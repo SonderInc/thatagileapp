@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { WorkItem, WorkItemType, WorkItemStatus } from '../types';
+import { WorkItem, WorkItemType, WorkItemStatus, EpicFeatureSize } from '../types';
 import { useStore } from '../store/useStore';
 import { getAllowedChildTypes } from '../utils/hierarchy';
+import { SIZE_OPTIONS, STORY_POINT_OPTIONS } from '../utils/estimates';
 import { X } from 'lucide-react';
 
 interface WorkItemModalProps {
@@ -12,7 +13,7 @@ interface WorkItemModalProps {
 }
 
 const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId, type }) => {
-  const { workItems, addWorkItem, updateWorkItem, users } = useStore();
+  const { workItems, addWorkItem, updateWorkItem, users, getAggregatedStoryPoints } = useStore();
   const [formData, setFormData] = useState<Partial<WorkItem>>({
     title: '',
     description: '',
@@ -40,6 +41,8 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
         priority: item.priority,
         assignee: item.assignee,
         tags: item.tags,
+        size: item.size,
+        storyPoints: item.storyPoints,
         estimatedHours: item.estimatedHours,
         parentId: item.parentId || parentId,
       });
@@ -64,6 +67,8 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
         priority: formData.priority || 'medium',
         assignee: formData.assignee,
         tags: formData.tags,
+        size: formData.size,
+        storyPoints: formData.storyPoints,
         estimatedHours: formData.estimatedHours,
         parentId: formData.parentId,
         createdAt: new Date(),
@@ -290,24 +295,98 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
               </select>
             </div>
 
-            <div>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
-                Estimated Hours
-              </label>
-              <input
-                type="number"
-                value={formData.estimatedHours || ''}
-                onChange={(e) => setFormData({ ...formData, estimatedHours: e.target.value ? parseInt(e.target.value) : undefined })}
-                min="0"
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                }}
-              />
-            </div>
+            {(formData.type === 'epic' || formData.type === 'feature') && (
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
+                  Size
+                </label>
+                <select
+                  value={formData.size ?? '?'}
+                  onChange={(e) => setFormData({ ...formData, size: e.target.value as EpicFeatureSize })}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                  }}
+                >
+                  {SIZE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {formData.type === 'feature' && (
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
+                  Story Points (from User Stories)
+                </label>
+                <input
+                  type="text"
+                  value={isEditing && item ? getAggregatedStoryPoints(item.id) : 0}
+                  readOnly
+                  disabled
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    backgroundColor: '#f9fafb',
+                    color: '#6b7280',
+                  }}
+                />
+              </div>
+            )}
+
+            {formData.type === 'user-story' && (
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
+                  Story Points
+                </label>
+                <select
+                  value={formData.storyPoints == null ? '?' : String(formData.storyPoints)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setFormData({ ...formData, storyPoints: v === '?' ? null : parseInt(v, 10) });
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                  }}
+                >
+                  {STORY_POINT_OPTIONS.map((opt) => (
+                    <option key={opt.label} value={opt.value === null ? '?' : opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {(formData.type === 'task' || formData.type === 'bug') && (
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
+                  Estimated Hours
+                </label>
+                <input
+                  type="number"
+                  value={formData.estimatedHours || ''}
+                  onChange={(e) => setFormData({ ...formData, estimatedHours: e.target.value ? parseInt(e.target.value) : undefined })}
+                  min="0"
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>

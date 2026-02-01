@@ -1,6 +1,8 @@
 // Work Item Types
 export type WorkItemType = 'product' | 'epic' | 'feature' | 'user-story' | 'task' | 'bug';
 
+export type EpicFeatureSize = 'small' | 'medium' | 'large' | 'xlarge' | 'xxlarge' | '?';
+
 export type WorkItemStatus = 
   // Epic Level: Funnel → Reviewing → Analyzing → Portfolio Backlog → Implementing → Done
   | 'funnel' | 'backlog' | 'analysis' | 'prioritization' | 'implementation' | 'done'
@@ -38,7 +40,9 @@ export interface WorkItem {
   parentId?: string; // Links to parent work item
   childrenIds?: string[]; // Links to child work items
   sprintId?: string; // For stories/tasks in sprints
-  estimatedHours?: number;
+  size?: EpicFeatureSize; // Epic, Feature: Small, Medium, Large, XLarge, XXLarge, ?
+  storyPoints?: number | null; // User Story: Fibonacci or ? (null)
+  estimatedHours?: number; // Task, Bug
   actualHours?: number;
   color?: string; // For visual distinction
 }

@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import WorkItemModal from '../components/WorkItemModal';
 import { getTypeLabel } from '../utils/hierarchy';
+import { getSizeLabel, formatStoryPoints } from '../utils/estimates';
 import { WorkItem, WorkItemType } from '../types';
 import { Filter } from 'lucide-react';
 
@@ -24,7 +25,7 @@ function applyFilters(items: WorkItem[], filters: ListViewFilters): WorkItem[] {
 }
 
 const WorkItemList: React.FC = () => {
-  const { workItems, getProductBacklog, setSelectedWorkItem } = useStore();
+  const { workItems, getProductBacklog, setSelectedWorkItem, getAggregatedStoryPoints } = useStore();
   const [filters, setFilters] = useState<ListViewFilters>(defaultFilters);
   const [showModal, setShowModal] = useState(false);
   const [modalItemId, setModalItemId] = useState<string | null>(null);
@@ -161,13 +162,16 @@ const WorkItemList: React.FC = () => {
                 <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: '600', color: '#374151' }}>Status</th>
                 <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: '600', color: '#374151' }}>Priority</th>
                 <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: '600', color: '#374151' }}>Assignee</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: '600', color: '#374151' }}>Size</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: '600', color: '#374151' }}>Story Points</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: '600', color: '#374151' }}>Est. Hours</th>
                 <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: '600', color: '#374151' }}>Parent</th>
               </tr>
             </thead>
             <tbody>
               {filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: '#6b7280' }}>
+                  <td colSpan={11} style={{ padding: '32px', textAlign: 'center', color: '#6b7280' }}>
                     No work items match the current filters.
                   </td>
                 </tr>
@@ -200,6 +204,15 @@ const WorkItemList: React.FC = () => {
                     <td style={{ padding: '12px 16px', color: '#6b7280' }}>{item.status}</td>
                     <td style={{ padding: '12px 16px', color: '#6b7280' }}>{item.priority ?? '—'}</td>
                     <td style={{ padding: '12px 16px', color: '#6b7280' }}>{item.assignee ?? '—'}</td>
+                    <td style={{ padding: '12px 16px', color: '#6b7280' }}>
+                      {(item.type === 'epic' || item.type === 'feature') ? (item.size ? getSizeLabel(item.size) : '—') : '—'}
+                    </td>
+                    <td style={{ padding: '12px 16px', color: '#6b7280' }}>
+                      {item.type === 'user-story' ? formatStoryPoints(item.storyPoints) : item.type === 'feature' ? getAggregatedStoryPoints(item.id) : '—'}
+                    </td>
+                    <td style={{ padding: '12px 16px', color: '#6b7280' }}>
+                      {(item.type === 'task' || item.type === 'bug') && item.estimatedHours != null ? item.estimatedHours : '—'}
+                    </td>
                     <td style={{ padding: '12px 16px', color: '#6b7280', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={getParentTitle(item)}>
                       {getParentTitle(item)}
                     </td>

@@ -49,6 +49,7 @@ interface AppState {
   getWorkItemsByParent: (parentId: string) => WorkItem[];
   getWorkItemsBySprint: (sprintId: string) => WorkItem[];
   getBoard: (boardId: string) => KanbanBoard | undefined;
+  getAggregatedStoryPoints: (featureId: string) => number;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -183,5 +184,10 @@ export const useStore = create<AppState>((set, get) => ({
   
   getBoard: (boardId) => {
     return get().boards.find((board) => board.id === boardId);
+  },
+
+  getAggregatedStoryPoints: (featureId) => {
+    const children = get().getWorkItemsByParent(featureId).filter((i) => i.type === 'user-story');
+    return children.reduce((sum, i) => sum + (i.storyPoints != null ? i.storyPoints : 0), 0);
   },
 }));

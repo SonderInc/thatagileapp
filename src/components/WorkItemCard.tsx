@@ -2,6 +2,7 @@ import React from 'react';
 import { WorkItem } from '../types';
 import { getStatusColor } from '../utils/boardConfig';
 import { getTypeLabel } from '../utils/hierarchy';
+import { getSizeLabel, formatStoryPoints } from '../utils/estimates';
 import { useStore } from '../store/useStore';
 
 interface WorkItemCardProps {
@@ -10,7 +11,7 @@ interface WorkItemCardProps {
 }
 
 const WorkItemCard: React.FC<WorkItemCardProps> = ({ item, onClick }) => {
-  const { setSelectedWorkItem } = useStore();
+  const { setSelectedWorkItem, getAggregatedStoryPoints } = useStore();
 
   const handleClick = () => {
     setSelectedWorkItem(item.id);
@@ -104,7 +105,16 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({ item, onClick }) => {
         color: '#9ca3af',
       }}>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {item.estimatedHours && (
+          {(item.type === 'epic' || item.type === 'feature') && item.size && (
+            <span>Size: {getSizeLabel(item.size)}</span>
+          )}
+          {item.type === 'feature' && (
+            <span>{getAggregatedStoryPoints(item.id)} pts</span>
+          )}
+          {item.type === 'user-story' && (
+            <span>{formatStoryPoints(item.storyPoints)} pts</span>
+          )}
+          {(item.type === 'task' || item.type === 'bug') && item.estimatedHours != null && (
             <span>⏱ {item.estimatedHours}h</span>
           )}
           {item.assignee && (
