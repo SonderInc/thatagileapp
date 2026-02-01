@@ -154,8 +154,10 @@ const WorkItemList: React.FC = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
             <thead>
               <tr style={{ backgroundColor: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: '600', color: '#374151' }}>Unique ID</th>
                 <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: '600', color: '#374151' }}>Type</th>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: '600', color: '#374151' }}>Title</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: '600', color: '#374151' }}>Name</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: '600', color: '#374151' }}>Description</th>
                 <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: '600', color: '#374151' }}>Status</th>
                 <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: '600', color: '#374151' }}>Priority</th>
                 <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: '600', color: '#374151' }}>Assignee</th>
@@ -165,7 +167,7 @@ const WorkItemList: React.FC = () => {
             <tbody>
               {filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ padding: '32px', textAlign: 'center', color: '#6b7280' }}>
+                  <td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: '#6b7280' }}>
                     No work items match the current filters.
                   </td>
                 </tr>
@@ -185,10 +187,16 @@ const WorkItemList: React.FC = () => {
                       e.currentTarget.style.backgroundColor = '#ffffff';
                     }}
                   >
+                    <td style={{ padding: '12px 16px', color: '#6b7280', fontSize: '13px', fontFamily: 'monospace' }} title={item.id}>
+                      {item.id.length > 20 ? `${item.id.slice(0, 20)}…` : item.id}
+                    </td>
                     <td style={{ padding: '12px 16px', color: '#6b7280', textTransform: 'uppercase', fontWeight: '600', fontSize: '12px' }}>
                       {getTypeLabel(item.type)}
                     </td>
                     <td style={{ padding: '12px 16px', fontWeight: '500', color: '#111827' }}>{item.title}</td>
+                    <td style={{ padding: '12px 16px', color: '#6b7280', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.description ?? ''}>
+                      {item.description ?? '—'}
+                    </td>
                     <td style={{ padding: '12px 16px', color: '#6b7280' }}>{item.status}</td>
                     <td style={{ padding: '12px 16px', color: '#6b7280' }}>{item.priority ?? '—'}</td>
                     <td style={{ padding: '12px 16px', color: '#6b7280' }}>{item.assignee ?? '—'}</td>
