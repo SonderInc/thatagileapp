@@ -8,7 +8,8 @@ import { Plus } from 'lucide-react';
 const TeamBoard: React.FC = () => {
   const {
     sprints,
-    getFeaturesWithUserStories,
+    getTeamBoardLanes,
+    getStoriesForLane,
     selectedWorkItem,
     setSelectedWorkItem,
   } = useStore();
@@ -16,7 +17,7 @@ const TeamBoard: React.FC = () => {
   const [modalColumnId, setModalColumnId] = useState<string | null>(null);
   const [selectedSprintId, setSelectedSprintId] = useState<string | null>(null);
 
-  const features = getFeaturesWithUserStories();
+  const lanes = getTeamBoardLanes();
   const currentSprint = sprints.find((s) => s.status === 'in-progress');
   const upcomingSprints = sprints.filter((s) => s.status === 'upcoming');
 
@@ -123,7 +124,8 @@ const TeamBoard: React.FC = () => {
       <TeamKanbanBoard
         boardId={`team-board-${selectedSprintId || 'all'}`}
         columns={TEAM_BOARD_COLUMNS}
-        features={features}
+        lanes={lanes}
+        getStoriesForLane={getStoriesForLane}
         onAddItem={handleAddItem}
         onOpenItem={() => setShowModal(true)}
       />

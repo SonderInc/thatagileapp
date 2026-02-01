@@ -3,7 +3,8 @@ import { WorkItem, WorkItemType, WorkItemStatus, EpicFeatureSize } from '../type
 import { useStore } from '../store/useStore';
 import { getAllowedChildTypes } from '../utils/hierarchy';
 import { SIZE_OPTIONS, STORY_POINT_OPTIONS, DAYS_OPTIONS } from '../utils/estimates';
-import { X } from 'lucide-react';
+import { X, Plus } from 'lucide-react';
+import { getTypeLabel } from '../utils/hierarchy';
 
 interface WorkItemModalProps {
   itemId: string | null;
@@ -13,7 +14,7 @@ interface WorkItemModalProps {
 }
 
 const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId, type }) => {
-  const { workItems, addWorkItem, updateWorkItem, users, getAggregatedStoryPoints } = useStore();
+  const { workItems, addWorkItem, updateWorkItem, users, getAggregatedStoryPoints, getWorkItemsByParent, setSelectedWorkItem } = useStore();
   const [formData, setFormData] = useState<Partial<WorkItem>>({
     title: '',
     description: '',
@@ -82,6 +83,40 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
     
     onClose();
   };
+
+  const handleAddTask = () => {
+    if (!item || item.type !== 'user-story') return;
+    const newItem: WorkItem = {
+      id: `item-${Date.now()}`,
+      type: 'task',
+      title: 'New task',
+      status: 'backlog',
+      priority: item.priority ?? 'medium',
+      parentId: item.id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    addWorkItem(newItem);
+  };
+
+  const handleAddBug = () => {
+    if (!item || item.type !== 'user-story') return;
+    const newItem: WorkItem = {
+      id: `item-${Date.now()}`,
+      type: 'bug',
+      title: 'New bug',
+      status: 'backlog',
+      priority: item.priority ?? 'medium',
+      parentId: item.id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    addWorkItem(newItem);
+  };
+
+  const childTasksAndBugs = item && item.type === 'user-story'
+    ? getWorkItemsByParent(item.id).filter((i) => i.type === 'task' || i.type === 'bug')
+    : [];
 
   return (
     <div
@@ -396,6 +431,79 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
               </div>
             )}
           </div>
+
+          {isEditing && item?.type === 'user-story' && (
+            <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <span style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>Tasks & bugs</span>
+                <button
+                  type="button"
+                  onClick={handleAddTask}
+                  style={{
+                    padding: '6px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    backgroundColor: '#ffffff',
+                    color: '#374151',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <Plus size={14} />
+                  Add task
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAddBug}
+                  style={{
+                    padding: '6px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    backgroundColor: '#ffffff',
+                    color: '#374151',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <Plus size={14} />
+                  Add bug
+                </button>
+              </div>
+              {childTasksAndBugs.length > 0 && (
+                <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                  {childTasksAndBugs.map((child) => (
+                    <li
+                      key={child.id}
+                      onClick={() => setSelectedWorkItem(child.id)}
+                      style={{
+                        padding: '8px 12px',
+                        marginBottom: '4px',
+                        backgroundColor: '#f9fafb',
+                        borderRadius: '6px',
+                        border: '1px solid #e5e7eb',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <span style={{ fontWeight: '500', color: '#111827' }}>{child.title}</span>
+                      <span style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: '600' }}>
+                        {getTypeLabel(child.type)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
 
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
             <button

@@ -55,6 +55,8 @@ interface AppState {
   getProductBacklogItems: (productId: string) => WorkItem[];
   canAddProduct: () => boolean;
   getFeaturesWithUserStories: () => WorkItem[];
+  getTeamBoardLanes: () => { id: string; title: string }[];
+  getStoriesForLane: (laneId: string) => WorkItem[];
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -225,5 +227,41 @@ export const useStore = create<AppState>((set, get) => ({
     return features.filter((f) =>
       items.some((i) => i.parentId === f.id && i.type === 'user-story')
     );
+  },
+
+  getTeamBoardLanes: () => {
+    const items = get().workItems;
+    const lanes: { id: string; title: string }[] = [];
+    get().getFeaturesWithUserStories().forEach((f) => {
+      lanes.push({ id: f.id, title: f.title });
+    });
+    const adHocStories = items.filter(
+      (i) =>
+        i.type === 'user-story' &&
+        (i.parentId == null || items.find((p) => p.id === i.parentId)?.type !== 'feature')
+    );
+    if (adHocStories.length > 0) {
+      lanes.push({ id: '__ad_hoc__', title: 'Ad hoc' });
+    }
+    const standaloneBugs = items.filter((i) => i.type === 'bug' && i.parentId == null);
+    if (standaloneBugs.length > 0) {
+      lanes.push({ id: '__bug__', title: 'Bug' });
+    }
+    return lanes;
+  },
+
+  getStoriesForLane: (laneId: string) => {
+    const items = get().workItems;
+    if (laneId === '__ad_hoc__') {
+      return items.filter(
+        (i) =>
+          i.type === 'user-story' &&
+          (i.parentId == null || items.find((p) => p.id === i.parentId)?.type !== 'feature')
+      );
+    }
+    if (laneId === '__bug__') {
+      return items.filter((i) => i.type === 'bug' && i.parentId == null);
+    }
+    return items.filter((i) => i.parentId === laneId && i.type === 'user-story');
   },
 }));
