@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useStore } from './store/useStore';
 import Navigation from './components/Navigation';
+import ProductBacklog from './pages/ProductBacklog';
 import EpicBoard from './pages/EpicBoard';
 import FeatureBoard from './pages/FeatureBoard';
 import TeamBoard from './pages/TeamBoard';
@@ -28,6 +29,8 @@ function App() {
 
   const renderBoard = () => {
     switch (viewMode) {
+      case 'backlog':
+        return <ProductBacklog />;
       case 'epic':
         return <EpicBoard />;
       case 'feature':
@@ -35,7 +38,7 @@ function App() {
       case 'team':
         return <TeamBoard />;
       default:
-        return <EpicBoard />;
+        return <ProductBacklog />;
     }
   };
 

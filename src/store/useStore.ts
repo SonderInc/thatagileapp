@@ -1,5 +1,14 @@
 import { create } from 'zustand';
-import { WorkItem, Sprint, KanbanBoard, User } from '../types';
+import { WorkItem, Sprint, KanbanBoard, User, WorkItemType } from '../types';
+import { getAllowedChildTypes } from '../utils/hierarchy';
+
+const TYPE_ORDER: Record<WorkItemType, number> = {
+  epic: 0,
+  feature: 1,
+  'user-story': 2,
+  task: 3,
+  bug: 4,
+};
 
 interface AppState {
   // Data
@@ -12,7 +21,7 @@ interface AppState {
   // UI State
   selectedBoard: string | null;
   selectedWorkItem: string | null;
-  viewMode: 'epic' | 'feature' | 'product' | 'team';
+  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog';
   
   // Actions
   setWorkItems: (items: WorkItem[]) => void;
@@ -34,6 +43,7 @@ interface AppState {
   setCurrentUser: (user: User | null) => void;
   
   // Computed
+  getProductBacklog: () => WorkItem[];
   getWorkItemsByType: (type: WorkItem['type']) => WorkItem[];
   getWorkItemsByParent: (parentId: string) => WorkItem[];
   getWorkItemsBySprint: (sprintId: string) => WorkItem[];
@@ -54,19 +64,77 @@ export const useStore = create<AppState>((set, get) => ({
   // Actions
   setWorkItems: (items) => set({ workItems: items }),
   
-  addWorkItem: (item) => set((state) => ({
-    workItems: [...state.workItems, item],
-  })),
+  addWorkItem: (item) => set((state) => {
+    if (item.parentId) {
+      const parent = state.workItems.find((i) => i.id === item.parentId);
+      if (parent && !getAllowedChildTypes(parent.type).includes(item.type)) {
+        return state;
+      }
+    }
+    const nextItems = [...state.workItems, item];
+    if (item.parentId) {
+      const parent = nextItems.find((i) => i.id === item.parentId);
+      if (parent) {
+        const childrenIds = [...(parent.childrenIds ?? []), item.id];
+        return {
+          workItems: nextItems.map((i) =>
+            i.id === item.parentId ? { ...i, childrenIds } : i
+          ),
+        };
+      }
+    }
+    return { workItems: nextItems };
+  }),
   
-  updateWorkItem: (id, updates) => set((state) => ({
-    workItems: state.workItems.map((item) =>
-      item.id === id ? { ...item, ...updates, updatedAt: new Date() } : item
-    ),
-  })),
+  updateWorkItem: (id, updates) => set((state) => {
+    const item = state.workItems.find((i) => i.id === id);
+    if (!item) return state;
+    const newParentId = updates.parentId !== undefined ? updates.parentId : item.parentId;
+    if (newParentId !== item.parentId && newParentId != null) {
+      const newParent = state.workItems.find((i) => i.id === newParentId);
+      if (!newParent || !getAllowedChildTypes(newParent.type).includes(item.type)) {
+        return state;
+      }
+    }
+    let nextItems = state.workItems.map((i) =>
+      i.id === id ? { ...i, ...updates, updatedAt: new Date() } : i
+    );
+    if (newParentId !== item.parentId) {
+      if (item.parentId) {
+        const oldParent = nextItems.find((i) => i.id === item.parentId);
+        if (oldParent) {
+          const childrenIds = (oldParent.childrenIds ?? []).filter((cid) => cid !== id);
+          nextItems = nextItems.map((i) =>
+            i.id === item.parentId ? { ...i, childrenIds } : i
+          );
+        }
+      }
+      if (newParentId) {
+        const newParent = nextItems.find((i) => i.id === newParentId);
+        if (newParent) {
+          const childrenIds = [...(newParent.childrenIds ?? []), id];
+          nextItems = nextItems.map((i) =>
+            i.id === newParentId ? { ...i, childrenIds } : i
+          );
+        }
+      }
+    }
+    return { workItems: nextItems };
+  }),
   
-  deleteWorkItem: (id) => set((state) => ({
-    workItems: state.workItems.filter((item) => item.id !== id),
-  })),
+  deleteWorkItem: (id) => set((state) => {
+    const item = state.workItems.find((i) => i.id === id);
+    const nextItems = state.workItems.filter((i) => i.id !== id);
+    if (!item?.parentId) return { workItems: nextItems };
+    const parent = nextItems.find((i) => i.id === item.parentId);
+    if (!parent) return { workItems: nextItems };
+    const childrenIds = (parent.childrenIds ?? []).filter((cid) => cid !== id);
+    return {
+      workItems: nextItems.map((i) =>
+        i.id === item.parentId ? { ...i, childrenIds } : i
+      ),
+    };
+  }),
   
   moveWorkItem: (itemId, newStatus, _newColumnId) => set((state) => ({
     workItems: state.workItems.map((item) =>
@@ -91,6 +159,15 @@ export const useStore = create<AppState>((set, get) => ({
   setCurrentUser: (user) => set({ currentUser: user }),
   
   // Computed
+  getProductBacklog: () => {
+    const items = get().workItems;
+    return [...items].sort((a, b) => {
+      const orderA = TYPE_ORDER[a.type] ?? 5;
+      const orderB = TYPE_ORDER[b.type] ?? 5;
+      if (orderA !== orderB) return orderA - orderB;
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    });
+  },
   getWorkItemsByType: (type) => {
     return get().workItems.filter((item) => item.type === type);
   },

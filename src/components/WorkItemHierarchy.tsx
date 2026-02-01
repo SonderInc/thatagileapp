@@ -1,5 +1,6 @@
 import React from 'react';
 import { useStore } from '../store/useStore';
+import { getTypeLabel } from '../utils/hierarchy';
 import { ChevronRight } from 'lucide-react';
 
 interface WorkItemHierarchyProps {
@@ -32,7 +33,7 @@ const WorkItemHierarchy: React.FC<WorkItemHierarchyProps> = ({ itemId }) => {
             gap: '8px',
           }}>
             <span style={{ fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>
-              {parent.type}
+              {getTypeLabel(parent.type)}
             </span>
             <ChevronRight size={14} color="#9ca3af" />
             <span style={{ fontSize: '14px', fontWeight: '500' }}>{parent.title}</span>
@@ -60,7 +61,7 @@ const WorkItemHierarchy: React.FC<WorkItemHierarchyProps> = ({ itemId }) => {
                 }}
               >
                 <span style={{ fontSize: '12px', color: '#6b7280', textTransform: 'uppercase' }}>
-                  {child.type}
+                  {getTypeLabel(child.type)}
                 </span>
                 <ChevronRight size={14} color="#9ca3af" />
                 <span style={{ fontSize: '14px', fontWeight: '500' }}>{child.title}</span>

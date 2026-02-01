@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { WorkItem, WorkItemType, WorkItemStatus } from '../types';
 import { useStore } from '../store/useStore';
+import { getAllowedChildTypes } from '../utils/hierarchy';
 import { X } from 'lucide-react';
 
 interface WorkItemModalProps {
@@ -15,13 +16,19 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
   const [formData, setFormData] = useState<Partial<WorkItem>>({
     title: '',
     description: '',
-    type: type || 'story',
+    type: type || 'user-story',
     status: 'backlog',
     priority: 'medium',
   });
 
   const item = itemId ? workItems.find((i) => i.id === itemId) : null;
   const isEditing = !!item;
+  const parent = parentId ? workItems.find((i) => i.id === parentId) : null;
+  const allowedTypes: WorkItemType[] = useMemo(() => {
+    if (isEditing) return [item!.type];
+    if (parent) return getAllowedChildTypes(parent.type);
+    return ['epic'];
+  }, [isEditing, item, parent]);
 
   useEffect(() => {
     if (item) {
@@ -36,10 +43,11 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
         estimatedHours: item.estimatedHours,
         parentId: item.parentId || parentId,
       });
-    } else if (parentId) {
-      setFormData((prev) => ({ ...prev, parentId }));
+    } else {
+      const defaultType = type && allowedTypes.includes(type) ? type : allowedTypes[0];
+      setFormData((prev) => ({ ...prev, parentId, type: defaultType }));
     }
-  }, [item, parentId]);
+  }, [item, parentId, type, allowedTypes]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +59,7 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
         id: `item-${Date.now()}`,
         title: formData.title || '',
         description: formData.description,
-        type: formData.type || 'story',
+        type: formData.type || 'user-story',
         status: formData.status || 'backlog',
         priority: formData.priority || 'medium',
         assignee: formData.assignee,
@@ -121,7 +129,7 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
               Type
             </label>
             <select
-              value={formData.type}
+              value={allowedTypes.includes(formData.type!) ? formData.type : allowedTypes[0]}
               onChange={(e) => setFormData({ ...formData, type: e.target.value as WorkItemType })}
               style={{
                 width: '100%',
@@ -132,12 +140,11 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
               }}
               disabled={isEditing}
             >
-              <option value="initiative">Initiative</option>
-              <option value="epic">Epic</option>
-              <option value="feature">Feature</option>
-              <option value="story">Story</option>
-              <option value="bug">Bug</option>
-              <option value="task">Task</option>
+              {allowedTypes.includes('epic') && <option value="epic">Epic</option>}
+              {allowedTypes.includes('feature') && <option value="feature">Feature</option>}
+              {allowedTypes.includes('user-story') && <option value="user-story">User Story</option>}
+              {allowedTypes.includes('task') && <option value="task">Task</option>}
+              {allowedTypes.includes('bug') && <option value="bug">Bug</option>}
             </select>
           </div>
 

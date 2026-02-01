@@ -16,8 +16,8 @@ const TeamBoard: React.FC = () => {
   
   const getSprintWorkItems = (sprintId: string | null) => {
     if (!sprintId) {
-      return workItems.filter((item) => 
-        item.type === 'story' || item.type === 'bug' || item.type === 'task'
+      return workItems.filter((item) =>
+        item.type === 'user-story' || item.type === 'bug' || item.type === 'task'
       );
     }
     return getWorkItemsBySprint(sprintId);
@@ -65,7 +65,7 @@ const TeamBoard: React.FC = () => {
           }}
         >
           <Plus size={20} />
-          New Story
+          New User Story
         </button>
       </div>
 
@@ -134,7 +134,7 @@ const TeamBoard: React.FC = () => {
         <WorkItemModal
           itemId={selectedWorkItem}
           onClose={handleCloseModal}
-          type={modalColumnId ? undefined : 'story'}
+          type={modalColumnId ? undefined : 'user-story'}
         />
       )}
     </div>

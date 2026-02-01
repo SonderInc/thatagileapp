@@ -1,6 +1,7 @@
 import React from 'react';
 import { WorkItem } from '../types';
 import { getStatusColor } from '../utils/boardConfig';
+import { getTypeLabel } from '../utils/hierarchy';
 import { useStore } from '../store/useStore';
 
 interface WorkItemCardProps {
@@ -53,7 +54,7 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({ item, onClick }) => {
             marginBottom: '4px',
             fontWeight: '600',
           }}>
-            {item.type}
+            {getTypeLabel(item.type)}
           </div>
           <h4 style={{ 
             margin: 0, 

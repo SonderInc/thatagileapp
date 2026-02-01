@@ -1,5 +1,5 @@
 // Work Item Types
-export type WorkItemType = 'initiative' | 'epic' | 'feature' | 'story' | 'bug' | 'task';
+export type WorkItemType = 'epic' | 'feature' | 'user-story' | 'task' | 'bug';
 
 export type WorkItemStatus = 
   // Epic Level: Funnel → Reviewing → Analyzing → Portfolio Backlog → Implementing → Done
