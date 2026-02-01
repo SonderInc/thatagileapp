@@ -14,7 +14,7 @@ interface WorkItemModalProps {
 }
 
 const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId, type }) => {
-  const { workItems, addWorkItem, updateWorkItem, users, getAggregatedStoryPoints, getWorkItemsByParent, setSelectedWorkItem } = useStore();
+  const { workItems, addWorkItem, updateWorkItem, users, getAggregatedStoryPoints, getWorkItemsByParent, getFeaturesInDevelopState, setSelectedWorkItem } = useStore();
   const [formData, setFormData] = useState<Partial<WorkItem>>({
     title: '',
     description: '',
@@ -49,7 +49,7 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
         parentId: item.parentId || parentId,
       });
     } else {
-      const defaultType = type && allowedTypes.includes(type) ? type : allowedTypes[0];
+      const defaultType = (type && (allowedTypes.includes(type) || type === 'user-story')) ? type : allowedTypes[0];
       setFormData((prev) => ({ ...prev, parentId, type: defaultType }));
     }
   }, [item, parentId, type, allowedTypes]);
@@ -214,6 +214,32 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
             </select>
           </div>
 
+          {!isEditing && formData.type === 'user-story' && (
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
+                Parent feature
+              </label>
+              <select
+                value={formData.parentId ?? ''}
+                onChange={(e) => setFormData({ ...formData, parentId: e.target.value || undefined })}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                }}
+              >
+                <option value="">None (Ad hoc)</option>
+                {getFeaturesInDevelopState().map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div style={{ marginBottom: '16px' }}>
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
               Name *
@@ -258,7 +284,13 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
                 Status
               </label>
               <select
-                value={formData.type === 'user-story' && !['backlog', 'to-do', 'in-progress', 'done', 'archive'].includes(formData.status ?? '') ? 'backlog' : formData.status}
+                value={
+                  formData.type === 'user-story' && !['backlog', 'to-do', 'in-progress', 'done', 'archive'].includes(formData.status ?? '')
+                    ? 'backlog'
+                    : (formData.type === 'task' || formData.type === 'bug') && !['to-do', 'in-progress', 'done'].includes(formData.status ?? '')
+                      ? 'to-do'
+                      : formData.status
+                }
                 onChange={(e) => setFormData({ ...formData, status: e.target.value as WorkItemStatus })}
                 style={{
                   width: '100%',
@@ -275,6 +307,12 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
                     <option value="in-progress">In Progress</option>
                     <option value="done">Done</option>
                     <option value="archive">Archive</option>
+                  </>
+                ) : (formData.type === 'task' || formData.type === 'bug') ? (
+                  <>
+                    <option value="to-do">Ready</option>
+                    <option value="in-progress">In progress</option>
+                    <option value="done">Done</option>
                   </>
                 ) : (
                   <>

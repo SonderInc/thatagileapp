@@ -55,6 +55,7 @@ interface AppState {
   getProductBacklogItems: (productId: string) => WorkItem[];
   canAddProduct: () => boolean;
   getFeaturesWithUserStories: () => WorkItem[];
+  getFeaturesInDevelopState: () => WorkItem[];
   getTeamBoardLanes: () => { id: string; title: string }[];
   getStoriesForLane: (laneId: string) => WorkItem[];
 }
@@ -226,6 +227,12 @@ export const useStore = create<AppState>((set, get) => ({
     const features = items.filter((i) => i.type === 'feature');
     return features.filter((f) =>
       items.some((i) => i.parentId === f.id && i.type === 'user-story')
+    );
+  },
+
+  getFeaturesInDevelopState: () => {
+    return get().workItems.filter(
+      (i) => i.type === 'feature' && i.status === 'develop'
     );
   },
 

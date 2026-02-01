@@ -9,6 +9,7 @@ import { Check } from 'lucide-react';
 const READY_COLUMN_GREEN = '#10b981'; // green when story has task in progress
 
 const BUG_LANE_ID = '__bug__';
+const AD_HOC_LANE_ID = '__ad_hoc__';
 
 interface TeamKanbanBoardProps {
   boardId: string;
@@ -56,7 +57,16 @@ const TeamKanbanBoard: React.FC<TeamKanbanBoardProps> = ({
     moveWorkItem(storyId, 'done');
   };
 
-  const LANE_LABEL_WIDTH = 120;
+  /** User story cards stay in Ready (or Backlog/Done/Archive); never in In Progress column. */
+  const isStoryCardInColumn = (story: WorkItem, columnId: string): boolean => {
+    if (columnId === 'to-do') return story.status === 'to-do' || story.status === 'in-progress';
+    if (columnId === 'done') return story.status === 'done';
+    if (columnId === 'archive') return story.status === 'archive';
+    if (columnId === 'backlog') return story.status === 'backlog';
+    return false; // in-progress column never shows user story cards
+  };
+
+  const LANE_LABEL_WIDTH = 280;
   const COLUMN_MIN_WIDTH = 280;
 
   return (
@@ -140,6 +150,11 @@ const TeamKanbanBoard: React.FC<TeamKanbanBoardProps> = ({
         {/* One row per swim lane: lane crosses all columns */}
         {lanes.map((lane, laneIndex) => {
           const isBugLane = lane.id === BUG_LANE_ID;
+          const isAdHocLane = lane.id === AD_HOC_LANE_ID;
+          const featureItem =
+            !isBugLane && !isAdHocLane
+              ? workItems.find((i) => i.id === lane.id && i.type === 'feature')
+              : undefined;
           const laneItems = getStoriesForLane(lane.id);
           const isEven = laneIndex % 2 === 0;
 
@@ -170,7 +185,16 @@ const TeamKanbanBoard: React.FC<TeamKanbanBoardProps> = ({
                   alignItems: 'center',
                 }}
               >
-                {lane.title}
+                {featureItem ? (
+                  <div style={{ width: '100%' }}>
+                    <WorkItemCard
+                      item={featureItem}
+                      onClick={() => handleOpenItem(featureItem.id)}
+                    />
+                  </div>
+                ) : (
+                  lane.title
+                )}
               </div>
               {columns.map((column) => {
                 const columnId = column.id;
@@ -270,7 +294,7 @@ const TeamKanbanBoard: React.FC<TeamKanbanBoardProps> = ({
                           }}
                         >
                           {storyRows.map(({ story, tasks: tasksInColumn }) => {
-                            const showFullStoryCard = isStatusInTeamColumn(story.status, columnId);
+                            const showFullStoryCard = isStoryCardInColumn(story, columnId);
                             const showStoryLabel =
                               tasksInColumn.length > 0 && !showFullStoryCard;
                             const showDoneCheckbox =
