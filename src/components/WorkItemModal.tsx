@@ -258,7 +258,7 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
                 Status
               </label>
               <select
-                value={formData.status}
+                value={formData.type === 'user-story' && !['backlog', 'to-do', 'in-progress', 'done', 'archive'].includes(formData.status ?? '') ? 'backlog' : formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value as WorkItemStatus })}
                 style={{
                   width: '100%',
@@ -268,20 +268,32 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
                   fontSize: '14px',
                 }}
               >
-                <option value="funnel">Funnel</option>
-                <option value="backlog">Backlog</option>
-                <option value="analysis">Analysis</option>
-                <option value="prioritization">Prioritization</option>
-                <option value="implementation">Implementation</option>
-                <option value="intake">Intake</option>
-                <option value="define">Define</option>
-                <option value="design">Design</option>
-                <option value="develop">Develop</option>
-                <option value="release">Release</option>
-                <option value="to-do">To Do</option>
-                <option value="in-progress">In Progress</option>
-                <option value="done">Done</option>
-                <option value="archive">Archive</option>
+                {formData.type === 'user-story' ? (
+                  <>
+                    <option value="backlog">Backlog</option>
+                    <option value="to-do">Ready</option>
+                    <option value="in-progress">In Progress</option>
+                    <option value="done">Done</option>
+                    <option value="archive">Archive</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="funnel">Funnel</option>
+                    <option value="backlog">Backlog</option>
+                    <option value="analysis">Analysis</option>
+                    <option value="prioritization">Prioritization</option>
+                    <option value="implementation">Implementation</option>
+                    <option value="intake">Intake</option>
+                    <option value="define">Define</option>
+                    <option value="design">Design</option>
+                    <option value="develop">Develop</option>
+                    <option value="release">Release</option>
+                    <option value="to-do">To Do</option>
+                    <option value="in-progress">In Progress</option>
+                    <option value="done">Done</option>
+                    <option value="archive">Archive</option>
+                  </>
+                )}
               </select>
             </div>
 
