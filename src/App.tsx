@@ -8,22 +8,31 @@ import WorkItemList from './pages/WorkItemList';
 import EpicBoard from './pages/EpicBoard';
 import FeatureBoard from './pages/FeatureBoard';
 import TeamBoard from './pages/TeamBoard';
+import { getWorkItems } from './lib/firestore';
+import { isFirebaseConfigured } from './lib/firebase';
 import { mockWorkItems, mockSprints, mockBoards, mockUsers } from './utils/mockData';
 import './App.css';
 
 function App() {
-  const { 
-    viewMode, 
-    setWorkItems, 
-    setSprints, 
-    setBoards, 
+  const {
+    viewMode,
+    setWorkItems,
+    setSprints,
+    setBoards,
     setUsers,
-    setCurrentUser 
+    setCurrentUser,
   } = useStore();
 
   useEffect(() => {
-    // Initialize with mock data
-    setWorkItems(mockWorkItems);
+    getWorkItems()
+      .then((data) => {
+        setWorkItems(data);
+        if (import.meta.env.DEV) console.log('[Firebase] Loaded', data.length, 'work items from Firestore');
+      })
+      .catch((err) => {
+        console.error('[Firebase] Load failed, using mock data:', err?.message || err);
+        setWorkItems(mockWorkItems);
+      });
     setSprints(mockSprints);
     setBoards(mockBoards);
     setUsers(mockUsers);
@@ -51,12 +60,29 @@ function App() {
     }
   };
 
+  const firebaseReady = isFirebaseConfigured();
+
   return (
     <div className="app">
       <Navigation />
       <main style={{ backgroundColor: '#f9fafb', minHeight: 'calc(100vh - 60px)' }}>
         {renderBoard()}
       </main>
+      {import.meta.env.DEV && (
+        <div
+          style={{
+            padding: '6px 12px',
+            fontSize: '12px',
+            color: firebaseReady ? '#059669' : '#b45309',
+            backgroundColor: firebaseReady ? '#d1fae5' : '#fef3c7',
+            borderTop: '1px solid #e5e7eb',
+          }}
+        >
+          {firebaseReady
+            ? 'Backlog: Firestore (data persists)'
+            : 'Backlog: Demo data — add .env.local with VITE_FIREBASE_* and restart dev server'}
+        </div>
+      )}
     </div>
   );
 }

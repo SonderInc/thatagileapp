@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { WorkItem, Sprint, KanbanBoard, User, WorkItemType } from '../types';
 import { getAllowedChildTypes } from '../utils/hierarchy';
+import * as firestore from '../lib/firestore';
 
 const TYPE_ORDER: Record<WorkItemType, number> = {
   product: 0,
@@ -27,7 +28,7 @@ interface AppState {
   
   // Actions
   setWorkItems: (items: WorkItem[]) => void;
-  addWorkItem: (item: WorkItem) => void;
+  addWorkItem: (item: WorkItem) => Promise<void>;
   updateWorkItem: (id: string, updates: Partial<WorkItem>) => void;
   deleteWorkItem: (id: string) => void;
   moveWorkItem: (itemId: string, newStatus: WorkItem['status'], newColumnId?: string) => void;
@@ -75,27 +76,27 @@ export const useStore = create<AppState>((set, get) => ({
   // Actions
   setWorkItems: (items) => set({ workItems: items }),
   
-  addWorkItem: (item) => set((state) => {
+  addWorkItem: async (item) => {
+    const state = get();
     if (item.parentId) {
       const parent = state.workItems.find((i) => i.id === item.parentId);
       if (parent && !getAllowedChildTypes(parent.type).includes(item.type)) {
-        return state;
+        return;
       }
     }
-    const nextItems = [...state.workItems, item];
+    let nextItems = [...state.workItems, item];
     if (item.parentId) {
       const parent = nextItems.find((i) => i.id === item.parentId);
       if (parent) {
         const childrenIds = [...(parent.childrenIds ?? []), item.id];
-        return {
-          workItems: nextItems.map((i) =>
-            i.id === item.parentId ? { ...i, childrenIds } : i
-          ),
-        };
+        nextItems = nextItems.map((i) =>
+          i.id === item.parentId ? { ...i, childrenIds } : i
+        );
       }
     }
-    return { workItems: nextItems };
-  }),
+    await firestore.addWorkItem(item);
+    set({ workItems: nextItems });
+  },
   
   updateWorkItem: (id, updates) => set((state) => {
     const item = state.workItems.find((i) => i.id === id);
@@ -107,8 +108,9 @@ export const useStore = create<AppState>((set, get) => ({
         return state;
       }
     }
+    const merged = { ...updates, updatedAt: new Date() };
     let nextItems = state.workItems.map((i) =>
-      i.id === id ? { ...i, ...updates, updatedAt: new Date() } : i
+      i.id === id ? { ...i, ...merged } : i
     );
     if (newParentId !== item.parentId) {
       if (item.parentId) {
@@ -130,12 +132,14 @@ export const useStore = create<AppState>((set, get) => ({
         }
       }
     }
+    firestore.updateWorkItem(id, merged).catch(() => {});
     return { workItems: nextItems };
   }),
   
   deleteWorkItem: (id) => set((state) => {
     const item = state.workItems.find((i) => i.id === id);
     const nextItems = state.workItems.filter((i) => i.id !== id);
+    firestore.deleteWorkItem(id).catch(() => {});
     if (!item?.parentId) return { workItems: nextItems };
     const parent = nextItems.find((i) => i.id === item.parentId);
     if (!parent) return { workItems: nextItems };
@@ -147,11 +151,15 @@ export const useStore = create<AppState>((set, get) => ({
     };
   }),
   
-  moveWorkItem: (itemId, newStatus, _newColumnId) => set((state) => ({
-    workItems: state.workItems.map((item) =>
-      item.id === itemId ? { ...item, status: newStatus, updatedAt: new Date() } : item
-    ),
-  })),
+  moveWorkItem: (itemId, newStatus, _newColumnId) => set((state) => {
+    const updatedAt = new Date();
+    firestore.updateWorkItem(itemId, { status: newStatus, updatedAt }).catch(() => {});
+    return {
+      workItems: state.workItems.map((item) =>
+        item.id === itemId ? { ...item, status: newStatus, updatedAt } : item
+      ),
+    };
+  }),
   
   setSprints: (sprints) => set({ sprints }),
   addSprint: (sprint) => set((state) => ({ sprints: [...state.sprints, sprint] })),

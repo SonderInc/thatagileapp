@@ -9,13 +9,17 @@ const AddProductPage: React.FC = () => {
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<WorkItemStatus>('backlog');
   const [priority, setPriority] = useState<WorkItem['priority']>('medium');
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const handleBack = () => {
     setViewMode('landing');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setSaving(true);
     const newItem: WorkItem = {
       id: `item-${Date.now()}`,
       type: 'product',
@@ -26,8 +30,16 @@ const AddProductPage: React.FC = () => {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    addWorkItem(newItem);
-    setViewMode('landing');
+    try {
+      await addWorkItem(newItem);
+      setViewMode('landing');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('[AddProduct] Save failed:', err);
+      setError(msg || 'Failed to save. Check console and Firestore rules.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -67,6 +79,22 @@ const AddProductPage: React.FC = () => {
         <h1 style={{ margin: '0 0 24px 0', fontSize: '24px', fontWeight: '600', color: '#111827' }}>
           Add Product
         </h1>
+
+        {error && (
+          <div
+            style={{
+              marginBottom: '16px',
+              padding: '12px',
+              backgroundColor: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: '8px',
+              color: '#b91c1c',
+              fontSize: '14px',
+            }}
+          >
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '16px' }}>
@@ -166,18 +194,19 @@ const AddProductPage: React.FC = () => {
           <div style={{ display: 'flex', gap: '12px' }}>
             <button
               type="submit"
+              disabled={saving}
               style={{
                 padding: '12px 24px',
-                backgroundColor: '#3b82f6',
+                backgroundColor: saving ? '#9ca3af' : '#3b82f6',
                 color: '#ffffff',
                 border: 'none',
                 borderRadius: '8px',
                 fontSize: '14px',
                 fontWeight: '500',
-                cursor: 'pointer',
+                cursor: saving ? 'wait' : 'pointer',
               }}
             >
-              Create Product
+              {saving ? 'Saving…' : 'Create Product'}
             </button>
             <button
               type="button"

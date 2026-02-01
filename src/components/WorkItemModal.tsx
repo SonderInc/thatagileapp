@@ -22,6 +22,8 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
     status: 'backlog',
     priority: 'medium',
   });
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const item = itemId ? workItems.find((i) => i.id === itemId) : null;
   const isEditing = !!item;
@@ -54,34 +56,43 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
     }
   }, [item, parentId, type, allowedTypes]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    setSubmitError(null);
     if (isEditing && itemId) {
       updateWorkItem(itemId, formData);
-    } else {
-      const newItem: WorkItem = {
-        id: `item-${Date.now()}`,
-        title: formData.title || '',
-        description: formData.description,
-        type: formData.type || 'user-story',
-        status: formData.status || 'backlog',
-        priority: formData.priority || 'medium',
-        assignee: formData.assignee,
-        tags: formData.tags,
-        size: formData.size,
-        storyPoints: formData.storyPoints,
-        estimatedDays: formData.estimatedDays,
-        estimatedHours: formData.estimatedHours,
-        parentId: formData.parentId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        color: formData.color,
-      };
-      addWorkItem(newItem);
+      onClose();
+      return;
     }
-    
-    onClose();
+    const newItem: WorkItem = {
+      id: `item-${Date.now()}`,
+      title: formData.title || '',
+      description: formData.description,
+      type: formData.type || 'user-story',
+      status: formData.status || 'backlog',
+      priority: formData.priority || 'medium',
+      assignee: formData.assignee,
+      tags: formData.tags,
+      size: formData.size,
+      storyPoints: formData.storyPoints,
+      estimatedDays: formData.estimatedDays,
+      estimatedHours: formData.estimatedHours,
+      parentId: formData.parentId,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      color: formData.color,
+    };
+    setSaving(true);
+    try {
+      await addWorkItem(newItem);
+      onClose();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setSubmitError(msg || 'Failed to save.');
+      console.error('[WorkItemModal] addWorkItem failed:', err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleAddTask = () => {
@@ -96,7 +107,7 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    addWorkItem(newItem);
+    addWorkItem(newItem).catch((err) => console.error('[WorkItemModal] addWorkItem (task) failed:', err));
   };
 
   const handleAddBug = () => {
@@ -111,7 +122,7 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    addWorkItem(newItem);
+    addWorkItem(newItem).catch((err) => console.error('[WorkItemModal] addWorkItem (bug) failed:', err));
   };
 
   const childTasksAndBugs = item && item.type === 'user-story'
@@ -164,6 +175,22 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
             <X size={24} />
           </button>
         </div>
+
+        {submitError && (
+          <div
+            style={{
+              marginBottom: '16px',
+              padding: '12px',
+              backgroundColor: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: '8px',
+              color: '#b91c1c',
+              fontSize: '14px',
+            }}
+          >
+            {submitError}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '16px' }}>
@@ -574,18 +601,19 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
             </button>
             <button
               type="submit"
+              disabled={saving}
               style={{
                 padding: '10px 20px',
                 border: 'none',
                 borderRadius: '6px',
-                backgroundColor: '#3b82f6',
+                backgroundColor: saving ? '#9ca3af' : '#3b82f6',
                 color: '#ffffff',
-                cursor: 'pointer',
+                cursor: saving ? 'wait' : 'pointer',
                 fontSize: '14px',
                 fontWeight: '500',
               }}
             >
-              {isEditing ? 'Update' : 'Create'}
+              {saving ? 'Saving…' : isEditing ? 'Update' : 'Create'}
             </button>
           </div>
         </form>
