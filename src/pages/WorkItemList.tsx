@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import WorkItemModal from '../components/WorkItemModal';
 import { getTypeLabel } from '../utils/hierarchy';
-import { getSizeLabel, formatStoryPoints } from '../utils/estimates';
+import { getSizeLabel, formatStoryPoints, formatDays } from '../utils/estimates';
 import { WorkItem, WorkItemType } from '../types';
 import { Filter } from 'lucide-react';
 
@@ -164,7 +164,7 @@ const WorkItemList: React.FC = () => {
                 <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: '600', color: '#374151' }}>Assignee</th>
                 <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: '600', color: '#374151' }}>Size</th>
                 <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: '600', color: '#374151' }}>Story Points</th>
-                <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: '600', color: '#374151' }}>Est. Hours</th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: '600', color: '#374151' }}>Days</th>
                 <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: '600', color: '#374151' }}>Parent</th>
               </tr>
             </thead>
@@ -211,7 +211,7 @@ const WorkItemList: React.FC = () => {
                       {item.type === 'user-story' ? formatStoryPoints(item.storyPoints) : item.type === 'feature' ? getAggregatedStoryPoints(item.id) : '—'}
                     </td>
                     <td style={{ padding: '12px 16px', color: '#6b7280' }}>
-                      {(item.type === 'task' || item.type === 'bug') && item.estimatedHours != null ? item.estimatedHours : '—'}
+                      {(item.type === 'task' || item.type === 'bug') ? (item.estimatedDays != null ? formatDays(item.estimatedDays) : item.estimatedHours != null ? item.estimatedHours : '—') : '—'}
                     </td>
                     <td style={{ padding: '12px 16px', color: '#6b7280', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={getParentTitle(item)}>
                       {getParentTitle(item)}

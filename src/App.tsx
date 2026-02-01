@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useStore } from './store/useStore';
 import Navigation from './components/Navigation';
+import Landing from './pages/Landing';
 import ProductBacklog from './pages/ProductBacklog';
 import WorkItemList from './pages/WorkItemList';
 import EpicBoard from './pages/EpicBoard';
@@ -30,6 +31,8 @@ function App() {
 
   const renderBoard = () => {
     switch (viewMode) {
+      case 'landing':
+        return <Landing />;
       case 'backlog':
         return <ProductBacklog />;
       case 'list':
@@ -41,7 +44,7 @@ function App() {
       case 'team':
         return <TeamBoard />;
       default:
-        return <ProductBacklog />;
+        return <Landing />;
     }
   };
 

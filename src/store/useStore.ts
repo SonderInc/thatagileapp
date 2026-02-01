@@ -22,7 +22,8 @@ interface AppState {
   // UI State
   selectedBoard: string | null;
   selectedWorkItem: string | null;
-  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list';
+  selectedProductId: string | null;
+  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing';
   
   // Actions
   setWorkItems: (items: WorkItem[]) => void;
@@ -39,6 +40,7 @@ interface AppState {
   setUsers: (users: User[]) => void;
   setSelectedBoard: (boardId: string | null) => void;
   setSelectedWorkItem: (itemId: string | null) => void;
+  setSelectedProductId: (id: string | null) => void;
   setViewMode: (mode: AppState['viewMode']) => void;
   
   setCurrentUser: (user: User | null) => void;
@@ -50,6 +52,7 @@ interface AppState {
   getWorkItemsBySprint: (sprintId: string) => WorkItem[];
   getBoard: (boardId: string) => KanbanBoard | undefined;
   getAggregatedStoryPoints: (featureId: string) => number;
+  getProductBacklogItems: (productId: string) => WorkItem[];
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -61,7 +64,8 @@ export const useStore = create<AppState>((set, get) => ({
   currentUser: null,
   selectedBoard: null,
   selectedWorkItem: null,
-  viewMode: 'epic',
+  selectedProductId: null,
+  viewMode: 'landing',
   
   // Actions
   setWorkItems: (items) => set({ workItems: items }),
@@ -156,6 +160,7 @@ export const useStore = create<AppState>((set, get) => ({
   setUsers: (users) => set({ users }),
   setSelectedBoard: (boardId) => set({ selectedBoard: boardId }),
   setSelectedWorkItem: (itemId) => set({ selectedWorkItem: itemId }),
+  setSelectedProductId: (id) => set({ selectedProductId: id }),
   setViewMode: (mode) => set({ viewMode: mode }),
   
   setCurrentUser: (user) => set({ currentUser: user }),
@@ -189,5 +194,21 @@ export const useStore = create<AppState>((set, get) => ({
   getAggregatedStoryPoints: (featureId) => {
     const children = get().getWorkItemsByParent(featureId).filter((i) => i.type === 'user-story');
     return children.reduce((sum, i) => sum + (i.storyPoints != null ? i.storyPoints : 0), 0);
+  },
+
+  getProductBacklogItems: (productId) => {
+    const items = get().workItems;
+    const idSet = new Set<string>([productId]);
+    let added = true;
+    while (added) {
+      added = false;
+      for (const i of items) {
+        if (i.parentId != null && idSet.has(i.parentId) && !idSet.has(i.id)) {
+          idSet.add(i.id);
+          added = true;
+        }
+      }
+    }
+    return items.filter((i) => idSet.has(i.id));
   },
 }));

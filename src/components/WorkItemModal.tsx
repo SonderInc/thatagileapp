@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { WorkItem, WorkItemType, WorkItemStatus, EpicFeatureSize } from '../types';
 import { useStore } from '../store/useStore';
 import { getAllowedChildTypes } from '../utils/hierarchy';
-import { SIZE_OPTIONS, STORY_POINT_OPTIONS } from '../utils/estimates';
+import { SIZE_OPTIONS, STORY_POINT_OPTIONS, DAYS_OPTIONS } from '../utils/estimates';
 import { X } from 'lucide-react';
 
 interface WorkItemModalProps {
@@ -43,6 +43,7 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
         tags: item.tags,
         size: item.size,
         storyPoints: item.storyPoints,
+        estimatedDays: item.estimatedDays,
         estimatedHours: item.estimatedHours,
         parentId: item.parentId || parentId,
       });
@@ -69,6 +70,7 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
         tags: formData.tags,
         size: formData.size,
         storyPoints: formData.storyPoints,
+        estimatedDays: formData.estimatedDays,
         estimatedHours: formData.estimatedHours,
         parentId: formData.parentId,
         createdAt: new Date(),
@@ -370,13 +372,14 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
             {(formData.type === 'task' || formData.type === 'bug') && (
               <div>
                 <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
-                  Estimated Hours
+                  Days
                 </label>
-                <input
-                  type="number"
-                  value={formData.estimatedHours || ''}
-                  onChange={(e) => setFormData({ ...formData, estimatedHours: e.target.value ? parseInt(e.target.value) : undefined })}
-                  min="0"
+                <select
+                  value={formData.estimatedDays === undefined || formData.estimatedDays === null ? '?' : String(formData.estimatedDays)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setFormData({ ...formData, estimatedDays: v === '?' ? null : parseFloat(v) });
+                  }}
                   style={{
                     width: '100%',
                     padding: '8px 12px',
@@ -384,7 +387,11 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
                     borderRadius: '6px',
                     fontSize: '14px',
                   }}
-                />
+                >
+                  {DAYS_OPTIONS.map((opt) => (
+                    <option key={opt.label} value={opt.value === null ? '?' : opt.value}>{opt.label}</option>
+                  ))}
+                </select>
               </div>
             )}
           </div>

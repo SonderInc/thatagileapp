@@ -1,17 +1,24 @@
 import React from 'react';
 import { useStore } from '../store/useStore';
-import { LayoutDashboard, Layers, Package, Users, List, ListOrdered } from 'lucide-react';
+import { LayoutDashboard, Layers, Package, Users, List, ListOrdered, Home } from 'lucide-react';
 
 const Navigation: React.FC = () => {
-  const { viewMode, setViewMode } = useStore();
+  const { viewMode, setViewMode, setSelectedProductId } = useStore();
 
   const navItems = [
+    { id: 'landing', label: 'Home', icon: Home },
     { id: 'backlog', label: 'Product Backlog', icon: List },
     { id: 'list', label: 'Work Items', icon: ListOrdered },
     { id: 'epic', label: 'Epic Board', icon: Layers },
     { id: 'feature', label: 'Feature Board', icon: Package },
     { id: 'team', label: 'Team Board', icon: Users },
   ];
+
+  const handleNavClick = (id: string) => {
+    setViewMode(id as typeof viewMode);
+    if (id === 'landing') setSelectedProductId(null);
+    if (id === 'backlog') setSelectedProductId(null);
+  };
 
   return (
     <nav style={{
@@ -41,7 +48,7 @@ const Navigation: React.FC = () => {
         return (
           <button
             key={item.id}
-            onClick={() => setViewMode(item.id as typeof viewMode)}
+            onClick={() => handleNavClick(item.id)}
             style={{
               padding: '12px 16px',
               border: 'none',

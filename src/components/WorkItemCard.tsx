@@ -2,7 +2,7 @@ import React from 'react';
 import { WorkItem } from '../types';
 import { getStatusColor } from '../utils/boardConfig';
 import { getTypeLabel } from '../utils/hierarchy';
-import { getSizeLabel, formatStoryPoints } from '../utils/estimates';
+import { getSizeLabel, formatStoryPoints, formatDays } from '../utils/estimates';
 import { useStore } from '../store/useStore';
 
 interface WorkItemCardProps {
@@ -114,8 +114,8 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({ item, onClick }) => {
           {item.type === 'user-story' && (
             <span>{formatStoryPoints(item.storyPoints)} pts</span>
           )}
-          {(item.type === 'task' || item.type === 'bug') && item.estimatedHours != null && (
-            <span>⏱ {item.estimatedHours}h</span>
+          {(item.type === 'task' || item.type === 'bug') && (item.estimatedDays != null || item.estimatedHours != null) && (
+            <span>{item.estimatedDays != null ? `${formatDays(item.estimatedDays)} days` : `⏱ ${item.estimatedHours}h`}</span>
           )}
           {item.assignee && (
             <span>👤 {item.assignee}</span>

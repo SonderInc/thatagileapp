@@ -3,7 +3,7 @@ import { useStore } from '../store/useStore';
 import WorkItemModal from '../components/WorkItemModal';
 import { getAllowedChildTypes, getTypeLabel } from '../utils/hierarchy';
 import { WorkItem, WorkItemType } from '../types';
-import { Plus, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, ChevronDown, ChevronRight, ArrowLeft } from 'lucide-react';
 
 function buildTree(items: WorkItem[]): WorkItem[] {
   const byParent = new Map<string | undefined, WorkItem[]>();
@@ -140,15 +140,23 @@ const TreeRow: React.FC<TreeRowProps> = ({ item, allItems, depth, collapsed, onT
 };
 
 const ProductBacklog: React.FC = () => {
-  const { getProductBacklog, workItems, setSelectedWorkItem } = useStore();
+  const { getProductBacklog, workItems, setSelectedWorkItem, selectedProductId, setSelectedProductId, getProductBacklogItems } = useStore();
   const [showModal, setShowModal] = useState(false);
   const [modalItemId, setModalItemId] = useState<string | null>(null);
   const [modalParentId, setModalParentId] = useState<string | undefined>(undefined);
   const [modalType, setModalType] = useState<WorkItemType | undefined>(undefined);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
+  const product = selectedProductId ? workItems.find((i) => i.id === selectedProductId) : null;
   const backlog = getProductBacklog();
-  const roots = useMemo(() => buildTree(backlog), [backlog]);
+  const roots = useMemo(() => {
+    if (product) return [product];
+    return buildTree(backlog);
+  }, [product, backlog]);
+  const allItems = useMemo(() => {
+    if (selectedProductId && product) return getProductBacklogItems(selectedProductId);
+    return workItems;
+  }, [selectedProductId, product, workItems, getProductBacklogItems]);
 
   const handleToggle = (id: string) => {
     setCollapsed((prev) => {
@@ -161,9 +169,13 @@ const ProductBacklog: React.FC = () => {
 
   const handleAddEpic = () => {
     setModalItemId(null);
-    setModalParentId(undefined);
+    setModalParentId(selectedProductId ?? undefined);
     setModalType('epic');
     setShowModal(true);
+  };
+
+  const handleBackToAll = () => {
+    setSelectedProductId(null);
   };
 
   const handleAddChild = (parentId: string, type: WorkItemType) => {
@@ -191,42 +203,68 @@ const ProductBacklog: React.FC = () => {
 
   return (
     <div style={{ padding: '24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
+          {product && (
+            <button
+              type="button"
+              onClick={handleBackToAll}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                marginBottom: '8px',
+                padding: '6px 0',
+                background: 'none',
+                border: 'none',
+                color: '#3b82f6',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer',
+              }}
+            >
+              <ArrowLeft size={18} />
+              All products
+            </button>
+          )}
           <h1 style={{ margin: 0, fontSize: '32px', fontWeight: '700', color: '#111827' }}>
-            Product Backlog
+            {product ? `Product Backlog: ${product.title}` : 'Product Backlog'}
           </h1>
           <p style={{ margin: '8px 0 0 0', color: '#6b7280', fontSize: '14px' }}>
-            Single source of truth for all work items. Products contain Epics, Epics contain Features, Features contain User Stories, User Stories contain Tasks and Bugs.
+            {product
+              ? `Backlog for ${product.title}. Epics, Features, User Stories, Tasks and Bugs.`
+              : 'Single source of truth for all work items. Products contain Epics, Epics contain Features, Features contain User Stories, User Stories contain Tasks and Bugs.'}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            onClick={() => { setModalItemId(null); setModalParentId(undefined); setModalType('product'); setShowModal(true); }}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: '#3b82f6',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            <Plus size={20} />
-            Add Product
-          </button>
+          {!product && (
+            <button
+              onClick={() => { setModalItemId(null); setModalParentId(undefined); setModalType('product'); setShowModal(true); }}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: '#3b82f6',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <Plus size={20} />
+              Add Product
+            </button>
+          )}
           <button
             onClick={handleAddEpic}
             style={{
               padding: '12px 24px',
-              backgroundColor: '#ffffff',
-              color: '#374151',
-              border: '1px solid #d1d5db',
+              backgroundColor: product ? '#3b82f6' : '#ffffff',
+              color: product ? '#ffffff' : '#374151',
+              border: product ? 'none' : '1px solid #d1d5db',
               borderRadius: '8px',
               fontSize: '14px',
               fontWeight: '500',
@@ -259,7 +297,7 @@ const ProductBacklog: React.FC = () => {
             <TreeRow
               key={item.id}
               item={item}
-              allItems={workItems}
+              allItems={allItems}
               depth={0}
               collapsed={collapsed}
               onToggle={handleToggle}

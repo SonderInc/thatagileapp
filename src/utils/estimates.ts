@@ -33,3 +33,16 @@ export function formatStoryPoints(points: number | null | undefined): string {
   if (points == null) return '?';
   return String(points);
 }
+
+export const DAYS_OPTIONS: { value: number | null; label: string }[] = [
+  { value: null, label: '?' },
+  { value: 0.5, label: '0.5' },
+  { value: 1, label: '1' },
+  { value: 1.5, label: '1.5' },
+  { value: 2, label: '2' },
+];
+
+export function formatDays(days: number | null | undefined): string {
+  if (days == null) return '?';
+  return String(days);
+}
