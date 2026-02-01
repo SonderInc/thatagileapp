@@ -10,8 +10,8 @@ export type WorkItemStatus =
   | 'intake' | 'define' | 'design' | 'develop' | 'release' | 'operate'
   // Team-level Features: Backlog → To Do → In Progress → Demo → Accepted/Done
   | 'demo' | 'accepted'
-  // Stories/Bug/Tasks (Sprint): Backlog → To Do → In Progress → Done
-  | 'to-do' | 'in-progress';
+  // Stories/Bug/Tasks (Sprint): Backlog → Ready → In Progress → Done → Archive
+  | 'to-do' | 'in-progress' | 'archive';
 
 export type Role = 
   | 'program-owner' 

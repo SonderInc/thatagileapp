@@ -36,28 +36,32 @@ export const TEAM_COLUMNS: KanbanColumn[] = [
   { id: 'done', name: 'Done', status: 'done', workItemIds: [], order: 3 },
 ];
 
-// Team board swim-lane layout: 3 columns (Backlog, Progress, Done)
+// Team board swim-lane layout: 5 columns (Backlog, Ready, In Progress, Done, Archive)
 export const TEAM_BOARD_COLUMNS: KanbanColumn[] = [
   { id: 'backlog', name: 'Backlog', status: 'backlog', workItemIds: [], order: 0 },
-  { id: 'in-progress', name: 'Progress', status: 'in-progress', workItemIds: [], order: 1 },
-  { id: 'done', name: 'Done', status: 'done', workItemIds: [], order: 2 },
+  { id: 'to-do', name: 'Ready', status: 'to-do', workItemIds: [], order: 1 },
+  { id: 'in-progress', name: 'In Progress', status: 'in-progress', workItemIds: [], order: 2 },
+  { id: 'done', name: 'Done', status: 'done', workItemIds: [], order: 3 },
+  { id: 'archive', name: 'Archive', status: 'archive', workItemIds: [], order: 4 },
 ];
-
-const TEAM_BOARD_BACKLOG_STATUSES: WorkItemStatus[] = ['backlog', 'to-do'];
 
 /** Status to set when dropping an item into a team board column */
 export function getStatusForTeamColumn(columnId: string): WorkItemStatus {
   if (columnId === 'backlog') return 'backlog';
+  if (columnId === 'to-do') return 'to-do';
   if (columnId === 'in-progress') return 'in-progress';
   if (columnId === 'done') return 'done';
+  if (columnId === 'archive') return 'archive';
   return 'backlog';
 }
 
 /** Whether a status belongs in the given team board column */
 export function isStatusInTeamColumn(status: WorkItemStatus, columnId: string): boolean {
-  if (columnId === 'backlog') return TEAM_BOARD_BACKLOG_STATUSES.includes(status);
+  if (columnId === 'backlog') return status === 'backlog';
+  if (columnId === 'to-do') return status === 'to-do';
   if (columnId === 'in-progress') return status === 'in-progress';
   if (columnId === 'done') return status === 'done';
+  if (columnId === 'archive') return status === 'archive';
   return false;
 }
 
@@ -94,6 +98,7 @@ export const getStatusColor = (status: WorkItemStatus): string => {
     demo: '#0ea5e9', // sky
     accepted: '#22c55e', // green (Accepted/Done)
     done: '#6b7280', // gray
+    archive: '#9ca3af', // muted gray
   };
   return colorMap[status] || '#6b7280';
 };

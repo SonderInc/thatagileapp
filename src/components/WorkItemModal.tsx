@@ -246,6 +246,7 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
                 <option value="to-do">To Do</option>
                 <option value="in-progress">In Progress</option>
                 <option value="done">Done</option>
+                <option value="archive">Archive</option>
               </select>
             </div>
 

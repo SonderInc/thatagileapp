@@ -10,9 +10,11 @@ interface WorkItemCardProps {
   onClick?: () => void;
   /** Half-height card for tasks/bugs under user stories on Team Board */
   compact?: boolean;
+  /** Override border color (e.g. Ready-column story with task in progress = green) */
+  borderColorOverride?: string;
 }
 
-const WorkItemCard: React.FC<WorkItemCardProps> = ({ item, onClick, compact }) => {
+const WorkItemCard: React.FC<WorkItemCardProps> = ({ item, onClick, compact, borderColorOverride }) => {
   const { setSelectedWorkItem, getAggregatedStoryPoints } = useStore();
 
   const handleClick = () => {
@@ -38,7 +40,7 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({ item, onClick, compact }) =
       onClick={handleClick}
       style={{
         backgroundColor: '#ffffff',
-        border: `2px solid ${item.color || getStatusColor(item.status)}`,
+        border: `2px solid ${borderColorOverride ?? item.color ?? getStatusColor(item.status)}`,
         borderRadius: compact ? 6 : 8,
         padding,
         cursor: 'pointer',

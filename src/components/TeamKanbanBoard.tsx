@@ -1,16 +1,12 @@
 import React from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { useStore } from '../store/useStore';
-import { KanbanColumn, WorkItem, WorkItemStatus } from '../types';
+import { KanbanColumn, WorkItem } from '../types';
 import { getStatusColor, getStatusForTeamColumn, isStatusInTeamColumn } from '../utils/boardConfig';
 import WorkItemCard from './WorkItemCard';
 import { Check } from 'lucide-react';
 
-const BACKLOG_STATUSES: WorkItemStatus[] = ['backlog', 'to-do'];
-
-function isBacklogStatus(s: WorkItemStatus): boolean {
-  return BACKLOG_STATUSES.includes(s);
-}
+const READY_COLUMN_GREEN = '#10b981'; // green when story has task in progress
 
 interface TeamKanbanBoardProps {
   boardId: string;
@@ -150,17 +146,22 @@ const TeamKanbanBoard: React.FC<TeamKanbanBoardProps> = ({
                           </div>
 
                           {storyRows.map(({ story, tasks: tasksInColumn }) => {
-                            const showFullStoryCard =
-                              (columnId === 'backlog' && isBacklogStatus(story.status)) ||
-                              (columnId === 'in-progress' && story.status === 'in-progress') ||
-                              (columnId === 'done' && story.status === 'done');
+                            const showFullStoryCard = isStatusInTeamColumn(story.status, columnId);
 
                             const showStoryLabel =
                               tasksInColumn.length > 0 && !showFullStoryCard;
                             const showDoneCheckbox =
                               columnId !== 'done' &&
+                              columnId !== 'archive' &&
                               showFullStoryCard &&
                               allTasksDoneForStory(story.id);
+
+                            const storyHasTaskInProgress =
+                              getTasksForStory(story.id).some((t) => t.status === 'in-progress');
+                            const readyColumnGreenOverride =
+                              columnId === 'to-do' && showFullStoryCard && storyHasTaskInProgress
+                                ? READY_COLUMN_GREEN
+                                : undefined;
 
                             if (
                               !showFullStoryCard &&
@@ -186,7 +187,10 @@ const TeamKanbanBoard: React.FC<TeamKanbanBoardProps> = ({
                                     >
                                       <div style={{ flex: 1 }} onClick={(e) => e.stopPropagation()}>
                                         <div onClick={() => handleOpenItem(story.id)}>
-                                          <WorkItemCard item={story} />
+                                          <WorkItemCard
+                                            item={story}
+                                            borderColorOverride={readyColumnGreenOverride}
+                                          />
                                         </div>
                                       </div>
                                       {showDoneCheckbox && (
