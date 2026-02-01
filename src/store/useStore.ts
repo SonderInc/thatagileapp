@@ -26,6 +26,7 @@ interface AppState {
   updateSprint: (id: string, updates: Partial<Sprint>) => void;
   
   setBoards: (boards: KanbanBoard[]) => void;
+  setUsers: (users: User[]) => void;
   setSelectedBoard: (boardId: string | null) => void;
   setSelectedWorkItem: (itemId: string | null) => void;
   setViewMode: (mode: AppState['viewMode']) => void;
@@ -67,7 +68,7 @@ export const useStore = create<AppState>((set, get) => ({
     workItems: state.workItems.filter((item) => item.id !== id),
   })),
   
-  moveWorkItem: (itemId, newStatus, newColumnId) => set((state) => ({
+  moveWorkItem: (itemId, newStatus, _newColumnId) => set((state) => ({
     workItems: state.workItems.map((item) =>
       item.id === itemId ? { ...item, status: newStatus, updatedAt: new Date() } : item
     ),
@@ -82,6 +83,7 @@ export const useStore = create<AppState>((set, get) => ({
   })),
   
   setBoards: (boards) => set({ boards }),
+  setUsers: (users) => set({ users }),
   setSelectedBoard: (boardId) => set({ selectedBoard: boardId }),
   setSelectedWorkItem: (itemId) => set({ selectedWorkItem: itemId }),
   setViewMode: (mode) => set({ viewMode: mode }),

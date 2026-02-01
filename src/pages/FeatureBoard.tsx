@@ -6,7 +6,7 @@ import { FEATURE_COLUMNS } from '../utils/boardConfig';
 import { Plus } from 'lucide-react';
 
 const FeatureBoard: React.FC = () => {
-  const { workItems, getWorkItemsByType, selectedWorkItem, setSelectedWorkItem } = useStore();
+  const { getWorkItemsByType, selectedWorkItem, setSelectedWorkItem } = useStore();
   const [showModal, setShowModal] = useState(false);
   const [modalColumnId, setModalColumnId] = useState<string | null>(null);
   

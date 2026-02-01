@@ -16,6 +16,8 @@ interface KanbanBoardProps {
 const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId, columns, workItems, onAddItem }) => {
   const { moveWorkItem } = useStore();
 
+  const boardKey = boardId;
+
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
 
@@ -30,7 +32,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId, columns, workItems, 
   };
 
   return (
-    <DragDropContext onDragEnd={handleDragEnd}>
+    <DragDropContext key={boardKey} onDragEnd={handleDragEnd}>
       <div className="kanban-board" style={{ display: 'flex', gap: '16px', padding: '20px', overflowX: 'auto', minHeight: '600px' }}>
         {columns.map((column) => {
           const columnItems = getItemsForColumn(column.id);

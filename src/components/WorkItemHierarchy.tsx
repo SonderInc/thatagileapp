@@ -1,5 +1,4 @@
 import React from 'react';
-import { WorkItem } from '../types';
 import { useStore } from '../store/useStore';
 import { ChevronRight } from 'lucide-react';
 
