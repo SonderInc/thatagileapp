@@ -229,6 +229,7 @@ export const useStore = create<AppState>((set, get) => ({
     );
   },
 
+  /** Team board lanes: one per feature (with user stories), plus Ad hoc and Bug lanes. */
   getTeamBoardLanes: () => {
     const items = get().workItems;
     const lanes: { id: string; title: string }[] = [];
@@ -250,6 +251,11 @@ export const useStore = create<AppState>((set, get) => ({
     return lanes;
   },
 
+  /**
+   * Items for a lane. For a feature lane: only user stories with that feature as parent.
+   * The board shows tasks/bugs only via getTasksForStory(story.id) for these stories,
+   * so all user stories and their tasks/bugs stay in the same swim lane.
+   */
   getStoriesForLane: (laneId: string) => {
     const items = get().workItems;
     if (laneId === '__ad_hoc__') {

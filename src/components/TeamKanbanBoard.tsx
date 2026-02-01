@@ -56,93 +56,154 @@ const TeamKanbanBoard: React.FC<TeamKanbanBoardProps> = ({
     moveWorkItem(storyId, 'done');
   };
 
+  const LANE_LABEL_WIDTH = 120;
+  const COLUMN_MIN_WIDTH = 280;
+
   return (
     <DragDropContext key={boardId} onDragEnd={handleDragEnd}>
       <div
         style={{
           display: 'flex',
-          gap: '16px',
+          flexDirection: 'column',
           padding: '20px',
           overflowX: 'auto',
           minHeight: '600px',
+          backgroundColor: '#ffffff',
+          borderRadius: '8px',
+          border: '1px solid #e5e7eb',
         }}
       >
-        {columns.map((column) => {
-          const columnId = column.id;
-          return (
+        {/* Header row: lane label + column names */}
+        <div
+          style={{
+            display: 'flex',
+            flexShrink: 0,
+            borderBottom: '2px solid #e5e7eb',
+          }}
+        >
+          <div
+            style={{
+              width: LANE_LABEL_WIDTH,
+              minWidth: LANE_LABEL_WIDTH,
+              padding: '12px 8px',
+              fontSize: '12px',
+              fontWeight: '600',
+              color: '#6b7280',
+              textTransform: 'uppercase',
+            }}
+          >
+            Lane
+          </div>
+          {columns.map((column) => (
             <div
               key={column.id}
               style={{
-                backgroundColor: '#ffffff',
-                borderRadius: '8px',
-                padding: '16px',
-                minWidth: '320px',
-                width: '320px',
-                border: '1px solid #e5e7eb',
-                display: 'flex',
-                flexDirection: 'column',
+                minWidth: COLUMN_MIN_WIDTH,
+                width: COLUMN_MIN_WIDTH,
+                padding: '12px 8px',
+                borderLeft: '1px solid #e5e7eb',
               }}
             >
               <div
                 style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '12px',
-                }}
-              >
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#111827' }}>
-                  {column.name}
-                </h3>
-              </div>
-              <div
-                style={{
-                  width: '100%',
                   height: '4px',
                   backgroundColor: getStatusColor(column.status),
                   borderRadius: '2px',
-                  marginBottom: '12px',
+                  marginBottom: '8px',
                 }}
               />
-              <div style={{ flex: 1, overflowY: 'auto' }}>
-                {lanes.map((lane) => {
-                  const droppableId = `${columnId}::${lane.id}`;
-                  const isBugLane = lane.id === BUG_LANE_ID;
-                  const laneItems = getStoriesForLane(lane.id);
+              <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                {column.name}
+              </h3>
+              {onAddItem && (
+                <button
+                  onClick={() => onAddItem(column.id)}
+                  style={{
+                    marginTop: '8px',
+                    padding: '6px',
+                    border: '1px dashed #d1d5db',
+                    borderRadius: '6px',
+                    backgroundColor: 'transparent',
+                    color: '#6b7280',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    width: '100%',
+                  }}
+                >
+                  Add Item
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
 
-                  if (isBugLane) {
-                    const bugsInColumn = laneItems.filter((b) =>
-                      isStatusInTeamColumn(b.status, columnId)
-                    );
-                    return (
-                      <Droppable key={droppableId} droppableId={droppableId}>
+        {/* One row per swim lane: lane crosses all columns */}
+        {lanes.map((lane, laneIndex) => {
+          const isBugLane = lane.id === BUG_LANE_ID;
+          const laneItems = getStoriesForLane(lane.id);
+          const isEven = laneIndex % 2 === 0;
+
+          return (
+            <div
+              key={lane.id}
+              style={{
+                display: 'flex',
+                alignItems: 'stretch',
+                flexShrink: 0,
+                borderTop: '2px solid #e5e7eb',
+                borderBottom: '2px solid #e5e7eb',
+                minHeight: '60px',
+                backgroundColor: isEven ? '#fafafa' : '#ffffff',
+              }}
+            >
+              <div
+                style={{
+                  width: LANE_LABEL_WIDTH,
+                  minWidth: LANE_LABEL_WIDTH,
+                  padding: '8px',
+                  borderRight: '1px solid #e5e7eb',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  color: '#6b7280',
+                  textTransform: 'uppercase',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                {lane.title}
+              </div>
+              {columns.map((column) => {
+                const columnId = column.id;
+                const droppableId = `${columnId}::${lane.id}`;
+
+                if (isBugLane) {
+                  const bugsInColumn = laneItems.filter((b) =>
+                    isStatusInTeamColumn(b.status, columnId)
+                  );
+                  return (
+                    <div
+                      key={droppableId}
+                      style={{
+                        minWidth: COLUMN_MIN_WIDTH,
+                        width: COLUMN_MIN_WIDTH,
+                        borderLeft: '1px solid #e5e7eb',
+                        padding: '8px',
+                        overflowY: 'auto',
+                        maxHeight: '400px',
+                      }}
+                    >
+                      <Droppable droppableId={droppableId}>
                         {(provided, snapshot) => (
                           <div
                             ref={provided.innerRef}
                             {...provided.droppableProps}
                             style={{
-                              marginBottom: '16px',
-                              borderTop: '1px solid #e5e7eb',
-                              borderBottom: '1px solid #e5e7eb',
+                              minHeight: '40px',
                               backgroundColor: snapshot.isDraggingOver ? '#f9fafb' : 'transparent',
                               borderRadius: '6px',
-                              padding: '8px',
-                              minHeight: '40px',
+                              padding: '4px',
                             }}
                           >
-                            <div
-                              style={{
-                                fontSize: '12px',
-                                fontWeight: '600',
-                                color: '#6b7280',
-                                textTransform: 'uppercase',
-                                marginBottom: '8px',
-                                paddingBottom: '4px',
-                                borderBottom: '1px solid #e5e7eb',
-                              }}
-                            >
-                              {lane.title}
-                            </div>
                             {bugsInColumn.map((bug, index) => (
                               <Draggable key={bug.id} draggableId={bug.id} index={index}>
                                 {(provided, snapshot) => (
@@ -169,53 +230,47 @@ const TeamKanbanBoard: React.FC<TeamKanbanBoardProps> = ({
                           </div>
                         )}
                       </Droppable>
-                    );
-                  }
-
-                  const stories = laneItems;
-                  const storyRows: { story: WorkItem; tasks: WorkItem[] }[] = stories.map(
-                    (story) => ({
-                      story,
-                      tasks: getTasksForStory(story.id).filter((t) =>
-                        isStatusInTeamColumn(t.status, columnId)
-                      ),
-                    })
+                    </div>
                   );
-                  let taskIndex = 0;
+                }
 
-                  return (
-                    <Droppable key={droppableId} droppableId={droppableId}>
+                const stories = laneItems;
+                const storyRows: { story: WorkItem; tasks: WorkItem[] }[] = stories.map(
+                  (story) => ({
+                    story,
+                    tasks: getTasksForStory(story.id).filter((t) =>
+                      isStatusInTeamColumn(t.status, columnId)
+                    ),
+                  })
+                );
+                let taskIndex = 0;
+
+                return (
+                  <div
+                    key={droppableId}
+                    style={{
+                      minWidth: COLUMN_MIN_WIDTH,
+                      width: COLUMN_MIN_WIDTH,
+                      borderLeft: '1px solid #e5e7eb',
+                      padding: '8px',
+                      overflowY: 'auto',
+                      maxHeight: '400px',
+                    }}
+                  >
+                    <Droppable droppableId={droppableId}>
                       {(provided, snapshot) => (
                         <div
                           ref={provided.innerRef}
                           {...provided.droppableProps}
                           style={{
-                            marginBottom: '16px',
-                            borderTop: '1px solid #e5e7eb',
-                            borderBottom: '1px solid #e5e7eb',
+                            minHeight: '40px',
                             backgroundColor: snapshot.isDraggingOver ? '#f9fafb' : 'transparent',
                             borderRadius: '6px',
-                            padding: '8px',
-                            minHeight: '40px',
+                            padding: '4px',
                           }}
                         >
-                          <div
-                            style={{
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              color: '#6b7280',
-                              textTransform: 'uppercase',
-                              marginBottom: '8px',
-                              paddingBottom: '4px',
-                              borderBottom: '1px solid #e5e7eb',
-                            }}
-                          >
-                            {lane.title}
-                          </div>
-
                           {storyRows.map(({ story, tasks: tasksInColumn }) => {
                             const showFullStoryCard = isStatusInTeamColumn(story.status, columnId);
-
                             const showStoryLabel =
                               tasksInColumn.length > 0 && !showFullStoryCard;
                             const showDoneCheckbox =
@@ -223,7 +278,6 @@ const TeamKanbanBoard: React.FC<TeamKanbanBoardProps> = ({
                               columnId !== 'archive' &&
                               showFullStoryCard &&
                               allTasksDoneForStory(story.id);
-
                             const storyHasTaskInProgress =
                               getTasksForStory(story.id).some((t) => t.status === 'in-progress');
                             const readyColumnGreenOverride =
@@ -300,30 +354,30 @@ const TeamKanbanBoard: React.FC<TeamKanbanBoardProps> = ({
                                   </div>
                                 )}
                                 {tasksInColumn.map((task, i) => (
-                                    <Draggable
-                                      key={task.id}
-                                      draggableId={task.id}
-                                      index={startIndex + i}
-                                    >
-                                      {(provided, snapshot) => (
-                                        <div
-                                          ref={provided.innerRef}
-                                          {...provided.draggableProps}
-                                          {...provided.dragHandleProps}
-                                          style={{
-                                            ...provided.draggableProps.style,
-                                            opacity: snapshot.isDragging ? 0.8 : 1,
-                                            marginBottom: '6px',
-                                          }}
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleOpenItem(task.id);
-                                          }}
-                                        >
-                                          <WorkItemCard item={task} compact />
-                                        </div>
-                                      )}
-                                    </Draggable>
+                                  <Draggable
+                                    key={task.id}
+                                    draggableId={task.id}
+                                    index={startIndex + i}
+                                  >
+                                    {(provided, snapshot) => (
+                                      <div
+                                        ref={provided.innerRef}
+                                        {...provided.draggableProps}
+                                        {...provided.dragHandleProps}
+                                        style={{
+                                          ...provided.draggableProps.style,
+                                          opacity: snapshot.isDragging ? 0.8 : 1,
+                                          marginBottom: '6px',
+                                        }}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleOpenItem(task.id);
+                                        }}
+                                      >
+                                        <WorkItemCard item={task} compact />
+                                      </div>
+                                    )}
+                                  </Draggable>
                                 ))}
                               </div>
                             );
@@ -332,31 +386,9 @@ const TeamKanbanBoard: React.FC<TeamKanbanBoardProps> = ({
                         </div>
                       )}
                     </Droppable>
-                  );
-                })}
-              </div>
-              {onAddItem && (
-                <button
-                  onClick={() => onAddItem(column.id)}
-                  style={{
-                    marginTop: '12px',
-                    padding: '8px',
-                    border: '1px dashed #d1d5db',
-                    borderRadius: '6px',
-                    backgroundColor: 'transparent',
-                    color: '#6b7280',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '4px',
-                    fontSize: '14px',
-                    width: '100%',
-                  }}
-                >
-                  Add Item
-                </button>
-              )}
+                  </div>
+                );
+              })}
             </div>
           );
         })}
