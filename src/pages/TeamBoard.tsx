@@ -1,27 +1,24 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
-import KanbanBoard from '../components/KanbanBoard';
+import TeamKanbanBoard from '../components/TeamKanbanBoard';
 import WorkItemModal from '../components/WorkItemModal';
-import { TEAM_COLUMNS } from '../utils/boardConfig';
+import { TEAM_BOARD_COLUMNS } from '../utils/boardConfig';
 import { Plus } from 'lucide-react';
 
 const TeamBoard: React.FC = () => {
-  const { workItems, sprints, getWorkItemsBySprint, selectedWorkItem, setSelectedWorkItem } = useStore();
+  const {
+    sprints,
+    getFeaturesWithUserStories,
+    selectedWorkItem,
+    setSelectedWorkItem,
+  } = useStore();
   const [showModal, setShowModal] = useState(false);
   const [modalColumnId, setModalColumnId] = useState<string | null>(null);
   const [selectedSprintId, setSelectedSprintId] = useState<string | null>(null);
-  
+
+  const features = getFeaturesWithUserStories();
   const currentSprint = sprints.find((s) => s.status === 'in-progress');
   const upcomingSprints = sprints.filter((s) => s.status === 'upcoming');
-  
-  const getSprintWorkItems = (sprintId: string | null) => {
-    if (!sprintId) {
-      return workItems.filter((item) =>
-        item.type === 'user-story' || item.type === 'bug' || item.type === 'task'
-      );
-    }
-    return getWorkItemsBySprint(sprintId);
-  };
 
   const handleAddItem = (columnId: string) => {
     setModalColumnId(columnId);
@@ -123,11 +120,12 @@ const TeamBoard: React.FC = () => {
         ))}
       </div>
 
-      <KanbanBoard
+      <TeamKanbanBoard
         boardId={`team-board-${selectedSprintId || 'all'}`}
-        columns={TEAM_COLUMNS}
-        workItems={getSprintWorkItems(selectedSprintId)}
+        columns={TEAM_BOARD_COLUMNS}
+        features={features}
         onAddItem={handleAddItem}
+        onOpenItem={() => setShowModal(true)}
       />
 
       {showModal && (

@@ -36,6 +36,31 @@ export const TEAM_COLUMNS: KanbanColumn[] = [
   { id: 'done', name: 'Done', status: 'done', workItemIds: [], order: 3 },
 ];
 
+// Team board swim-lane layout: 3 columns (Backlog, Progress, Done)
+export const TEAM_BOARD_COLUMNS: KanbanColumn[] = [
+  { id: 'backlog', name: 'Backlog', status: 'backlog', workItemIds: [], order: 0 },
+  { id: 'in-progress', name: 'Progress', status: 'in-progress', workItemIds: [], order: 1 },
+  { id: 'done', name: 'Done', status: 'done', workItemIds: [], order: 2 },
+];
+
+const TEAM_BOARD_BACKLOG_STATUSES: WorkItemStatus[] = ['backlog', 'to-do'];
+
+/** Status to set when dropping an item into a team board column */
+export function getStatusForTeamColumn(columnId: string): WorkItemStatus {
+  if (columnId === 'backlog') return 'backlog';
+  if (columnId === 'in-progress') return 'in-progress';
+  if (columnId === 'done') return 'done';
+  return 'backlog';
+}
+
+/** Whether a status belongs in the given team board column */
+export function isStatusInTeamColumn(status: WorkItemStatus, columnId: string): boolean {
+  if (columnId === 'backlog') return TEAM_BOARD_BACKLOG_STATUSES.includes(status);
+  if (columnId === 'in-progress') return status === 'in-progress';
+  if (columnId === 'done') return status === 'done';
+  return false;
+}
+
 export const getColumnsForLevel = (level: 'epic' | 'feature' | 'product' | 'team'): KanbanColumn[] => {
   switch (level) {
     case 'epic':

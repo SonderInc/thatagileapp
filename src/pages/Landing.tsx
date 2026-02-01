@@ -2,10 +2,10 @@ import React from 'react';
 import { useStore } from '../store/useStore';
 import { WorkItem } from '../types';
 import { getTypeLabel } from '../utils/hierarchy';
-import { Package } from 'lucide-react';
+import { Package, Plus } from 'lucide-react';
 
 const Landing: React.FC = () => {
-  const { getWorkItemsByType, setSelectedProductId, setViewMode } = useStore();
+  const { getWorkItemsByType, setSelectedProductId, setViewMode, canAddProduct } = useStore();
   const products = getWorkItemsByType('product');
 
   const handleProductClick = (product: WorkItem) => {
@@ -13,20 +13,48 @@ const Landing: React.FC = () => {
     setViewMode('backlog');
   };
 
-  const handleAddProduct = () => {
+  const handleGoToBacklog = () => {
     setSelectedProductId(null);
     setViewMode('backlog');
   };
 
+  const handleAddProduct = () => {
+    setViewMode('add-product');
+  };
+
   return (
     <div style={{ padding: '24px' }}>
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ margin: 0, fontSize: '32px', fontWeight: '700', color: '#111827' }}>
-          Products
-        </h1>
-        <p style={{ margin: '8px 0 0 0', color: '#6b7280', fontSize: '14px' }}>
-          Select a product to open its backlog. Each product has its own backlog of epics, features, and work items.
-        </p>
+      <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: '32px', fontWeight: '700', color: '#111827' }}>
+            Products
+          </h1>
+          <p style={{ margin: '8px 0 0 0', color: '#6b7280', fontSize: '14px' }}>
+            Select a product to open its backlog. Each product has its own backlog of epics, features, and work items.
+          </p>
+        </div>
+        {canAddProduct() && (
+          <button
+            type="button"
+            onClick={handleAddProduct}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: '#3b82f6',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
+            <Plus size={20} />
+            Add Product
+          </button>
+        )}
       </div>
 
       <div
@@ -51,22 +79,46 @@ const Landing: React.FC = () => {
             <p style={{ margin: 0, fontSize: '16px', marginBottom: '16px' }}>
               No products yet. Add a product to get started.
             </p>
-            <button
-              type="button"
-              onClick={handleAddProduct}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: '#3b82f6',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: 'pointer',
-              }}
-            >
-              Go to Product Backlog
-            </button>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              {canAddProduct() && (
+                <button
+                  type="button"
+                  onClick={handleAddProduct}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#3b82f6',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <Plus size={20} />
+                  Add Product
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleGoToBacklog}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: canAddProduct() ? '#ffffff' : '#3b82f6',
+                  color: canAddProduct() ? '#374151' : '#ffffff',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                }}
+              >
+                Go to Product Backlog
+              </button>
+            </div>
           </div>
         ) : (
           products.map((product) => (

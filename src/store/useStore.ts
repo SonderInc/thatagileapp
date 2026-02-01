@@ -23,7 +23,7 @@ interface AppState {
   selectedBoard: string | null;
   selectedWorkItem: string | null;
   selectedProductId: string | null;
-  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing';
+  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing' | 'add-product';
   
   // Actions
   setWorkItems: (items: WorkItem[]) => void;
@@ -53,6 +53,8 @@ interface AppState {
   getBoard: (boardId: string) => KanbanBoard | undefined;
   getAggregatedStoryPoints: (featureId: string) => number;
   getProductBacklogItems: (productId: string) => WorkItem[];
+  canAddProduct: () => boolean;
+  getFeaturesWithUserStories: () => WorkItem[];
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -210,5 +212,18 @@ export const useStore = create<AppState>((set, get) => ({
       }
     }
     return items.filter((i) => idSet.has(i.id));
+  },
+
+  canAddProduct: () => {
+    // For now allow all; later: check currentUser?.roles (e.g. program-owner, product-owner, product-manager)
+    return true;
+  },
+
+  getFeaturesWithUserStories: () => {
+    const items = get().workItems;
+    const features = items.filter((i) => i.type === 'feature');
+    return features.filter((f) =>
+      items.some((i) => i.parentId === f.id && i.type === 'user-story')
+    );
   },
 }));
