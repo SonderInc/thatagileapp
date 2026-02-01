@@ -1,12 +1,13 @@
 import React from 'react';
 import { useStore } from '../store/useStore';
-import { LayoutDashboard, Layers, Package, Users, List } from 'lucide-react';
+import { LayoutDashboard, Layers, Package, Users, List, ListOrdered } from 'lucide-react';
 
 const Navigation: React.FC = () => {
   const { viewMode, setViewMode } = useStore();
 
   const navItems = [
     { id: 'backlog', label: 'Product Backlog', icon: List },
+    { id: 'list', label: 'Work Items', icon: ListOrdered },
     { id: 'epic', label: 'Epic Board', icon: Layers },
     { id: 'feature', label: 'Feature Board', icon: Package },
     { id: 'team', label: 'Team Board', icon: Users },

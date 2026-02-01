@@ -1,6 +1,7 @@
 import { WorkItemType } from '../types';
 
 const CHILD_TYPES: Record<WorkItemType, WorkItemType[]> = {
+  product: ['epic'],
   epic: ['feature'],
   feature: ['user-story'],
   'user-story': ['task', 'bug'],
@@ -9,7 +10,8 @@ const CHILD_TYPES: Record<WorkItemType, WorkItemType[]> = {
 };
 
 const PARENT_TYPES: Record<WorkItemType, WorkItemType[]> = {
-  epic: [],
+  product: [],
+  epic: ['product'],
   feature: ['epic'],
   'user-story': ['feature'],
   task: ['user-story'],
@@ -29,6 +31,7 @@ export function canBeChildOf(childType: WorkItemType, parentType: WorkItemType):
 }
 
 const TYPE_LABELS: Record<WorkItemType, string> = {
+  product: 'Product',
   epic: 'Epic',
   feature: 'Feature',
   'user-story': 'User Story',

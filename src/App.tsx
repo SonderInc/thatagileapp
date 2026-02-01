@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useStore } from './store/useStore';
 import Navigation from './components/Navigation';
 import ProductBacklog from './pages/ProductBacklog';
+import WorkItemList from './pages/WorkItemList';
 import EpicBoard from './pages/EpicBoard';
 import FeatureBoard from './pages/FeatureBoard';
 import TeamBoard from './pages/TeamBoard';
@@ -31,6 +32,8 @@ function App() {
     switch (viewMode) {
       case 'backlog':
         return <ProductBacklog />;
+      case 'list':
+        return <WorkItemList />;
       case 'epic':
         return <EpicBoard />;
       case 'feature':

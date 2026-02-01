@@ -3,11 +3,12 @@ import { WorkItem, Sprint, KanbanBoard, User, WorkItemType } from '../types';
 import { getAllowedChildTypes } from '../utils/hierarchy';
 
 const TYPE_ORDER: Record<WorkItemType, number> = {
-  epic: 0,
-  feature: 1,
-  'user-story': 2,
-  task: 3,
-  bug: 4,
+  product: 0,
+  epic: 1,
+  feature: 2,
+  'user-story': 3,
+  task: 4,
+  bug: 5,
 };
 
 interface AppState {
@@ -21,7 +22,7 @@ interface AppState {
   // UI State
   selectedBoard: string | null;
   selectedWorkItem: string | null;
-  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog';
+  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list';
   
   // Actions
   setWorkItems: (items: WorkItem[]) => void;

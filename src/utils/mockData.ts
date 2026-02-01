@@ -8,6 +8,19 @@ export const mockUsers: User[] = [
 ];
 
 export const mockWorkItems: WorkItem[] = [
+  // Products
+  {
+    id: 'product-1',
+    type: 'product',
+    title: 'Product Alpha',
+    description: 'Main product line',
+    status: 'backlog',
+    priority: 'high',
+    color: '#3b82f6',
+    createdAt: new Date('2024-01-00'),
+    updatedAt: new Date('2024-01-00'),
+    childrenIds: ['epic-1', 'epic-2'],
+  },
   // Epics
   {
     id: 'epic-1',
@@ -17,6 +30,7 @@ export const mockWorkItems: WorkItem[] = [
     status: 'funnel',
     priority: 'high',
     color: '#ef4444',
+    parentId: 'product-1',
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
   },
@@ -28,6 +42,7 @@ export const mockWorkItems: WorkItem[] = [
     status: 'backlog',
     priority: 'medium',
     color: '#8b5cf6',
+    parentId: 'product-1',
     createdAt: new Date('2024-01-02'),
     updatedAt: new Date('2024-01-02'),
   },

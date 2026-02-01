@@ -12,7 +12,7 @@ function buildTree(items: WorkItem[]): WorkItem[] {
     if (!byParent.has(key)) byParent.set(key, []);
     byParent.get(key)!.push(item);
   }
-  const sortOrder: WorkItemType[] = ['epic', 'feature', 'user-story', 'task', 'bug'];
+  const sortOrder: WorkItemType[] = ['product', 'epic', 'feature', 'user-story', 'task', 'bug'];
   for (const arr of byParent.values()) {
     arr.sort((a, b) => sortOrder.indexOf(a.type) - sortOrder.indexOf(b.type) || a.title.localeCompare(b.title));
   }
@@ -197,28 +197,49 @@ const ProductBacklog: React.FC = () => {
             Product Backlog
           </h1>
           <p style={{ margin: '8px 0 0 0', color: '#6b7280', fontSize: '14px' }}>
-            Single source of truth for all work items. Epics contain Features, Features contain User Stories, User Stories contain Tasks and Bugs.
+            Single source of truth for all work items. Products contain Epics, Epics contain Features, Features contain User Stories, User Stories contain Tasks and Bugs.
           </p>
         </div>
-        <button
-          onClick={handleAddEpic}
-          style={{
-            padding: '12px 24px',
-            backgroundColor: '#3b82f6',
-            color: '#ffffff',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '14px',
-            fontWeight: '500',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <Plus size={20} />
-          Add Epic
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => { setModalItemId(null); setModalParentId(undefined); setModalType('product'); setShowModal(true); }}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: '#3b82f6',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
+            <Plus size={20} />
+            Add Product
+          </button>
+          <button
+            onClick={handleAddEpic}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: '#ffffff',
+              color: '#374151',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
+            <Plus size={20} />
+            Add Epic
+          </button>
+        </div>
       </div>
 
       <div
@@ -231,7 +252,7 @@ const ProductBacklog: React.FC = () => {
       >
         {roots.length === 0 ? (
           <div style={{ padding: '32px', textAlign: 'center', color: '#6b7280' }}>
-            No items in the backlog. Add an Epic to get started.
+            No items in the backlog. Add a Product or Epic to get started.
           </div>
         ) : (
           roots.map((item) => (
