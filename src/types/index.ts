@@ -45,6 +45,15 @@ export const ROLE_LABELS: Record<Role, string> = {
   customer: 'Customer',
 };
 
+/** Tenant (registered company) from Firestore companies collection. */
+export interface TenantCompany {
+  id: string;
+  name: string;
+  slug: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface WorkItem {
   id: string;
   type: WorkItemType;
@@ -56,6 +65,8 @@ export interface WorkItem {
   tags?: string[];
   createdAt: Date;
   updatedAt: Date;
+  /** Tenant id (from companies collection); every work item belongs to one tenant. */
+  companyId?: string;
   parentId?: string; // Links to parent work item
   childrenIds?: string[]; // Links to child work items
   sprintId?: string; // For stories/tasks in sprints
@@ -98,4 +109,13 @@ export interface User {
   email: string;
   roles: Role[];
   avatar?: string;
+}
+
+/** User profile in Firestore users collection (per-company roles in Phase 3). */
+export interface UserProfile {
+  uid: string;
+  email: string;
+  displayName: string;
+  companyId: string | null;
+  companies?: { companyId: string; roles: Role[] }[];
 }

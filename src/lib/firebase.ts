@@ -1,4 +1,5 @@
 import { initializeApp, FirebaseApp } from 'firebase/app';
+import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { getAnalytics, Analytics } from 'firebase/analytics';
 
@@ -15,11 +16,13 @@ const firebaseConfig = {
 };
 
 let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
 let db: Firestore | null = null;
 let analytics: Analytics | null = null;
 
 if (firebaseConfig.projectId && firebaseConfig.apiKey) {
   app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
   db = getFirestore(app);
   if (
     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID &&
@@ -36,5 +39,5 @@ if (firebaseConfig.projectId && firebaseConfig.apiKey) {
   }
 }
 
-export { db, analytics };
+export { db, auth, analytics };
 export const isFirebaseConfigured = (): boolean => !!db;

@@ -1,0 +1,33 @@
+rules_version = '2';
+// Copy this file to Firebase Console → Firestore Database → Rules and publish.
+// Phase 1: permissive for workItems and companies so app can scope by companyId.
+// Phase 2/3: tighten with auth and (optionally) role checks via custom claims or users collection.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Tenant companies (registered companies)
+    match /companies/{companyId} {
+      // Allow read if user is authenticated (later: check user profile has this companyId).
+      allow read: if request.auth != null;
+      // Allow create for any authenticated user (company registration).
+      allow create: if request.auth != null;
+      // Allow update/delete only for owner or admin (later: check users/{uid}.companies or custom claims).
+      allow update, delete: if request.auth != null;
+    }
+
+    // Work items (scoped by companyId = tenant id)
+    match /workItems/{itemId} {
+      // Phase 1: permissive; Phase 3: allow read/write only if resource.data.companyId is in user's companies.
+      allow read, write: if request.auth != null;
+      // Example for Phase 3 (requires reading users collection): 
+      // allow read, write: if request.auth != null && 
+      //   resource.data.companyId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companies;
+    }
+
+    // User profiles (uid = Firebase Auth uid)
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Later: allow company admins to read users in their company.
+    }
+  }
+}

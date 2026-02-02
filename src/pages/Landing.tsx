@@ -15,6 +15,7 @@ const Landing: React.FC = () => {
     setViewMode,
     canAddProduct,
     canAddCompany,
+    firebaseUser,
   } = useStore();
   const companies = getCompanies();
   const products = selectedCompanyId
@@ -54,6 +55,26 @@ const Landing: React.FC = () => {
             </h1>
             <p style={{ margin: '8px 0 0 0', color: '#6b7280', fontSize: '14px' }}>
               Select a company to filter its products below, or show all products.
+              {firebaseUser && (
+                <>
+                  {' '}
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('register-company')}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#3b82f6',
+                      cursor: 'pointer',
+                      padding: 0,
+                      fontSize: 'inherit',
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    Register your company
+                  </button>
+                </>
+              )}
             </p>
           </div>
           {canAddCompany() && (

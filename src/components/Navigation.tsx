@@ -1,9 +1,21 @@
 import React from 'react';
+import { signOut } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 import { useStore } from '../store/useStore';
-import { LayoutDashboard, Layers, Package, Users, List, ListOrdered, Home } from 'lucide-react';
+import { LayoutDashboard, Layers, Package, Users, List, ListOrdered, Home, LogOut } from 'lucide-react';
 
 const Navigation: React.FC = () => {
-  const { viewMode, setViewMode, setSelectedProductId } = useStore();
+  const { viewMode, setViewMode, setSelectedProductId, firebaseUser, setFirebaseUser, setCurrentUser, setCurrentTenantId } = useStore();
+
+  const handleSignOut = () => {
+    if (auth) {
+      signOut(auth).then(() => {
+        setFirebaseUser(null);
+        setCurrentUser(null);
+        setCurrentTenantId(null);
+      });
+    }
+  };
 
   const navItems = [
     { id: 'landing', label: 'Home', icon: Home },
@@ -69,6 +81,28 @@ const Navigation: React.FC = () => {
           </button>
         );
       })}
+      {firebaseUser && auth && (
+        <button
+          type="button"
+          onClick={handleSignOut}
+          style={{
+            marginLeft: 'auto',
+            padding: '8px 12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            backgroundColor: 'transparent',
+            border: '1px solid #d1d5db',
+            borderRadius: '8px',
+            color: '#6b7280',
+            cursor: 'pointer',
+            fontSize: '14px',
+          }}
+        >
+          <LogOut size={18} />
+          Sign out
+        </button>
+      )}
     </nav>
   );
 };

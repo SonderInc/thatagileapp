@@ -1,5 +1,13 @@
-import { WorkItem, Sprint, KanbanBoard, User } from '../types';
+import { WorkItem, Sprint, KanbanBoard, User, TenantCompany } from '../types';
 import { EPIC_COLUMNS, FEATURE_COLUMNS, PRODUCT_COLUMNS, TEAM_COLUMNS } from './boardConfig';
+
+/** Seed tenant id for dev when no Firestore companies exist. */
+export const SEED_TENANT_ID = 'seed-tenant-1';
+
+/** Tenant companies (Firestore companies collection) for dev/mock. */
+export const mockTenantCompanies: TenantCompany[] = [
+  { id: SEED_TENANT_ID, name: 'Seed Company', slug: 'seed-company', createdAt: new Date('2024-01-00'), updatedAt: new Date('2024-01-00') },
+];
 
 export const mockUsers: User[] = [
   { id: '1', name: 'John Doe', email: 'john@example.com', roles: ['portfolio-leader', 'business-owner'] },
@@ -8,7 +16,7 @@ export const mockUsers: User[] = [
 ];
 
 export const mockWorkItems: WorkItem[] = [
-  // Companies
+  // Companies (in-tenant work item type)
   {
     id: 'company-1',
     type: 'company',
@@ -16,6 +24,7 @@ export const mockWorkItems: WorkItem[] = [
     description: 'Main company',
     status: 'backlog',
     priority: 'high',
+    companyId: SEED_TENANT_ID,
     createdAt: new Date('2024-01-00'),
     updatedAt: new Date('2024-01-00'),
     childrenIds: ['product-1'],
@@ -27,6 +36,7 @@ export const mockWorkItems: WorkItem[] = [
     description: 'Second company',
     status: 'backlog',
     priority: 'medium',
+    companyId: SEED_TENANT_ID,
     createdAt: new Date('2024-01-00'),
     updatedAt: new Date('2024-01-00'),
     childrenIds: [],
@@ -36,6 +46,7 @@ export const mockWorkItems: WorkItem[] = [
     id: 'product-1',
     type: 'product',
     title: 'Product Alpha',
+    companyId: SEED_TENANT_ID,
     description: 'Main product line',
     status: 'backlog',
     priority: 'high',
@@ -56,6 +67,7 @@ export const mockWorkItems: WorkItem[] = [
     size: 'large',
     color: '#ef4444',
     parentId: 'product-1',
+    companyId: SEED_TENANT_ID,
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
   },
@@ -69,6 +81,7 @@ export const mockWorkItems: WorkItem[] = [
     size: 'medium',
     color: '#8b5cf6',
     parentId: 'product-1',
+    companyId: SEED_TENANT_ID,
     createdAt: new Date('2024-01-02'),
     updatedAt: new Date('2024-01-02'),
   },
@@ -80,6 +93,7 @@ export const mockWorkItems: WorkItem[] = [
     status: 'analysis',
     priority: 'high',
     size: 'xlarge',
+    companyId: SEED_TENANT_ID,
     color: '#f97316',
     createdAt: new Date('2024-01-03'),
     updatedAt: new Date('2024-01-03'),
@@ -94,6 +108,7 @@ export const mockWorkItems: WorkItem[] = [
     priority: 'critical',
     size: 'large',
     color: '#10b981',
+    companyId: SEED_TENANT_ID,
     createdAt: new Date('2024-01-04'),
     updatedAt: new Date('2024-01-04'),
     childrenIds: ['feature-2', 'feature-3'],
@@ -108,6 +123,7 @@ export const mockWorkItems: WorkItem[] = [
     priority: 'high',
     size: 'medium',
     parentId: 'epic-3',
+    companyId: SEED_TENANT_ID,
     color: '#f97316',
     createdAt: new Date('2024-01-05'),
     updatedAt: new Date('2024-01-05'),
@@ -121,6 +137,7 @@ export const mockWorkItems: WorkItem[] = [
     priority: 'medium',
     size: 'large',
     parentId: 'epic-4',
+    companyId: SEED_TENANT_ID,
     color: '#10b981',
     createdAt: new Date('2024-01-06'),
     updatedAt: new Date('2024-01-06'),
@@ -135,6 +152,7 @@ export const mockWorkItems: WorkItem[] = [
     priority: 'high',
     size: 'medium',
     parentId: 'epic-4',
+    companyId: SEED_TENANT_ID,
     color: '#fbbf24',
     createdAt: new Date('2024-01-07'),
     updatedAt: new Date('2024-01-07'),
@@ -147,6 +165,7 @@ export const mockWorkItems: WorkItem[] = [
     status: 'release',
     priority: 'low',
     size: 'small',
+    companyId: SEED_TENANT_ID,
     color: '#10b981',
     createdAt: new Date('2024-01-08'),
     updatedAt: new Date('2024-01-08'),
@@ -160,6 +179,7 @@ export const mockWorkItems: WorkItem[] = [
     status: 'in-progress',
     priority: 'high',
     parentId: 'feature-2',
+    companyId: SEED_TENANT_ID,
     sprintId: 'sprint-1',
     color: '#10b981',
     storyPoints: 8,
@@ -174,6 +194,7 @@ export const mockWorkItems: WorkItem[] = [
     description: 'Second user story description',
     status: 'to-do',
     priority: 'medium',
+    companyId: SEED_TENANT_ID,
     sprintId: 'sprint-1',
     color: '#fbbf24',
     storyPoints: 5,
@@ -188,6 +209,7 @@ export const mockWorkItems: WorkItem[] = [
     status: 'in-progress',
     priority: 'high',
     parentId: 'feature-2',
+    companyId: SEED_TENANT_ID,
     sprintId: 'sprint-1',
     color: '#10b981',
     storyPoints: 13,
@@ -204,6 +226,7 @@ export const mockWorkItems: WorkItem[] = [
     status: 'done',
     priority: 'high',
     parentId: 'story-1',
+    companyId: SEED_TENANT_ID,
     color: '#6b7280',
     estimatedDays: 1,
     createdAt: new Date('2024-01-12'),
@@ -217,6 +240,7 @@ export const mockWorkItems: WorkItem[] = [
     status: 'in-progress',
     priority: 'medium',
     parentId: 'story-1',
+    companyId: SEED_TENANT_ID,
     color: '#10b981',
     estimatedDays: 0.5,
     createdAt: new Date('2024-01-13'),
@@ -231,6 +255,7 @@ export const mockWorkItems: WorkItem[] = [
     status: 'to-do',
     priority: 'critical',
     parentId: 'story-3',
+    companyId: SEED_TENANT_ID,
     color: '#ef4444',
     estimatedDays: 1,
     createdAt: new Date('2024-01-14'),

@@ -1,5 +1,6 @@
+import type { User as FirebaseUser } from 'firebase/auth';
 import { create } from 'zustand';
-import { WorkItem, Sprint, KanbanBoard, User, WorkItemType } from '../types';
+import { WorkItem, Sprint, KanbanBoard, User, WorkItemType, TenantCompany } from '../types';
 import { getAllowedChildTypes } from '../utils/hierarchy';
 import * as firestore from '../lib/firestore';
 
@@ -20,13 +21,19 @@ interface AppState {
   boards: KanbanBoard[];
   users: User[];
   currentUser: User | null;
-  
+  /** Tenant companies (from Firestore companies collection). */
+  tenantCompanies: TenantCompany[];
+  /** Current tenant id (which registered company we're in). Used to scope work items. */
+  currentTenantId: string | null;
+  /** Current Firebase Auth user (null when signed out). */
+  firebaseUser: FirebaseUser | null;
+
   // UI State
   selectedBoard: string | null;
   selectedWorkItem: string | null;
   selectedProductId: string | null;
   selectedCompanyId: string | null;
-  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing' | 'add-product' | 'add-company';
+  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing' | 'add-product' | 'add-company' | 'register-company';
   
   // Actions
   setWorkItems: (items: WorkItem[]) => void;
@@ -46,7 +53,9 @@ interface AppState {
   setSelectedProductId: (id: string | null) => void;
   setSelectedCompanyId: (id: string | null) => void;
   setViewMode: (mode: AppState['viewMode']) => void;
-  
+  setTenantCompanies: (companies: TenantCompany[]) => void;
+  setCurrentTenantId: (id: string | null) => void;
+  setFirebaseUser: (user: FirebaseUser | null) => void;
   setCurrentUser: (user: User | null) => void;
   
   // Computed
@@ -74,6 +83,9 @@ export const useStore = create<AppState>((set, get) => ({
   boards: [],
   users: [],
   currentUser: null,
+  tenantCompanies: [],
+  currentTenantId: null,
+  firebaseUser: null,
   selectedBoard: null,
   selectedWorkItem: null,
   selectedProductId: null,
@@ -85,23 +97,29 @@ export const useStore = create<AppState>((set, get) => ({
   
   addWorkItem: async (item) => {
     const state = get();
-    if (item.parentId) {
-      const parent = state.workItems.find((i) => i.id === item.parentId);
-      if (parent && !getAllowedChildTypes(parent.type).includes(item.type)) {
+    const tenantId = state.currentTenantId ?? item.companyId;
+    const itemWithTenant: WorkItem = { ...item, companyId: item.companyId ?? tenantId ?? undefined };
+    if (!itemWithTenant.companyId) {
+      if (import.meta.env.DEV) console.warn('[Store] addWorkItem: no currentTenantId or companyId');
+      return;
+    }
+    if (itemWithTenant.parentId) {
+      const parent = state.workItems.find((i) => i.id === itemWithTenant.parentId);
+      if (parent && !getAllowedChildTypes(parent.type).includes(itemWithTenant.type)) {
         return;
       }
     }
-    let nextItems = [...state.workItems, item];
-    if (item.parentId) {
-      const parent = nextItems.find((i) => i.id === item.parentId);
+    let nextItems = [...state.workItems, itemWithTenant];
+    if (itemWithTenant.parentId) {
+      const parent = nextItems.find((i) => i.id === itemWithTenant.parentId);
       if (parent) {
-        const childrenIds = [...(parent.childrenIds ?? []), item.id];
+        const childrenIds = [...(parent.childrenIds ?? []), itemWithTenant.id];
         nextItems = nextItems.map((i) =>
-          i.id === item.parentId ? { ...i, childrenIds } : i
+          i.id === itemWithTenant.parentId ? { ...i, childrenIds } : i
         );
       }
     }
-    await firestore.addWorkItem(item);
+    await firestore.addWorkItem(itemWithTenant);
     set({ workItems: nextItems });
   },
   
@@ -183,7 +201,9 @@ export const useStore = create<AppState>((set, get) => ({
   setSelectedProductId: (id) => set({ selectedProductId: id }),
   setSelectedCompanyId: (id) => set({ selectedCompanyId: id }),
   setViewMode: (mode) => set({ viewMode: mode }),
-  
+  setTenantCompanies: (companies) => set({ tenantCompanies: companies }),
+  setCurrentTenantId: (id) => set({ currentTenantId: id }),
+  setFirebaseUser: (user) => set({ firebaseUser: user }),
   setCurrentUser: (user) => set({ currentUser: user }),
   
   // Computed
@@ -234,13 +254,19 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   canAddProduct: () => {
-    // For now allow all; later: check currentUser?.roles (e.g. product-owner, portfolio-leader)
-    return true;
+    const user = get().currentUser;
+    if (!user?.roles?.length) return true;
+    const allowed: (string | undefined)[] = ['admin', 'product-owner', 'portfolio-leader'];
+    return user.roles.some((r) => allowed.includes(r));
   },
 
   getCompanies: () => get().workItems.filter((item) => item.type === 'company'),
   getProductsByCompany: (companyId) => get().getWorkItemsByParent(companyId),
-  canAddCompany: () => true,
+  canAddCompany: () => {
+    const user = get().currentUser;
+    if (!user?.roles?.length) return true;
+    return user.roles.includes('admin');
+  },
 
   getFeaturesWithUserStories: () => {
     const items = get().workItems;
