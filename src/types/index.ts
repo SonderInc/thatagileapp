@@ -14,6 +14,7 @@ export type WorkItemStatus =
   | 'to-do' | 'in-progress' | 'archive';
 
 export type Role =
+  | 'admin'
   | 'developer'
   | 'scrum-master-team-coach'
   | 'product-owner'
@@ -29,6 +30,7 @@ export type Role =
 
 /** Display labels for UI (e.g. "Scrum Master/Team Coach"). */
 export const ROLE_LABELS: Record<Role, string> = {
+  admin: 'Admin',
   developer: 'Developer',
   'scrum-master-team-coach': 'Scrum Master/Team Coach',
   'product-owner': 'Product Owner',
