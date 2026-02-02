@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { addTenantCompany, setUserProfile } from '../lib/firestore';
-import { auth } from '../lib/firebase';
 import type { TenantCompany, UserProfile, Role } from '../types';
 
 const RegisterCompanyPage: React.FC = () => {

@@ -87,7 +87,7 @@ const Login: React.FC = () => {
       const profile: UserProfile = {
         uid: cred.user.uid,
         email: cred.user.email ?? email,
-        displayName: displayName.trim() || cred.user.email?.split('@')[0] ?? 'User',
+        displayName: (displayName.trim() || cred.user.email?.split('@')[0]) ?? 'User',
         companyId: SEED_TENANT_ID,
         companies: [{ companyId: SEED_TENANT_ID, roles: [] }],
       };

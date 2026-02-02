@@ -80,7 +80,8 @@ function App() {
         setTenantCompanies(companies);
         if (companies.length > 0) {
           const first = companies[0].id;
-          setCurrentTenantId((prev) => prev ?? first);
+          const current = useStore.getState().currentTenantId;
+          setCurrentTenantId(current ?? first);
         } else {
           setCurrentTenantId(SEED_TENANT_ID);
           setWorkItems(mockWorkItems);
