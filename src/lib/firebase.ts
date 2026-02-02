@@ -21,7 +21,10 @@ let analytics: Analytics | null = null;
 if (firebaseConfig.projectId && firebaseConfig.apiKey) {
   app = initializeApp(firebaseConfig);
   db = getFirestore(app);
-  if (import.meta.env.VITE_FIREBASE_MEASUREMENT_ID) {
+  if (
+    import.meta.env.VITE_FIREBASE_MEASUREMENT_ID &&
+    import.meta.env.VITE_FIREBASE_ANALYTICS_ENABLED
+  ) {
     analytics = getAnalytics(app);
   }
   if (import.meta.env.DEV) console.log('[Firebase] Connected to project:', firebaseConfig.projectId);
