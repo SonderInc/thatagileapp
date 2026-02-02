@@ -1,11 +1,5 @@
 import React, { useState } from 'react';
-import { auth } from '../lib/firebase';
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  updateProfile,
-} from 'firebase/auth';
-import { getUserProfile, setUserProfile } from '../lib/firestore';
+import { getAuth, getDataStore } from '../lib/adapters';
 import { useStore } from '../store/useStore';
 import { SEED_TENANT_ID } from '../utils/mockData';
 import type { UserProfile } from '../types';
@@ -21,7 +15,7 @@ const Login: React.FC = () => {
 
   const loadProfileAndSetApp = async (uid: string) => {
     try {
-      const profile = await getUserProfile(uid);
+      const profile = await getDataStore().getUserProfile(uid);
       if (profile) {
         setCurrentTenantId(profile.companyId ?? SEED_TENANT_ID);
         setCurrentUser({
@@ -54,14 +48,15 @@ const Login: React.FC = () => {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    if (!auth) {
-      setError('Firebase Auth not configured');
+    const auth = getAuth();
+    if (!auth.isConfigured()) {
+      setError('Auth not configured');
       setLoading(false);
       return;
     }
     try {
-      const cred = await signInWithEmailAndPassword(auth, email, password);
-      await loadProfileAndSetApp(cred.user.uid);
+      const user = await auth.signInWithEmailAndPassword(email, password);
+      await loadProfileAndSetApp(user.uid);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
@@ -74,25 +69,26 @@ const Login: React.FC = () => {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    if (!auth) {
-      setError('Firebase Auth not configured');
+    const auth = getAuth();
+    if (!auth.isConfigured()) {
+      setError('Auth not configured');
       setLoading(false);
       return;
     }
     try {
-      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      const user = await auth.createUserWithEmailAndPassword(email, password);
       if (displayName.trim()) {
-        await updateProfile(cred.user, { displayName: displayName.trim() });
+        await auth.updateDisplayName(user.uid, displayName.trim());
       }
       const profile: UserProfile = {
-        uid: cred.user.uid,
-        email: cred.user.email ?? email,
-        displayName: (displayName.trim() || cred.user.email?.split('@')[0]) ?? 'User',
+        uid: user.uid,
+        email: user.email ?? email,
+        displayName: (displayName.trim() || user.email?.split('@')[0]) ?? 'User',
         companyId: SEED_TENANT_ID,
         companies: [{ companyId: SEED_TENANT_ID, roles: [] }],
       };
-      await setUserProfile(profile);
-      await loadProfileAndSetApp(cred.user.uid);
+      await getDataStore().setUserProfile(profile);
+      await loadProfileAndSetApp(user.uid);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);

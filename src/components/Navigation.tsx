@@ -1,6 +1,5 @@
 import React from 'react';
-import { signOut } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { getAuth } from '../lib/adapters';
 import { useStore } from '../store/useStore';
 import { LayoutDashboard, Layers, Package, Users, List, ListOrdered, Home, LogOut } from 'lucide-react';
 
@@ -8,13 +7,12 @@ const Navigation: React.FC = () => {
   const { viewMode, setViewMode, setSelectedProductId, firebaseUser, setFirebaseUser, setCurrentUser, setCurrentTenantId } = useStore();
 
   const handleSignOut = () => {
-    if (auth) {
-      signOut(auth).then(() => {
-        setFirebaseUser(null);
-        setCurrentUser(null);
-        setCurrentTenantId(null);
-      });
-    }
+    const auth = getAuth();
+    auth.signOut().then(() => {
+      setFirebaseUser(null);
+      setCurrentUser(null);
+      setCurrentTenantId(null);
+    });
   };
 
   const navItems = [
@@ -81,7 +79,7 @@ const Navigation: React.FC = () => {
           </button>
         );
       })}
-      {firebaseUser && auth && (
+      {firebaseUser && (
         <button
           type="button"
           onClick={handleSignOut}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
-import { addTenantCompany, setUserProfile } from '../lib/firestore';
+import { getDataStore } from '../lib/adapters';
 import type { TenantCompany, UserProfile, Role } from '../types';
 
 const RegisterCompanyPage: React.FC = () => {
@@ -29,15 +29,15 @@ const RegisterCompanyPage: React.FC = () => {
       updatedAt: now,
     };
     try {
-      await addTenantCompany(company);
+      await getDataStore().addTenantCompany(company);
       const profile: UserProfile = {
         uid: firebaseUser.uid,
         email: firebaseUser.email ?? '',
-        displayName: firebaseUser.displayName ?? firebaseUser.email?.split('@')[0] ?? 'User',
+        displayName: (firebaseUser.displayName ?? firebaseUser.email?.split('@')[0]) ?? 'User',
         companyId,
         companies: [{ companyId, roles: ['admin' as Role] }],
       };
-      await setUserProfile(profile);
+      await getDataStore().setUserProfile(profile);
       setTenantCompanies([...tenantCompanies, company]);
       setCurrentTenantId(companyId);
       setCurrentUser({

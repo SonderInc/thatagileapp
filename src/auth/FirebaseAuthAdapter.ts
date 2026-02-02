@@ -1,0 +1,48 @@
+/**
+ * Firebase Auth implementation of IAuth.
+ * All firebase/auth imports are confined to this file and lib/firebase.
+ */
+import {
+  onAuthStateChanged as fbOnAuthStateChanged,
+  signInWithEmailAndPassword as fbSignIn,
+  createUserWithEmailAndPassword as fbCreateUser,
+  updateProfile as fbUpdateProfile,
+  signOut as fbSignOut,
+} from 'firebase/auth';
+import { auth, isFirebaseConfigured } from '../lib/firebase';
+import type { IAuth } from './IAuth';
+import type { AuthUser } from '../types';
+
+function toAuthUser(user: { uid: string; email: string | null; displayName: string | null }): AuthUser {
+  return { uid: user.uid, email: user.email ?? null, displayName: user.displayName ?? null };
+}
+
+export const FirebaseAuthAdapter: IAuth = {
+  onAuthStateChanged(callback) {
+    if (!auth) return () => {};
+    return fbOnAuthStateChanged(auth, (user) => {
+      callback(user ? toAuthUser(user) : null);
+    });
+  },
+  async signInWithEmailAndPassword(email, password) {
+    if (!auth) throw new Error('Auth not configured');
+    const { user } = await fbSignIn(auth, email, password);
+    return toAuthUser(user);
+  },
+  async createUserWithEmailAndPassword(email, password) {
+    if (!auth) throw new Error('Auth not configured');
+    const { user } = await fbCreateUser(auth, email, password);
+    return toAuthUser(user);
+  },
+  async updateDisplayName(uid, displayName) {
+    if (!auth) throw new Error('Auth not configured');
+    const current = auth.currentUser;
+    if (current?.uid === uid) {
+      await fbUpdateProfile(current, { displayName });
+    }
+  },
+  async signOut() {
+    if (auth) await fbSignOut(auth);
+  },
+  isConfigured: isFirebaseConfigured,
+};

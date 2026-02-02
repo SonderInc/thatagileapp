@@ -119,3 +119,10 @@ export interface UserProfile {
   companyId: string | null;
   companies?: { companyId: string; roles: Role[] }[];
 }
+
+/** Auth user (provider-agnostic). Use this in UI/store; do not import firebase/auth types. */
+export interface AuthUser {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+}

@@ -1,8 +1,7 @@
-import type { User as FirebaseUser } from 'firebase/auth';
 import { create } from 'zustand';
-import { WorkItem, Sprint, KanbanBoard, User, WorkItemType, TenantCompany } from '../types';
+import { WorkItem, Sprint, KanbanBoard, User, WorkItemType, TenantCompany, AuthUser } from '../types';
 import { getAllowedChildTypes } from '../utils/hierarchy';
-import * as firestore from '../lib/firestore';
+import { getDataStore } from '../lib/adapters';
 
 const TYPE_ORDER: Record<WorkItemType, number> = {
   company: 0,
@@ -25,8 +24,8 @@ interface AppState {
   tenantCompanies: TenantCompany[];
   /** Current tenant id (which registered company we're in). Used to scope work items. */
   currentTenantId: string | null;
-  /** Current Firebase Auth user (null when signed out). */
-  firebaseUser: FirebaseUser | null;
+  /** Current auth user (null when signed out). Provider-agnostic. */
+  firebaseUser: AuthUser | null;
 
   // UI State
   selectedBoard: string | null;
@@ -55,7 +54,7 @@ interface AppState {
   setViewMode: (mode: AppState['viewMode']) => void;
   setTenantCompanies: (companies: TenantCompany[]) => void;
   setCurrentTenantId: (id: string | null) => void;
-  setFirebaseUser: (user: FirebaseUser | null) => void;
+  setFirebaseUser: (user: AuthUser | null) => void;
   setCurrentUser: (user: User | null) => void;
   
   // Computed
@@ -119,7 +118,7 @@ export const useStore = create<AppState>((set, get) => ({
         );
       }
     }
-    await firestore.addWorkItem(itemWithTenant);
+    await getDataStore().addWorkItem(itemWithTenant);
     set({ workItems: nextItems });
   },
   
@@ -157,14 +156,14 @@ export const useStore = create<AppState>((set, get) => ({
         }
       }
     }
-    firestore.updateWorkItem(id, merged).catch(() => {});
+    getDataStore().updateWorkItem(id, merged).catch(() => {});
     return { workItems: nextItems };
   }),
   
   deleteWorkItem: (id) => set((state) => {
     const item = state.workItems.find((i) => i.id === id);
     const nextItems = state.workItems.filter((i) => i.id !== id);
-    firestore.deleteWorkItem(id).catch(() => {});
+    getDataStore().deleteWorkItem(id).catch(() => {});
     if (!item?.parentId) return { workItems: nextItems };
     const parent = nextItems.find((i) => i.id === item.parentId);
     if (!parent) return { workItems: nextItems };
@@ -178,7 +177,7 @@ export const useStore = create<AppState>((set, get) => ({
   
   moveWorkItem: (itemId, newStatus, _newColumnId) => set((state) => {
     const updatedAt = new Date();
-    firestore.updateWorkItem(itemId, { status: newStatus, updatedAt }).catch(() => {});
+    getDataStore().updateWorkItem(itemId, { status: newStatus, updatedAt }).catch(() => {});
     return {
       workItems: state.workItems.map((item) =>
         item.id === itemId ? { ...item, status: newStatus, updatedAt } : item

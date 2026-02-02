@@ -9,9 +9,7 @@ import WorkItemList from './pages/WorkItemList';
 import EpicBoard from './pages/EpicBoard';
 import FeatureBoard from './pages/FeatureBoard';
 import TeamBoard from './pages/TeamBoard';
-import { onAuthStateChanged } from 'firebase/auth';
-import { getWorkItems, getTenantCompanies, getUserProfile } from './lib/firestore';
-import { isFirebaseConfigured, auth } from './lib/firebase';
+import { getAuth, getDataStore } from './lib/adapters';
 import { mockWorkItems, mockSprints, mockBoards, mockUsers, mockTenantCompanies, SEED_TENANT_ID } from './utils/mockData';
 import Login from './pages/Login';
 import RegisterCompanyPage from './pages/RegisterCompanyPage';
@@ -33,15 +31,15 @@ function App() {
   } = useStore();
 
   useEffect(() => {
-    if (!auth) return;
-    return onAuthStateChanged(auth, (user) => {
+    const auth = getAuth();
+    return auth.onAuthStateChanged((user) => {
       setFirebaseUser(user);
     });
   }, [setFirebaseUser]);
 
   useEffect(() => {
-    if (!firebaseUser || !isFirebaseConfigured()) return;
-    getUserProfile(firebaseUser.uid)
+    if (!firebaseUser || !getAuth().isConfigured()) return;
+    getDataStore().getUserProfile(firebaseUser.uid)
       .then((profile) => {
         if (profile) {
           setCurrentTenantId(profile.companyId ?? SEED_TENANT_ID);
@@ -57,7 +55,7 @@ function App() {
         setCurrentTenantId(SEED_TENANT_ID);
         setCurrentUser({
           id: firebaseUser.uid,
-          name: firebaseUser.displayName ?? firebaseUser.email?.split('@')[0] ?? 'User',
+          name: (firebaseUser.displayName ?? firebaseUser.email?.split('@')[0]) ?? 'User',
           email: firebaseUser.email ?? '',
           roles: [],
         });
@@ -65,7 +63,7 @@ function App() {
   }, [firebaseUser?.uid, setCurrentTenantId, setCurrentUser]);
 
   useEffect(() => {
-    if (!isFirebaseConfigured()) {
+    if (!getAuth().isConfigured()) {
       setTenantCompanies(mockTenantCompanies);
       setCurrentTenantId(SEED_TENANT_ID);
       setWorkItems(mockWorkItems);
@@ -75,7 +73,7 @@ function App() {
       setCurrentUser(mockUsers[0]);
       return;
     }
-    getTenantCompanies()
+    getDataStore().getTenantCompanies()
       .then((companies) => {
         setTenantCompanies(companies);
         if (companies.length > 0) {
@@ -100,8 +98,8 @@ function App() {
 
   useEffect(() => {
     if (!currentTenantId) return;
-    if (!isFirebaseConfigured()) return;
-    getWorkItems(currentTenantId)
+    if (!getAuth().isConfigured()) return;
+    getDataStore().getWorkItems(currentTenantId)
       .then((data) => {
         setWorkItems(data);
         if (import.meta.env.DEV) console.log('[Firebase] Loaded', data.length, 'work items for tenant', currentTenantId);
@@ -137,7 +135,7 @@ function App() {
     }
   };
 
-  const firebaseReady = isFirebaseConfigured();
+  const firebaseReady = getAuth().isConfigured();
 
   if (firebaseReady && firebaseUser === null) {
     return (

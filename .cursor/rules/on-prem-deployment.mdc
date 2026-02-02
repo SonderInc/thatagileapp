@@ -1,0 +1,36 @@
+---
+description: On-prem / local server deployment — config-first, adapter layer, no cloud lock-in
+alwaysApply: true
+---
+
+# On-Prem & Local Server Readiness
+
+This project must support **cloud SaaS** and **customer-hosted/on-prem** without rewrite.
+
+## Hard constraints (every change)
+- **No UI/UX or business-logic changes** when adding config/adapters.
+- **No hardcoded** URLs, API endpoints, Firebase project IDs, secrets, regions.
+- **UI MUST NOT import `firebase/*`.** All auth/data/storage via adapters only.
+
+## Config (12-factor)
+- All config from env; centralize in `src/config.ts` (frontend).
+- Required: `APP_BASE_URL`, `API_BASE_URL`, `AUTH_PROVIDER`, `DATA_PROVIDER`, `LOG_LEVEL`, `TENANT_ID`.
+- Keep `.env.example` documented.
+
+## Adapter layer
+- **Data**: use `getDataStore()` → `IDataStore` (implementations: Firestore, future Postgres).
+- **Auth**: use `getAuth()` → `IAuth` (implementations: Firebase, future OIDC/local).
+- **Storage**: use `getObjectStore()` → `IObjectStore` (implementations: Firebase Storage, future S3/MinIO).
+- Do not call Firebase/Firestore directly from components, hooks, or store; only from adapter implementations under `src/data/`, `src/auth/`, `src/storage/`.
+
+## Network
+- All HTTP via `src/api/client.ts`; base URL from config. No direct `fetch`/axios in UI.
+
+## When touching a file that violates
+- Fix that file: move calls behind interfaces, use config, remove firebase imports from UI.
+
+## Definition of done (per change)
+- List files modified and which rule they satisfy.
+- Confirm no UI/UX or behavior change; cloud dependencies remain swappable.
+
+See `docs/DEPLOYMENT.md` for env vars, build/start, and deployment notes.
