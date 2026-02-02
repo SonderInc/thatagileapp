@@ -62,9 +62,26 @@ function App() {
 
   const firebaseReady = isFirebaseConfigured();
 
+  const showProductionPersistenceNotice =
+    !import.meta.env.DEV && !firebaseReady;
+
   return (
     <div className="app">
       <Navigation />
+      {showProductionPersistenceNotice && (
+        <div
+          style={{
+            padding: '8px 16px',
+            fontSize: '13px',
+            color: '#92400e',
+            backgroundColor: '#fef3c7',
+            borderBottom: '1px solid #e5e7eb',
+            textAlign: 'center',
+          }}
+        >
+          Data is not saved. Set Firebase env vars (VITE_FIREBASE_*) in your host to persist work items.
+        </div>
+      )}
       <main style={{ backgroundColor: '#f9fafb', minHeight: 'calc(100vh - 60px)' }}>
         {renderBoard()}
       </main>

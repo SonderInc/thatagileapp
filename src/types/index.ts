@@ -13,18 +13,35 @@ export type WorkItemStatus =
   // Stories/Bug/Tasks (Sprint): Backlog → Ready → In Progress → Done → Archive
   | 'to-do' | 'in-progress' | 'archive';
 
-export type Role = 
-  | 'program-owner' 
-  | 'business-owner' 
-  | 'enterprise-architect'
-  | 'solution-architect'
+export type Role =
+  | 'developer'
+  | 'scrum-master-team-coach'
   | 'product-owner'
+  | 'rte-team-of-teams-coach'
   | 'product-manager'
-  | 'system-architect'
-  | 'quality-assurance'
-  | 'team-lead'
-  | 'scrum-master'
-  | 'development-team';
+  | 'systems-architect'
+  | 'business-owner'
+  | 'solution-manager'
+  | 'epic-owner'
+  | 'enterprise-architect'
+  | 'portfolio-leader'
+  | 'customer';
+
+/** Display labels for UI (e.g. "Scrum Master/Team Coach"). */
+export const ROLE_LABELS: Record<Role, string> = {
+  developer: 'Developer',
+  'scrum-master-team-coach': 'Scrum Master/Team Coach',
+  'product-owner': 'Product Owner',
+  'rte-team-of-teams-coach': 'RTE/Team of Teams Coach',
+  'product-manager': 'Product Manager',
+  'systems-architect': 'Systems Architect',
+  'business-owner': 'Business Owner',
+  'solution-manager': 'Solution Manager',
+  'epic-owner': 'Epic Owner',
+  'enterprise-architect': 'Enterprise Architect',
+  'portfolio-leader': 'Portfolio Leader',
+  customer: 'Customer',
+};
 
 export interface WorkItem {
   id: string;

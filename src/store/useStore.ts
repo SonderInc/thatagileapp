@@ -226,7 +226,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   canAddProduct: () => {
-    // For now allow all; later: check currentUser?.roles (e.g. program-owner, product-owner, product-manager)
+    // For now allow all; later: check currentUser?.roles (e.g. product-owner, portfolio-leader)
     return true;
   },
 

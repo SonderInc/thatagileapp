@@ -2,9 +2,9 @@ import { WorkItem, Sprint, KanbanBoard, User } from '../types';
 import { EPIC_COLUMNS, FEATURE_COLUMNS, PRODUCT_COLUMNS, TEAM_COLUMNS } from './boardConfig';
 
 export const mockUsers: User[] = [
-  { id: '1', name: 'John Doe', email: 'john@example.com', roles: ['program-owner', 'business-owner'] },
-  { id: '2', name: 'Jane Smith', email: 'jane@example.com', roles: ['product-owner', 'scrum-master'] },
-  { id: '3', name: 'Bob Johnson', email: 'bob@example.com', roles: ['development-team', 'team-lead'] },
+  { id: '1', name: 'John Doe', email: 'john@example.com', roles: ['portfolio-leader', 'business-owner'] },
+  { id: '2', name: 'Jane Smith', email: 'jane@example.com', roles: ['product-owner', 'scrum-master-team-coach'] },
+  { id: '3', name: 'Bob Johnson', email: 'bob@example.com', roles: ['developer', 'epic-owner'] },
 ];
 
 export const mockWorkItems: WorkItem[] = [

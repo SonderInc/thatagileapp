@@ -1,5 +1,6 @@
 import { initializeApp, FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
+import { getAnalytics, Analytics } from 'firebase/analytics';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -8,14 +9,21 @@ const firebaseConfig = {
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  ...(import.meta.env.VITE_FIREBASE_MEASUREMENT_ID && {
+    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+  }),
 };
 
 let app: FirebaseApp | null = null;
 let db: Firestore | null = null;
+let analytics: Analytics | null = null;
 
 if (firebaseConfig.projectId && firebaseConfig.apiKey) {
   app = initializeApp(firebaseConfig);
   db = getFirestore(app);
+  if (import.meta.env.VITE_FIREBASE_MEASUREMENT_ID) {
+    analytics = getAnalytics(app);
+  }
   if (import.meta.env.DEV) console.log('[Firebase] Connected to project:', firebaseConfig.projectId);
 } else {
   if (import.meta.env.DEV) {
@@ -25,5 +33,5 @@ if (firebaseConfig.projectId && firebaseConfig.apiKey) {
   }
 }
 
-export { db };
+export { db, analytics };
 export const isFirebaseConfigured = (): boolean => !!db;
