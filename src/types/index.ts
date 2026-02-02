@@ -1,5 +1,5 @@
 // Work Item Types
-export type WorkItemType = 'product' | 'epic' | 'feature' | 'user-story' | 'task' | 'bug';
+export type WorkItemType = 'company' | 'product' | 'epic' | 'feature' | 'user-story' | 'task' | 'bug';
 
 export type EpicFeatureSize = 'small' | 'medium' | 'large' | 'xlarge' | 'xxlarge' | '?';
 

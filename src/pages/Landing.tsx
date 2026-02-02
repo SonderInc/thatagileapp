@@ -5,8 +5,25 @@ import { getTypeLabel } from '../utils/hierarchy';
 import { Package, Plus } from 'lucide-react';
 
 const Landing: React.FC = () => {
-  const { getWorkItemsByType, setSelectedProductId, setViewMode, canAddProduct } = useStore();
-  const products = getWorkItemsByType('product');
+  const {
+    getWorkItemsByType,
+    getCompanies,
+    getProductsByCompany,
+    selectedCompanyId,
+    setSelectedCompanyId,
+    setSelectedProductId,
+    setViewMode,
+    canAddProduct,
+    canAddCompany,
+  } = useStore();
+  const companies = getCompanies();
+  const products = selectedCompanyId
+    ? getProductsByCompany(selectedCompanyId)
+    : getWorkItemsByType('product');
+
+  const handleCompanyClick = (company: WorkItem) => {
+    setSelectedCompanyId(selectedCompanyId === company.id ? null : company.id);
+  };
 
   const handleProductClick = (product: WorkItem) => {
     setSelectedProductId(product.id);
@@ -22,13 +39,93 @@ const Landing: React.FC = () => {
     setViewMode('add-product');
   };
 
+  const handleAddCompany = () => {
+    setViewMode('add-company');
+  };
+
   return (
     <div style={{ padding: '24px' }}>
+      {/* Company section */}
+      <div style={{ marginBottom: '32px' }}>
+        <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
+          <div>
+            <h1 style={{ margin: 0, fontSize: '32px', fontWeight: '700', color: '#111827' }}>
+              Companies
+            </h1>
+            <p style={{ margin: '8px 0 0 0', color: '#6b7280', fontSize: '14px' }}>
+              Select a company to filter its products below, or show all products.
+            </p>
+          </div>
+          {canAddCompany() && (
+            <button
+              type="button"
+              onClick={handleAddCompany}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: '#3b82f6',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <Plus size={20} />
+              Add Company
+            </button>
+          )}
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', marginBottom: '12px' }}>
+          <button
+            type="button"
+            onClick={() => setSelectedCompanyId(null)}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: selectedCompanyId ? '#f3f4f6' : '#3b82f6',
+              color: selectedCompanyId ? '#374151' : '#ffffff',
+              border: '1px solid',
+              borderColor: selectedCompanyId ? '#d1d5db' : '#3b82f6',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer',
+            }}
+          >
+            All
+          </button>
+          {companies.map((company) => (
+            <button
+              key={company.id}
+              type="button"
+              onClick={() => handleCompanyClick(company)}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: selectedCompanyId === company.id ? '#3b82f6' : '#f3f4f6',
+                color: selectedCompanyId === company.id ? '#ffffff' : '#374151',
+                border: '1px solid',
+                borderColor: selectedCompanyId === company.id ? '#3b82f6' : '#d1d5db',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer',
+              }}
+            >
+              {company.title}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Products section */}
       <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '32px', fontWeight: '700', color: '#111827' }}>
+          <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '600', color: '#111827' }}>
             Products
-          </h1>
+          </h2>
           <p style={{ margin: '8px 0 0 0', color: '#6b7280', fontSize: '14px' }}>
             Select a product to open its backlog. Each product has its own backlog of epics, features, and work items.
           </p>

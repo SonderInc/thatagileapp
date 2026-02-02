@@ -8,6 +8,29 @@ export const mockUsers: User[] = [
 ];
 
 export const mockWorkItems: WorkItem[] = [
+  // Companies
+  {
+    id: 'company-1',
+    type: 'company',
+    title: 'Acme Corp',
+    description: 'Main company',
+    status: 'backlog',
+    priority: 'high',
+    createdAt: new Date('2024-01-00'),
+    updatedAt: new Date('2024-01-00'),
+    childrenIds: ['product-1'],
+  },
+  {
+    id: 'company-2',
+    type: 'company',
+    title: 'Beta Inc',
+    description: 'Second company',
+    status: 'backlog',
+    priority: 'medium',
+    createdAt: new Date('2024-01-00'),
+    updatedAt: new Date('2024-01-00'),
+    childrenIds: [],
+  },
   // Products
   {
     id: 'product-1',
@@ -17,6 +40,7 @@ export const mockWorkItems: WorkItem[] = [
     status: 'backlog',
     priority: 'high',
     color: '#3b82f6',
+    parentId: 'company-1',
     createdAt: new Date('2024-01-00'),
     updatedAt: new Date('2024-01-00'),
     childrenIds: ['epic-1', 'epic-2'],

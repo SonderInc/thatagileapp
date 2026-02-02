@@ -31,7 +31,7 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
   const allowedTypes: WorkItemType[] = useMemo(() => {
     if (isEditing) return [item!.type];
     if (parent) return getAllowedChildTypes(parent.type);
-    return ['product', 'epic'];
+    return ['company', 'product'];
   }, [isEditing, item, parent]);
 
   useEffect(() => {

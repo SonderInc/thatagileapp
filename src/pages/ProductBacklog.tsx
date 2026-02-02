@@ -12,7 +12,7 @@ function buildTree(items: WorkItem[]): WorkItem[] {
     if (!byParent.has(key)) byParent.set(key, []);
     byParent.get(key)!.push(item);
   }
-  const sortOrder: WorkItemType[] = ['product', 'epic', 'feature', 'user-story', 'task', 'bug'];
+  const sortOrder: WorkItemType[] = ['company', 'product', 'epic', 'feature', 'user-story', 'task', 'bug'];
   for (const arr of byParent.values()) {
     arr.sort((a, b) => sortOrder.indexOf(a.type) - sortOrder.indexOf(b.type) || a.title.localeCompare(b.title));
   }

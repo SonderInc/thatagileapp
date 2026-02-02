@@ -3,6 +3,7 @@ import { useStore } from './store/useStore';
 import Navigation from './components/Navigation';
 import Landing from './pages/Landing';
 import AddProductPage from './pages/AddProductPage';
+import AddCompanyPage from './pages/AddCompanyPage';
 import ProductBacklog from './pages/ProductBacklog';
 import WorkItemList from './pages/WorkItemList';
 import EpicBoard from './pages/EpicBoard';
@@ -45,6 +46,8 @@ function App() {
         return <Landing />;
       case 'add-product':
         return <AddProductPage />;
+      case 'add-company':
+        return <AddCompanyPage />;
       case 'backlog':
         return <ProductBacklog />;
       case 'list':

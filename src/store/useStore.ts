@@ -4,12 +4,13 @@ import { getAllowedChildTypes } from '../utils/hierarchy';
 import * as firestore from '../lib/firestore';
 
 const TYPE_ORDER: Record<WorkItemType, number> = {
-  product: 0,
-  epic: 1,
-  feature: 2,
-  'user-story': 3,
-  task: 4,
-  bug: 5,
+  company: 0,
+  product: 1,
+  epic: 2,
+  feature: 3,
+  'user-story': 4,
+  task: 5,
+  bug: 6,
 };
 
 interface AppState {
@@ -24,7 +25,8 @@ interface AppState {
   selectedBoard: string | null;
   selectedWorkItem: string | null;
   selectedProductId: string | null;
-  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing' | 'add-product';
+  selectedCompanyId: string | null;
+  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing' | 'add-product' | 'add-company';
   
   // Actions
   setWorkItems: (items: WorkItem[]) => void;
@@ -42,6 +44,7 @@ interface AppState {
   setSelectedBoard: (boardId: string | null) => void;
   setSelectedWorkItem: (itemId: string | null) => void;
   setSelectedProductId: (id: string | null) => void;
+  setSelectedCompanyId: (id: string | null) => void;
   setViewMode: (mode: AppState['viewMode']) => void;
   
   setCurrentUser: (user: User | null) => void;
@@ -55,6 +58,9 @@ interface AppState {
   getAggregatedStoryPoints: (featureId: string) => number;
   getProductBacklogItems: (productId: string) => WorkItem[];
   canAddProduct: () => boolean;
+  getCompanies: () => WorkItem[];
+  getProductsByCompany: (companyId: string) => WorkItem[];
+  canAddCompany: () => boolean;
   getFeaturesWithUserStories: () => WorkItem[];
   getFeaturesInDevelopState: () => WorkItem[];
   getTeamBoardLanes: () => { id: string; title: string }[];
@@ -71,6 +77,7 @@ export const useStore = create<AppState>((set, get) => ({
   selectedBoard: null,
   selectedWorkItem: null,
   selectedProductId: null,
+  selectedCompanyId: null,
   viewMode: 'landing',
   
   // Actions
@@ -174,6 +181,7 @@ export const useStore = create<AppState>((set, get) => ({
   setSelectedBoard: (boardId) => set({ selectedBoard: boardId }),
   setSelectedWorkItem: (itemId) => set({ selectedWorkItem: itemId }),
   setSelectedProductId: (id) => set({ selectedProductId: id }),
+  setSelectedCompanyId: (id) => set({ selectedCompanyId: id }),
   setViewMode: (mode) => set({ viewMode: mode }),
   
   setCurrentUser: (user) => set({ currentUser: user }),
@@ -229,6 +237,10 @@ export const useStore = create<AppState>((set, get) => ({
     // For now allow all; later: check currentUser?.roles (e.g. product-owner, portfolio-leader)
     return true;
   },
+
+  getCompanies: () => get().workItems.filter((item) => item.type === 'company'),
+  getProductsByCompany: (companyId) => get().getWorkItemsByParent(companyId),
+  canAddCompany: () => true,
 
   getFeaturesWithUserStories: () => {
     const items = get().workItems;

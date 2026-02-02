@@ -3,8 +3,8 @@ import { useStore } from '../store/useStore';
 import { WorkItem, WorkItemStatus } from '../types';
 import { ArrowLeft } from 'lucide-react';
 
-const AddProductPage: React.FC = () => {
-  const { addWorkItem, setViewMode, selectedCompanyId } = useStore();
+const AddCompanyPage: React.FC = () => {
+  const { addWorkItem, setViewMode } = useStore();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<WorkItemStatus>('backlog');
@@ -22,12 +22,11 @@ const AddProductPage: React.FC = () => {
     setSaving(true);
     const newItem: WorkItem = {
       id: `item-${Date.now()}`,
-      type: 'product',
-      title: title.trim() || 'New Product',
+      type: 'company',
+      title: title.trim() || 'New Company',
       description: description.trim() || undefined,
       status,
       priority,
-      parentId: selectedCompanyId ?? undefined,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -36,7 +35,7 @@ const AddProductPage: React.FC = () => {
       setViewMode('landing');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      if (import.meta.env.DEV) console.error('[AddProduct] Save failed:', err);
+      if (import.meta.env.DEV) console.error('[AddCompany] Save failed:', err);
       const userMsg =
         msg === 'Firebase not configured'
           ? 'Firebase not configured. Add .env.local with Firebase config or use demo data.'
@@ -84,7 +83,7 @@ const AddProductPage: React.FC = () => {
         }}
       >
         <h1 style={{ margin: '0 0 24px 0', fontSize: '24px', fontWeight: '600', color: '#111827' }}>
-          Add Product
+          Add Company
         </h1>
 
         {error && (
@@ -113,7 +112,7 @@ const AddProductPage: React.FC = () => {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
-              placeholder="Product name"
+              placeholder="Company name"
               style={{
                 width: '100%',
                 padding: '8px 12px',
@@ -213,7 +212,7 @@ const AddProductPage: React.FC = () => {
                 cursor: saving ? 'wait' : 'pointer',
               }}
             >
-              {saving ? 'Saving…' : 'Create Product'}
+              {saving ? 'Saving…' : 'Create Company'}
             </button>
             <button
               type="button"
@@ -238,4 +237,4 @@ const AddProductPage: React.FC = () => {
   );
 };
 
-export default AddProductPage;
+export default AddCompanyPage;
