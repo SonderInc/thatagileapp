@@ -35,8 +35,14 @@ const AddProductPage: React.FC = () => {
       setViewMode('landing');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error('[AddProduct] Save failed:', err);
-      setError(msg || 'Failed to save. Check console and Firestore rules.');
+      if (import.meta.env.DEV) console.error('[AddProduct] Save failed:', err);
+      const userMsg =
+        msg === 'Firebase not configured'
+          ? 'Firebase not configured. Add .env.local with Firebase config or use demo data.'
+          : msg?.includes('Save timed out')
+            ? 'Save timed out. Check your network and Firestore rules.'
+            : msg || 'Failed to save. Check console and Firestore rules.';
+      setError(userMsg);
     } finally {
       setSaving(false);
     }

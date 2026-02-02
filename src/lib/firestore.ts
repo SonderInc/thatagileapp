@@ -69,12 +69,20 @@ export async function getWorkItems(): Promise<WorkItem[]> {
   return snapshot.docs.map((d) => deserializeWorkItem(d.data() as WorkItemData));
 }
 
+const SAVE_TIMEOUT_MS = 15000;
+
 export async function addWorkItem(item: WorkItem): Promise<void> {
-  if (!db) return;
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
   const ref = doc(db, WORK_ITEMS_COLLECTION, item.id);
   const data = serializeWorkItem(item);
   try {
-    await setDoc(ref, data);
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(
+        () => reject(new Error('Save timed out. Check network and Firestore rules.')),
+        SAVE_TIMEOUT_MS
+      );
+    });
+    await Promise.race([setDoc(ref, data), timeoutPromise]);
     if (import.meta.env.DEV) console.log('[Firebase] Saved work item:', item.id, item.type, item.title);
   } catch (err: unknown) {
     const e = err as { code?: string; message?: string };
