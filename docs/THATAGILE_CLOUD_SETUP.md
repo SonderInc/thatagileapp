@@ -63,18 +63,7 @@ The rules allow:
 
 1. In the left sidebar, open **Build** → **Storage**.
 2. Click **Get started**, choose **Start in production mode**, pick a location, then **Done**.
-3. Open the **Rules** tab and replace with rules that allow authenticated users to read/write under `tenants/` (e.g. so company logos can be uploaded and served):
-
-```
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /tenants/{tenantId}/{allPaths=**} {
-      allow read, write: if request.auth != null;
-    }
-  }
-}
-```
+3. Open the **Rules** tab and replace with the contents of **storage.rules** in this repo (or the same rules: `tenants/{tenantId}/**` allow read, write when `request.auth != null`).
 
 4. Click **Publish**.
 
@@ -132,7 +121,8 @@ Optional: `VITE_FIREBASE_MEASUREMENT_ID`, `VITE_FIREBASE_ANALYTICS_ENABLED` for 
 1. Push the app to GitHub and connect the repo to Netlify (see [DEPLOY.md](../DEPLOY.md)).
 2. In Netlify: **Site settings** → **Environment variables**.
 3. Add the same variables as in step 6 (`VITE_FIREBASE_*`, etc.). Set `VITE_APP_BASE_URL` to your live URL (e.g. `https://thatagileapp.com`).
-4. Trigger a new deploy (or push to `main`). The built app will use the env vars and talk to your Firebase project.
+4. **Logo uploads (avoid CORS):** Set `VITE_USE_UPLOAD_PROXY=true` so logo uploads go through a Netlify Function (same-origin) instead of directly to Firebase Storage. Then add **function** env vars (not VITE_): **FIREBASE_SERVICE_ACCOUNT_JSON** = full contents of your Firebase service account JSON (from Firebase Console → Project settings → Service accounts → Generate new private key), and **FIREBASE_STORAGE_BUCKET** = your bucket name (e.g. `thatagileapp.firebasestorage.app`). Redeploy so the `upload-logo` function can upload to Storage.
+5. Trigger a new deploy (or push to `main`). The built app will use the env vars and talk to your Firebase project.
 
 ---
 

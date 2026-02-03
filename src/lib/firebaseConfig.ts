@@ -30,11 +30,14 @@ function fromEnv(): FirebaseConfig | null {
   const projectId = (env.VITE_FIREBASE_PROJECT_ID as string) || '';
   const apiKey = (env.VITE_FIREBASE_API_KEY as string) || '';
   if (!projectId || !apiKey) return null;
+  const storageBucket =
+    (env.VITE_FIREBASE_STORAGE_BUCKET as string) ||
+    (projectId ? `${projectId}.appspot.com` : undefined);
   return {
     apiKey,
     authDomain: (env.VITE_FIREBASE_AUTH_DOMAIN as string) || '',
     projectId,
-    storageBucket: (env.VITE_FIREBASE_STORAGE_BUCKET as string) || undefined,
+    storageBucket,
     messagingSenderId: (env.VITE_FIREBASE_MESSAGING_SENDER_ID as string) || undefined,
     appId: (env.VITE_FIREBASE_APP_ID as string) || undefined,
     measurementId: (env.VITE_FIREBASE_MEASUREMENT_ID as string) || undefined,
@@ -44,18 +47,32 @@ function fromEnv(): FirebaseConfig | null {
 /**
  * Returns effective Firebase config: localStorage override if set, else env.
  */
+/**
+ * Returns effective Firebase config. In production, storageBucket always comes from env (VITE_FIREBASE_STORAGE_BUCKET), not localStorage, so Netlify/env is source of truth for bucket.
+ */
 export function getFirebaseConfig(): FirebaseConfig | null {
-  if (typeof window === 'undefined') return fromEnv();
+  const envConfig = fromEnv();
+  if (typeof window === 'undefined') return envConfig;
+  const bucketFromEnv =
+    envConfig?.storageBucket ||
+    (envConfig?.projectId ? `${envConfig.projectId}.appspot.com` : undefined);
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as unknown;
-      if (isFirebaseConfig(parsed) && parsed.projectId && parsed.apiKey) return parsed;
+      if (isFirebaseConfig(parsed) && parsed.projectId && parsed.apiKey) {
+        const storageBucket =
+          import.meta.env.DEV
+            ? parsed.storageBucket || (parsed.projectId ? `${parsed.projectId}.appspot.com` : undefined)
+            : (bucketFromEnv ?? (parsed.projectId ? `${parsed.projectId}.appspot.com` : undefined));
+        return { ...parsed, storageBucket };
+      }
     }
   } catch {
     // ignore invalid JSON
   }
-  return fromEnv();
+  if (envConfig) return { ...envConfig, storageBucket: bucketFromEnv };
+  return envConfig;
 }
 
 /**

@@ -35,4 +35,6 @@ export const config = {
   TENANT_ID: (env.VITE_TENANT_ID as string) || '',
   /** Email verification required (saas) vs optional/offline (onprem/airgapped). Driven by mode only. */
   EMAIL_VERIFICATION_REQUIRED: DEPLOYMENT_MODE === 'saas',
+  /** Use Netlify Function proxy for logo upload (avoids Firebase Storage CORS). Set VITE_USE_UPLOAD_PROXY=true on Netlify. */
+  USE_UPLOAD_PROXY: (env.VITE_USE_UPLOAD_PROXY as string) === 'true',
 } as const;

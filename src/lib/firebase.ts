@@ -14,14 +14,36 @@ let storage: FirebaseStorage | null = null;
 let analytics: Analytics | null = null;
 
 if (firebaseConfig?.projectId && firebaseConfig?.apiKey) {
-  app = initializeApp(firebaseConfig);
+  const resolvedBucket =
+    firebaseConfig.storageBucket || `${firebaseConfig.projectId}.appspot.com`;
+  const configWithBucket = { ...firebaseConfig, storageBucket: resolvedBucket };
+  app = initializeApp(configWithBucket);
   auth = getAuth(app);
   db = getFirestore(app);
   storage = getStorage(app);
   if (firebaseConfig.measurementId && import.meta.env.VITE_FIREBASE_ANALYTICS_ENABLED) {
     analytics = getAnalytics(app);
   }
-  if (import.meta.env.DEV) console.log('[Firebase] Connected to project:', firebaseConfig.projectId);
+  if (import.meta.env.DEV) {
+    console.log('[Firebase] Connected to project:', firebaseConfig.projectId);
+    console.log('[Firebase] Storage bucket:', resolvedBucket);
+    if (!resolvedBucket) {
+      console.warn(
+        '[Firebase] Storage bucket missing; set VITE_FIREBASE_STORAGE_BUCKET to match Firebase Console (Project settings → General → Your apps).'
+      );
+    } else if (
+      firebaseConfig.projectId &&
+      !resolvedBucket.includes(firebaseConfig.projectId)
+    ) {
+      console.warn(
+        '[Firebase] Storage bucket may be inconsistent with projectId:',
+        resolvedBucket,
+        'vs project',
+        firebaseConfig.projectId,
+        '— ensure VITE_FIREBASE_STORAGE_BUCKET matches Firebase Console.'
+      );
+    }
+  }
 } else {
   if (import.meta.env.DEV) {
     console.warn(
