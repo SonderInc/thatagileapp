@@ -15,6 +15,7 @@ import RegisterCompanyPage from './pages/RegisterCompanyPage';
 import PublicLandingPage from './pages/PublicLandingPage';
 import InviteUserPage from './pages/InviteUserPage';
 import LicencePage from './pages/LicencePage';
+import CompanyProfilePage from './pages/CompanyProfilePage';
 import './App.css';
 
 function App() {
@@ -162,12 +163,7 @@ function App() {
       case 'licence':
         return <LicencePage />;
       case 'company-profile':
-        return (
-          <div style={{ padding: '24px', maxWidth: '500px', margin: '0 auto' }}>
-            <h1 style={{ fontSize: '24px', fontWeight: '600', color: '#111827' }}>Company profile</h1>
-            <p style={{ marginTop: '8px', color: '#6b7280' }}>Coming soon.</p>
-          </div>
-        );
+        return <CompanyProfilePage />;
       case 'settings':
         return (
           <div style={{ padding: '24px', maxWidth: '500px', margin: '0 auto' }}>

@@ -8,7 +8,7 @@ export interface IDataStore {
   getWorkItems(companyId: string): Promise<WorkItem[]>;
   getTenantCompanies(): Promise<TenantCompany[]>;
   addTenantCompany(company: TenantCompany): Promise<void>;
-  updateCompany(companyId: string, updates: Partial<Pick<TenantCompany, 'seats' | 'licenseKey' | 'updatedAt'>>): Promise<void>;
+  updateCompany(companyId: string, updates: Partial<Pick<TenantCompany, 'name' | 'vision' | 'logoUrl' | 'seats' | 'licenseKey' | 'updatedAt'>>): Promise<void>;
   addWorkItem(item: WorkItem): Promise<void>;
   updateWorkItem(id: string, updates: Partial<WorkItem>): Promise<void>;
   deleteWorkItem(id: string): Promise<void>;

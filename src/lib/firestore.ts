@@ -115,6 +115,8 @@ export async function getTenantCompanies(): Promise<TenantCompany[]> {
             : undefined,
       seats: typeof data.seats === 'number' ? data.seats : 50,
       licenseKey: typeof data.licenseKey === 'string' ? data.licenseKey : undefined,
+      vision: typeof data.vision === 'string' ? data.vision : undefined,
+      logoUrl: typeof data.logoUrl === 'string' ? data.logoUrl : undefined,
     } as TenantCompany;
   });
 }
@@ -134,15 +136,20 @@ export async function addTenantCompany(company: TenantCompany): Promise<void> {
     payload.trialEndsAt = company.trialEndsAt instanceof Date ? Timestamp.fromDate(company.trialEndsAt) : company.trialEndsAt;
   }
   if (company.licenseKey !== undefined) payload.licenseKey = company.licenseKey;
+  if (company.vision !== undefined) payload.vision = company.vision;
+  if (company.logoUrl !== undefined) payload.logoUrl = company.logoUrl;
   await setDoc(ref, payload);
 }
 
 /** Update a tenant company (partial). */
-export async function updateCompany(companyId: string, updates: Partial<Pick<TenantCompany, 'seats' | 'licenseKey' | 'updatedAt'>>): Promise<void> {
+export async function updateCompany(companyId: string, updates: Partial<Pick<TenantCompany, 'name' | 'vision' | 'logoUrl' | 'seats' | 'licenseKey' | 'updatedAt'>>): Promise<void> {
   if (!db) return Promise.reject(new Error('Firebase not configured'));
   const ref = doc(db, COMPANIES_COLLECTION, companyId);
   const payload: Record<string, unknown> = {
     updatedAt: Timestamp.now(),
+    ...(updates.name !== undefined && { name: updates.name }),
+    ...(updates.vision !== undefined && { vision: updates.vision }),
+    ...(updates.logoUrl !== undefined && { logoUrl: updates.logoUrl }),
     ...(updates.seats !== undefined && { seats: updates.seats }),
     ...(updates.licenseKey !== undefined && { licenseKey: updates.licenseKey }),
   };

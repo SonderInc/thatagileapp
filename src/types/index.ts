@@ -60,6 +60,10 @@ export interface TenantCompany {
   seats: number;
   /** Set when a licence is redeemed. */
   licenseKey?: string;
+  /** Company vision (editable in Company profile). */
+  vision?: string;
+  /** Logo image URL (editable in Company profile). */
+  logoUrl?: string;
 }
 
 export interface WorkItem {
