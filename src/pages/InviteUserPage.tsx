@@ -15,13 +15,9 @@ const InviteUserPage: React.FC = () => {
 
   if (!canAddUser()) {
     return (
-      <div style={{ padding: '24px', maxWidth: '500px', margin: '0 auto' }}>
-        <p style={{ color: '#b91c1c', marginBottom: '16px' }}>You do not have permission to invite users.</p>
-        <button
-          type="button"
-          onClick={() => setViewMode('landing')}
-          style={{ padding: '8px 16px', cursor: 'pointer' }}
-        >
+      <div className="page-container">
+        <div className="form-error">You do not have permission to invite users.</div>
+        <button type="button" className="btn-secondary" onClick={() => setViewMode('landing')}>
           Back to Home
         </button>
       </div>
@@ -75,122 +71,51 @@ const InviteUserPage: React.FC = () => {
   ));
 
   return (
-    <div style={{ padding: '24px', maxWidth: '500px', margin: '0 auto' }}>
+    <div className="page-container">
       <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <button
-          type="button"
-          onClick={() => setViewMode('landing')}
-          style={{
-            padding: '6px 12px',
-            border: '1px solid #d1d5db',
-            borderRadius: '6px',
-            background: '#fff',
-            cursor: 'pointer',
-            fontSize: '14px',
-          }}
-        >
+        <button type="button" className="btn-secondary" onClick={() => setViewMode('landing')}>
           Back
         </button>
-        <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '600', color: '#111827' }}>
-          Invite user
-        </h1>
+        <h1 className="page-title" style={{ margin: 0 }}>Invite user</h1>
       </div>
-      {error && (
-        <div
-          style={{
-            marginBottom: '16px',
-            padding: '12px',
-            backgroundColor: '#fef2f2',
-            border: '1px solid #fecaca',
-            borderRadius: '8px',
-            color: '#b91c1c',
-            fontSize: '14px',
-          }}
-        >
-          {error}
-        </div>
-      )}
+      {error && <div className="form-error">{error}</div>}
       {inviteLink && (
-        <div
-          style={{
-            marginBottom: '16px',
-            padding: '12px',
-            backgroundColor: '#d1fae5',
-            border: '1px solid #a7f3d0',
-            borderRadius: '8px',
-            fontSize: '14px',
-          }}
-        >
+        <div className="form-success">
           <div style={{ fontWeight: '500', marginBottom: '8px' }}>Invite link (share with the user):</div>
           <code style={{ wordBreak: 'break-all', fontSize: '12px' }}>{inviteLink}</code>
           <button
             type="button"
-            onClick={() => {
-              navigator.clipboard.writeText(inviteLink);
-            }}
-            style={{
-              display: 'block',
-              marginTop: '8px',
-              padding: '6px 12px',
-              cursor: 'pointer',
-              fontSize: '13px',
-            }}
+            onClick={() => navigator.clipboard.writeText(inviteLink)}
+            className="btn-secondary"
+            style={{ display: 'block', marginTop: '8px' }}
           >
             Copy link
           </button>
         </div>
       )}
       <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
-            Email *
-          </label>
+        <div className="form-group">
+          <label className="form-label">Email *</label>
           <input
             type="email"
+            className="form-input"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
             placeholder="user@company.com"
-            style={{
-              width: '100%',
-              padding: '8px 12px',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
-              fontSize: '14px',
-            }}
           />
         </div>
-        <div style={{ marginBottom: '24px' }}>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
-            Role *
-          </label>
+        <div className="form-group" style={{ marginBottom: '24px' }}>
+          <label className="form-label">Role *</label>
           <select
+            className="form-input"
             value={role}
             onChange={(e) => setRole(e.target.value as Role)}
-            style={{
-              width: '100%',
-              padding: '8px 12px',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
-              fontSize: '14px',
-            }}
           >
             {roleOptions}
           </select>
         </div>
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            padding: '10px 20px',
-            backgroundColor: '#3b82f6',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '6px',
-            fontWeight: '500',
-            cursor: loading ? 'not-allowed' : 'pointer',
-          }}
-        >
+        <button type="submit" className="btn-primary" disabled={loading}>
           {loading ? 'Creating…' : 'Create invite link'}
         </button>
       </form>

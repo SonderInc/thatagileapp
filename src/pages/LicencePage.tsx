@@ -41,11 +41,9 @@ const LicencePage: React.FC = () => {
     : null;
 
   return (
-    <div style={{ padding: '24px', maxWidth: '500px', margin: '0 auto' }}>
-      <h1 style={{ marginBottom: '8px', fontSize: '24px', fontWeight: '600', color: '#111827' }}>
-        Licence
-      </h1>
-      <p style={{ marginBottom: '24px', fontSize: '14px', color: '#6b7280' }}>
+    <div className="page-container">
+      <h1 className="page-title">Licence</h1>
+      <p className="page-description">
         Add a licence number to unlock more seats, or buy a licence.
       </p>
 
@@ -76,74 +74,26 @@ const LicencePage: React.FC = () => {
         </div>
       )}
 
-      {error && (
-        <div
-          style={{
-            marginBottom: '16px',
-            padding: '12px',
-            backgroundColor: '#fef2f2',
-            border: '1px solid #fecaca',
-            borderRadius: '8px',
-            color: '#b91c1c',
-            fontSize: '14px',
-          }}
-        >
-          {error}
-        </div>
-      )}
-      {success && (
-        <div
-          style={{
-            marginBottom: '16px',
-            padding: '12px',
-            backgroundColor: '#d1fae5',
-            border: '1px solid #a7f3d0',
-            borderRadius: '8px',
-            color: '#065f46',
-            fontSize: '14px',
-          }}
-        >
-          {success}
-        </div>
-      )}
+      {error && <div className="form-error">{error}</div>}
+      {success && <div className="form-success">{success}</div>}
 
       <form onSubmit={handleRedeem} style={{ marginBottom: '24px' }}>
-        <div style={{ marginBottom: '12px' }}>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
-            Licence number
-          </label>
+        <div className="form-group">
+          <label className="form-label">Licence number</label>
           <input
             type="text"
+            className="form-input"
             value={licenceKey}
             onChange={(e) => setLicenceKey(e.target.value)}
             placeholder="Enter your licence key"
-            style={{
-              width: '100%',
-              padding: '8px 12px',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
-              fontSize: '14px',
-            }}
           />
         </div>
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            padding: '10px 20px',
-            backgroundColor: loading ? '#9ca3af' : '#3b82f6',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '6px',
-            fontWeight: '500',
-            cursor: loading ? 'not-allowed' : 'pointer',
-          }}
-        >
+        <button type="submit" className="btn-primary" disabled={loading}>
           {loading ? 'Applying…' : 'Add licence'}
         </button>
       </form>
 
-      <p style={{ fontSize: '14px', color: '#6b7280' }}>
+      <p className="page-description" style={{ marginBottom: 0 }}>
         <a href="#" style={{ color: '#3b82f6' }}>Buy a licence</a>
         {' '}(coming soon)
       </p>
