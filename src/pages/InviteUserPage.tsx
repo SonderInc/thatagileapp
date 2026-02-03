@@ -57,13 +57,20 @@ const InviteUserPage: React.FC = () => {
           await getDataStore().setUserProfile(profileToSync);
         }
       } catch (syncErr) {
-        if (import.meta.env.DEV) console.warn('[InviteUserPage] Profile sync before directory load failed:', syncErr);
+        console.warn('[InviteUserPage] Profile sync before directory load failed:', syncErr);
       }
       const users = await getDataStore().getCompanyUsers(currentTenantId);
       setCompanyUsers(users);
-    } catch {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const isPermissionDenied = message.includes('permission-denied') || message.includes('Permission denied') || (err && typeof err === 'object' && 'code' in err && (err as { code?: string }).code === 'permission-denied');
+      console.error('[InviteUserPage] Load user directory failed:', err);
       setCompanyUsers([]);
-      setDirectoryError('Could not load user directory. Try refreshing.');
+      setDirectoryError(
+        isPermissionDenied
+          ? 'Permission denied loading user directory. Ensure your profile includes this company, then retry.'
+          : 'Could not load user directory. Try refreshing. See console for details.'
+      );
     } finally {
       setDirectoryLoading(false);
     }
