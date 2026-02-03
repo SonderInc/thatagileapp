@@ -14,7 +14,9 @@ const Landing: React.FC = () => {
     setSelectedProductId,
     setViewMode,
     canAddProduct,
+    getCurrentCompany,
   } = useStore();
+  const tenant = getCurrentCompany();
   const companies = getCompanies();
   const products = selectedCompanyId
     ? getProductsByCompany(selectedCompanyId)
@@ -40,57 +42,100 @@ const Landing: React.FC = () => {
 
   return (
     <div style={{ padding: '24px' }}>
-      {/* Company section */}
+      {/* Company section: current tenant logo + vision */}
       <div style={{ marginBottom: '32px' }}>
-        <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
-          <div>
-            <h1 style={{ margin: 0, fontSize: '32px', fontWeight: '700', color: '#111827' }}>
-              Companies
-            </h1>
-            <p style={{ margin: '8px 0 0 0', color: '#6b7280', fontSize: '14px' }}>
-              Select a company to filter its products below, or show all products.
-            </p>
+        <h1 style={{ margin: 0, fontSize: '32px', fontWeight: '700', color: '#111827' }}>
+          Company
+        </h1>
+        <div
+          style={{
+            marginTop: '16px',
+            padding: '20px',
+            backgroundColor: '#ffffff',
+            border: '1px solid #e5e7eb',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '20px',
+            flexWrap: 'wrap',
+          }}
+        >
+          {tenant?.logoUrl && (
+            <img
+              src={tenant.logoUrl}
+              alt={`${tenant.name} logo`}
+              style={{
+                width: '80px',
+                height: '80px',
+                objectFit: 'contain',
+                flexShrink: 0,
+              }}
+            />
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {tenant?.name && (
+              <p style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+                {tenant.name}
+              </p>
+            )}
+            {tenant?.vision && (
+              <p style={{ margin: tenant?.name ? '8px 0 0 0' : 0, fontSize: '14px', color: '#6b7280', lineHeight: 1.5 }}>
+                {tenant.vision}
+              </p>
+            )}
+            {tenant && !tenant.logoUrl && !tenant.vision && (
+              <p style={{ margin: tenant?.name ? '8px 0 0 0' : 0, fontSize: '14px', color: '#9ca3af' }}>
+                Add a logo and vision in Company profile.
+              </p>
+            )}
           </div>
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', marginBottom: '12px' }}>
-          <button
-            type="button"
-            onClick={() => setSelectedCompanyId(null)}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: selectedCompanyId ? '#f3f4f6' : '#3b82f6',
-              color: selectedCompanyId ? '#374151' : '#ffffff',
-              border: '1px solid',
-              borderColor: selectedCompanyId ? '#d1d5db' : '#3b82f6',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: '500',
-              cursor: 'pointer',
-            }}
-          >
-            All
-          </button>
-          {companies.map((company) => (
-            <button
-              key={company.id}
-              type="button"
-              onClick={() => handleCompanyClick(company)}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: selectedCompanyId === company.id ? '#3b82f6' : '#f3f4f6',
-                color: selectedCompanyId === company.id ? '#ffffff' : '#374151',
-                border: '1px solid',
-                borderColor: selectedCompanyId === company.id ? '#3b82f6' : '#d1d5db',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: 'pointer',
-              }}
-            >
-              {company.title}
-            </button>
-          ))}
-        </div>
+        {companies.length > 0 && (
+          <div style={{ marginTop: '16px' }}>
+            <p style={{ margin: '0 0 8px 0', color: '#6b7280', fontSize: '14px' }}>
+              Filter products by company:
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+              <button
+                type="button"
+                onClick={() => setSelectedCompanyId(null)}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: selectedCompanyId ? '#f3f4f6' : '#3b82f6',
+                  color: selectedCompanyId ? '#374151' : '#ffffff',
+                  border: '1px solid',
+                  borderColor: selectedCompanyId ? '#d1d5db' : '#3b82f6',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                }}
+              >
+                All
+              </button>
+              {companies.map((company) => (
+                <button
+                  key={company.id}
+                  type="button"
+                  onClick={() => handleCompanyClick(company)}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: selectedCompanyId === company.id ? '#3b82f6' : '#f3f4f6',
+                    color: selectedCompanyId === company.id ? '#ffffff' : '#374151',
+                    border: '1px solid',
+                    borderColor: selectedCompanyId === company.id ? '#3b82f6' : '#d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {company.title}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Products section */}
