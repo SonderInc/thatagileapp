@@ -85,8 +85,6 @@ interface AppState {
   getProductsByCompany: (companyId: string) => WorkItem[];
   canAddCompany: () => boolean;
   canAddUser: () => boolean;
-  canAccessTeamBoardSettings: () => boolean;
-  canConfigureSprintStart: () => boolean;
   getFeaturesWithUserStories: () => WorkItem[];
   getFeaturesInDevelopState: () => WorkItem[];
   getTeamBoardLanes: () => { id: string; title: string }[];
