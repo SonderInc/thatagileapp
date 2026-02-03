@@ -1,19 +1,8 @@
 [
   {
-    "origin": [
-      "https://thatagileapp.netlify.app",
-      "https://thatagileapp.com",
-      "http://localhost:5173",
-      "http://localhost:4173"
-    ],
+    "origin": ["*"],
     "method": ["GET", "HEAD", "PUT", "POST", "DELETE", "OPTIONS"],
-    "responseHeader": [
-      "Content-Type",
-      "Authorization",
-      "Content-Length",
-      "x-goog-resumable",
-      "x-goog-meta-*"
-    ],
+    "responseHeader": ["Content-Type", "Authorization", "Content-Length", "x-goog-resumable", "x-goog-meta-*"],
     "maxAgeSeconds": 3600
   }
 ]

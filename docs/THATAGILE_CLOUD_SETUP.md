@@ -78,14 +78,23 @@ service firebase.storage {
 
 4. Click **Publish**.
 
-5. **Configure CORS** so the browser can upload from your app origin (e.g. thatagileapp.netlify.app). Otherwise you’ll see “blocked by CORS policy” when uploading a logo.
-   - Your Firebase Storage bucket name is in Firebase Console → Storage → Files (e.g. `your-project.firebasestorage.app` or `your-project.appspot.com`).
-   - In the project root there is **storage-cors.json**. Edit it if your app runs on other origins (add your Netlify/custom domain and localhost).
-   - Install [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) and log in: `gcloud auth login`.
-   - Apply CORS (replace `YOUR_BUCKET` with your bucket name):
-     - **gcloud (recommended):** `gcloud storage buckets update gs://YOUR_BUCKET --cors-file=storage-cors.json`
-     - **gsutil:** `gsutil cors set storage-cors.json gs://YOUR_BUCKET`
-   - After this, logo uploads from your deployed app and localhost should succeed.
+5. **Configure CORS** so the browser can upload from your app origin. Otherwise you’ll see “blocked by CORS policy” / “does not have HTTP ok status” when uploading a logo.
+   - **Bucket name:** Use the exact name from the error URL (e.g. `thatagileapp.firebasestorage.app`) or Firebase Console → **Storage** (bucket name at the top). It is often `YOUR_PROJECT_ID.firebasestorage.app` or `YOUR_PROJECT_ID.appspot.com`.
+   - **From the repo root** (where `storage-cors.json` lives), with [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) installed:
+     - `gcloud auth login`
+     - `gcloud auth application-default login`
+     - `gcloud config set project YOUR_PROJECT_ID` (e.g. `thatagileapp`)
+     - **gcloud:** `gcloud storage buckets update gs://YOUR_BUCKET --cors-file=storage-cors.json`
+     - **Or gsutil:** `gsutil cors set storage-cors.json gs://YOUR_BUCKET`
+   - **Verify:** `gsutil cors get gs://YOUR_BUCKET` should print the CORS config. If it’s empty, the update didn’t apply (check project and bucket name).
+   - **storage-cors.json** uses `"origin": ["*"]` to avoid origin mismatch; you can tighten origins later if needed.
+
+   **CORS troubleshooting:** If uploads still show “blocked by CORS policy” or “does not have HTTP ok status”:
+   - Confirm the bucket name in Firebase Console → Storage and use that exact value in `gs://YOUR_BUCKET`.
+   - In [Google Cloud Console](https://console.cloud.google.com), select the same project → Cloud Storage → Buckets; ensure the bucket exists and your account has Storage Admin (or can edit the bucket).
+   - Run `gcloud auth application-default login` and `gcloud config set project YOUR_PROJECT_ID` before applying CORS.
+   - After applying, run `gsutil cors get gs://YOUR_BUCKET`; you should see the JSON config. If it’s empty, the update didn’t apply.
+   - Wait a minute and retry the upload; CORS can take a moment to apply.
 
 ---
 
