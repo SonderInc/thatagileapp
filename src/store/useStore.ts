@@ -28,6 +28,12 @@ interface AppState {
   firebaseUser: AuthUser | null;
   /** When true, user must change password before using the app (e.g. first login after invite). */
   mustChangePassword: boolean;
+  /** Team board display mode (Scrum = current board; Kanban = placeholder for later). */
+  teamBoardMode: 'scrum' | 'kanban';
+  /** Sprint length in weeks (1–4). */
+  sprintLengthWeeks: 1 | 2 | 3 | 4;
+  /** Sprint start day: 0 = Sunday, 1 = Monday, … 6 = Saturday. */
+  sprintStartDay: number;
 
   // UI State
   selectedBoard: string | null;
@@ -59,8 +65,14 @@ interface AppState {
   setFirebaseUser: (user: AuthUser | null) => void;
   setCurrentUser: (user: User | null) => void;
   setMustChangePassword: (value: boolean) => void;
+  setTeamBoardMode: (mode: 'scrum' | 'kanban') => void;
+  setSprintLengthWeeks: (weeks: 1 | 2 | 3 | 4) => void;
+  setSprintStartDay: (day: number) => void;
+  hydrateTeamBoardSettings: (tenantId: string | null) => void;
 
   // Computed
+  canAccessTeamBoardSettings: () => boolean;
+  canConfigureSprintStart: () => boolean;
   getProductBacklog: () => WorkItem[];
   getWorkItemsByType: (type: WorkItem['type']) => WorkItem[];
   getWorkItemsByParent: (parentId: string) => WorkItem[];
@@ -73,12 +85,16 @@ interface AppState {
   getProductsByCompany: (companyId: string) => WorkItem[];
   canAddCompany: () => boolean;
   canAddUser: () => boolean;
+  canAccessTeamBoardSettings: () => boolean;
+  canConfigureSprintStart: () => boolean;
   getFeaturesWithUserStories: () => WorkItem[];
   getFeaturesInDevelopState: () => WorkItem[];
   getTeamBoardLanes: () => { id: string; title: string }[];
   getStoriesForLane: (laneId: string) => WorkItem[];
   getCurrentCompany: () => TenantCompany | null;
 }
+
+const TEAM_BOARD_STORAGE_KEY = 'thatagileapp_teamBoard';
 
 export const useStore = create<AppState>((set, get) => ({
   // Initial state
@@ -91,6 +107,9 @@ export const useStore = create<AppState>((set, get) => ({
   currentTenantId: null,
   firebaseUser: null,
   mustChangePassword: false,
+  teamBoardMode: 'scrum',
+  sprintLengthWeeks: 2,
+  sprintStartDay: 1,
   selectedBoard: null,
   selectedWorkItem: null,
   selectedProductId: null,
@@ -211,6 +230,59 @@ export const useStore = create<AppState>((set, get) => ({
   setFirebaseUser: (user) => set({ firebaseUser: user }),
   setCurrentUser: (user) => set({ currentUser: user }),
   setMustChangePassword: (value) => set({ mustChangePassword: value }),
+  setTeamBoardMode: (mode) => {
+    set({ teamBoardMode: mode });
+    const tid = get().currentTenantId;
+    if (tid && typeof localStorage !== 'undefined') {
+      const { teamBoardMode: _, ...rest } = get();
+      localStorage.setItem(`${TEAM_BOARD_STORAGE_KEY}_${tid}`, JSON.stringify({
+        teamBoardMode: mode,
+        sprintLengthWeeks: rest.sprintLengthWeeks,
+        sprintStartDay: rest.sprintStartDay,
+      }));
+    }
+  },
+  setSprintLengthWeeks: (weeks) => {
+    set({ sprintLengthWeeks: weeks });
+    const tid = get().currentTenantId;
+    if (tid && typeof localStorage !== 'undefined') {
+      const { sprintLengthWeeks: _, ...rest } = get();
+      localStorage.setItem(`${TEAM_BOARD_STORAGE_KEY}_${tid}`, JSON.stringify({
+        teamBoardMode: rest.teamBoardMode,
+        sprintLengthWeeks: weeks,
+        sprintStartDay: rest.sprintStartDay,
+      }));
+    }
+  },
+  setSprintStartDay: (day) => {
+    set({ sprintStartDay: day });
+    const tid = get().currentTenantId;
+    if (tid && typeof localStorage !== 'undefined') {
+      const { sprintStartDay: _, ...rest } = get();
+      localStorage.setItem(`${TEAM_BOARD_STORAGE_KEY}_${tid}`, JSON.stringify({
+        teamBoardMode: rest.teamBoardMode,
+        sprintLengthWeeks: rest.sprintLengthWeeks,
+        sprintStartDay: day,
+      }));
+    }
+  },
+  hydrateTeamBoardSettings: (tenantId) => {
+    if (!tenantId || typeof localStorage === 'undefined') return;
+    try {
+      const raw = localStorage.getItem(`${TEAM_BOARD_STORAGE_KEY}_${tenantId}`);
+      if (!raw) return;
+      const data = JSON.parse(raw) as { teamBoardMode?: string; sprintLengthWeeks?: number; sprintStartDay?: number };
+      const updates: Partial<Pick<AppState, 'teamBoardMode' | 'sprintLengthWeeks' | 'sprintStartDay'>> = {};
+      if (data.teamBoardMode === 'scrum' || data.teamBoardMode === 'kanban') updates.teamBoardMode = data.teamBoardMode;
+      if (typeof data.sprintLengthWeeks === 'number' && data.sprintLengthWeeks >= 1 && data.sprintLengthWeeks <= 4)
+        updates.sprintLengthWeeks = data.sprintLengthWeeks as 1 | 2 | 3 | 4;
+      if (typeof data.sprintStartDay === 'number' && data.sprintStartDay >= 0 && data.sprintStartDay <= 6)
+        updates.sprintStartDay = data.sprintStartDay;
+      if (Object.keys(updates).length) set(updates);
+    } catch {
+      // ignore invalid stored data
+    }
+  },
   
   // Computed
   getProductBacklog: () => {
@@ -278,6 +350,20 @@ export const useStore = create<AppState>((set, get) => ({
     const user = get().currentUser;
     if (!user?.roles?.length) return false;
     return user.roles.includes('admin') || user.roles.includes('hr');
+  },
+  canAccessTeamBoardSettings: () => {
+    const user = get().currentUser;
+    if (!user?.roles?.length) return false;
+    return (
+      user.roles.includes('admin') ||
+      user.roles.includes('scrum-master-team-coach') ||
+      user.roles.includes('rte-team-of-teams-coach')
+    );
+  },
+  canConfigureSprintStart: () => {
+    const user = get().currentUser;
+    if (!user?.roles?.length) return false;
+    return user.roles.includes('admin') || user.roles.includes('rte-team-of-teams-coach');
   },
 
   getFeaturesWithUserStories: () => {

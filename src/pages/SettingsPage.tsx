@@ -5,8 +5,30 @@ import {
   setFirebaseConfigOverride,
   type FirebaseConfig,
 } from '../lib/firebaseConfig';
+import { useStore } from '../store/useStore';
+
+const SPRINT_START_DAY_LABELS: Record<number, string> = {
+  0: 'Sun',
+  1: 'Mon',
+  2: 'Tue',
+  3: 'Wed',
+  4: 'Thu',
+  5: 'Fri',
+  6: 'Sat',
+};
 
 const SettingsPage: React.FC = () => {
+  const {
+    currentTenantId,
+    hydrateTeamBoardSettings,
+    teamBoardMode,
+    sprintLengthWeeks,
+    sprintStartDay,
+    setTeamBoardMode,
+    setSprintLengthWeeks,
+    setSprintStartDay,
+    canConfigureSprintStart,
+  } = useStore();
   const [override, setOverride] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -16,6 +38,10 @@ const SettingsPage: React.FC = () => {
   const [storageBucket, setStorageBucket] = useState('');
   const [messagingSenderId, setMessagingSenderId] = useState('');
   const [appId, setAppId] = useState('');
+
+  useEffect(() => {
+    hydrateTeamBoardSettings(currentTenantId);
+  }, [currentTenantId, hydrateTeamBoardSettings]);
 
   useEffect(() => {
     setOverride(hasFirebaseConfigOverride());
@@ -64,6 +90,105 @@ const SettingsPage: React.FC = () => {
       <p className="page-description">
         Configure where your data is stored. You can use ThatAgile Cloud or your own Firebase project.
       </p>
+
+      <section style={{ marginBottom: '24px' }}>
+        <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px', color: '#374151' }}>
+          Team Board
+        </h2>
+        <p style={{ marginBottom: '12px', fontSize: '14px', color: '#6b7280' }}>
+          Board mode and Scrum options. Kanban board is coming later.
+        </p>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Board mode:</span>
+          <button
+            type="button"
+            onClick={() => setTeamBoardMode('scrum')}
+            style={{
+              padding: '8px 16px',
+              border: teamBoardMode === 'scrum' ? '2px solid #3b82f6' : '1px solid #d1d5db',
+              borderRadius: '6px',
+              backgroundColor: teamBoardMode === 'scrum' ? '#eff6ff' : '#ffffff',
+              color: teamBoardMode === 'scrum' ? '#3b82f6' : '#374151',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: teamBoardMode === 'scrum' ? '600' : '400',
+            }}
+          >
+            Scrum
+          </button>
+          <button
+            type="button"
+            onClick={() => setTeamBoardMode('kanban')}
+            style={{
+              padding: '8px 16px',
+              border: teamBoardMode === 'kanban' ? '2px solid #3b82f6' : '1px solid #d1d5db',
+              borderRadius: '6px',
+              backgroundColor: teamBoardMode === 'kanban' ? '#eff6ff' : '#ffffff',
+              color: teamBoardMode === 'kanban' ? '#3b82f6' : '#374151',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: teamBoardMode === 'kanban' ? '600' : '400',
+            }}
+          >
+            Kanban
+          </button>
+        </div>
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+            Sprint length (Scrum)
+          </label>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {([1, 2, 3, 4] as const).map((weeks) => (
+              <button
+                key={weeks}
+                type="button"
+                onClick={() => setSprintLengthWeeks(weeks)}
+                style={{
+                  padding: '8px 16px',
+                  border: sprintLengthWeeks === weeks ? '2px solid #3b82f6' : '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  backgroundColor: sprintLengthWeeks === weeks ? '#eff6ff' : '#ffffff',
+                  color: sprintLengthWeeks === weeks ? '#3b82f6' : '#374151',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                }}
+              >
+                {weeks} {weeks === 1 ? 'week' : 'weeks'}
+              </button>
+            ))}
+          </div>
+        </div>
+        {canConfigureSprintStart() && (
+          <div>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+              Sprint start day
+            </label>
+            <p style={{ marginBottom: '8px', fontSize: '13px', color: '#6b7280' }}>
+              Only admins and RTE/Team of Teams Coach can change this.
+            </p>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {[0, 1, 2, 3, 4, 5, 6].map((day) => (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() => setSprintStartDay(day)}
+                  style={{
+                    padding: '8px 12px',
+                    border: sprintStartDay === day ? '2px solid #3b82f6' : '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    backgroundColor: sprintStartDay === day ? '#eff6ff' : '#ffffff',
+                    color: sprintStartDay === day ? '#3b82f6' : '#374151',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                  }}
+                >
+                  {SPRINT_START_DAY_LABELS[day]}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
 
       <section style={{ marginBottom: '24px' }}>
         <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px', color: '#374151' }}>

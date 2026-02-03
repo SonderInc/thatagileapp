@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import TeamKanbanBoard from '../components/TeamKanbanBoard';
 import WorkItemModal from '../components/WorkItemModal';
 import { TEAM_BOARD_COLUMNS } from '../utils/boardConfig';
-import { Plus } from 'lucide-react';
+import { Settings } from 'lucide-react';
 
 const TeamBoard: React.FC = () => {
   const {
@@ -12,10 +12,19 @@ const TeamBoard: React.FC = () => {
     getStoriesForLane,
     selectedWorkItem,
     setSelectedWorkItem,
+    currentTenantId,
+    hydrateTeamBoardSettings,
+    canAccessTeamBoardSettings,
+    teamBoardMode,
+    setViewMode,
   } = useStore();
   const [showModal, setShowModal] = useState(false);
   const [modalColumnId, setModalColumnId] = useState<string | null>(null);
   const [selectedSprintId, setSelectedSprintId] = useState<string | null>(null);
+
+  useEffect(() => {
+    hydrateTeamBoardSettings(currentTenantId);
+  }, [currentTenantId, hydrateTeamBoardSettings]);
 
   const lanes = getTeamBoardLanes();
   const currentSprint = sprints.find((s) => s.status === 'in-progress');
@@ -34,7 +43,7 @@ const TeamBoard: React.FC = () => {
 
   return (
     <div style={{ padding: '24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+      <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
         <div>
           <h1 style={{ margin: 0, fontSize: '32px', fontWeight: '700', color: '#111827' }}>
             Team Board
@@ -43,30 +52,46 @@ const TeamBoard: React.FC = () => {
             Sprint-based work management
           </p>
         </div>
-        <button
-          onClick={() => {
-            setModalColumnId(null);
-            setShowModal(true);
-          }}
-          style={{
-            padding: '12px 24px',
-            backgroundColor: '#3b82f6',
-            color: '#ffffff',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '14px',
-            fontWeight: '500',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <Plus size={20} />
-          New User Story
-        </button>
+        {canAccessTeamBoardSettings() && (
+          <button
+            type="button"
+            onClick={() => setViewMode('settings')}
+            style={{
+              padding: '8px 12px',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              backgroundColor: '#ffffff',
+              color: '#6b7280',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '14px',
+            }}
+            title="Settings"
+          >
+            <Settings size={20} />
+            Settings
+          </button>
+        )}
       </div>
 
+      {teamBoardMode === 'kanban' ? (
+        <div
+          style={{
+            padding: '48px 24px',
+            textAlign: 'center',
+            backgroundColor: '#f9fafb',
+            border: '1px solid #e5e7eb',
+            borderRadius: '8px',
+            color: '#6b7280',
+            fontSize: '16px',
+          }}
+        >
+          Kanban board coming soon.
+        </div>
+      ) : (
+        <>
       {/* Sprint Selector */}
       <div style={{ marginBottom: '24px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
         <button
@@ -129,12 +154,15 @@ const TeamBoard: React.FC = () => {
         onAddItem={handleAddItem}
         onOpenItem={() => setShowModal(true)}
       />
+        </>
+      )}
 
       {showModal && (
         <WorkItemModal
           itemId={selectedWorkItem}
           onClose={handleCloseModal}
-          type={modalColumnId ? undefined : 'user-story'}
+          type={modalColumnId === 'backlog' ? 'user-story' : undefined}
+          allowedTypes={modalColumnId === 'backlog' ? ['user-story', 'task', 'bug'] : undefined}
         />
       )}
     </div>

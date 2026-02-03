@@ -125,7 +125,7 @@ const TeamKanbanBoard: React.FC<TeamKanbanBoardProps> = ({
               <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#111827' }}>
                 {column.name}
               </h3>
-              {onAddItem && (
+              {onAddItem && column.id === 'backlog' && (
                 <button
                   onClick={() => onAddItem(column.id)}
                   style={{

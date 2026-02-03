@@ -12,9 +12,11 @@ interface WorkItemModalProps {
   onClose: () => void;
   parentId?: string;
   type?: WorkItemType;
+  /** When provided and not editing, restricts the type dropdown to these types (e.g. Team Board Backlog: user-story, task, bug). */
+  allowedTypes?: WorkItemType[];
 }
 
-const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId, type }) => {
+const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId, type, allowedTypes: allowedTypesProp }) => {
   const { workItems, addWorkItem, updateWorkItem, users, getAggregatedStoryPoints, getWorkItemsByParent, getFeaturesInDevelopState, setSelectedWorkItem } = useStore();
   const [formData, setFormData] = useState<Partial<WorkItem>>({
     title: '',
@@ -32,9 +34,10 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
   const parent = parentId ? workItems.find((i) => i.id === parentId) : null;
   const allowedTypes: WorkItemType[] = useMemo(() => {
     if (isEditing) return [item!.type];
+    if (allowedTypesProp?.length) return allowedTypesProp;
     if (parent) return getAllowedChildTypes(parent.type);
     return ['company', 'product'];
-  }, [isEditing, item, parent]);
+  }, [isEditing, item, parent, allowedTypesProp]);
 
   useEffect(() => {
     if (item) {
