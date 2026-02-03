@@ -88,14 +88,17 @@ const InviteUserPage: React.FC = () => {
     }
     const seats = company?.seats ?? 50;
     try {
+      const profile = await getDataStore().getUserProfile(currentUser.id);
+      if (profile) await getDataStore().setUserProfile(profile);
       const count = await getDataStore().getCompanyUserCount(currentTenantId);
       if (count >= seats) {
         setError('Seat limit reached. Add a licence or buy more seats.');
         setLoading(false);
         return;
       }
-    } catch {
-      setError('Could not check seat limit.');
+    } catch (err) {
+      if (import.meta.env.DEV) console.error('[InviteUserPage] Seat limit check failed:', err);
+      setError('Could not check seat limit. Try refreshing the page and try again.');
       setLoading(false);
       return;
     }

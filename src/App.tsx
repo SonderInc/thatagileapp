@@ -59,6 +59,7 @@ function App() {
             roles: profile.companies?.find((c) => c.companyId === (profile.companyId ?? SEED_TENANT_ID))?.roles ?? [],
           });
           setMustChangePassword(profile.mustChangePassword === true);
+          getDataStore().setUserProfile(profile).catch(() => {});
         } else {
           setMustChangePassword(false);
         }
