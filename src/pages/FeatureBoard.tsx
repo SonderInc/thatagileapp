@@ -31,6 +31,7 @@ const FeatureBoard: React.FC = () => {
         workItems={features}
         onAddItem={handleAddItem}
         addItemColumnId="funnel"
+        addItemLabel={`Add a ${featureLabel}`}
       />
 
       {showModal && (

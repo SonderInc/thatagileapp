@@ -20,6 +20,7 @@ const InviteUserPage: React.FC = () => {
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [companyUsers, setCompanyUsers] = useState<UserProfile[]>([]);
   const [directoryLoading, setDirectoryLoading] = useState(false);
+  const [directoryError, setDirectoryError] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [editingRoles, setEditingRoles] = useState<Role[]>([]);
   const [roleSaveLoading, setRoleSaveLoading] = useState(false);
@@ -40,11 +41,27 @@ const InviteUserPage: React.FC = () => {
   const loadDirectory = async () => {
     if (!currentTenantId) return;
     setDirectoryLoading(true);
+    setDirectoryError(null);
     try {
+      if (currentUser?.id) {
+        const profile = await getDataStore().getUserProfile(currentUser.id);
+        if (profile) {
+          const hasCurrentCompany = profile.companies?.some((c) => c.companyId === currentTenantId) || profile.companyId === currentTenantId;
+          const profileToSync = hasCurrentCompany
+            ? profile
+            : {
+                ...profile,
+                companyId: profile.companyId ?? currentTenantId,
+                companies: [...(profile.companies ?? []), { companyId: currentTenantId, roles: (currentUser.roles ?? []) as Role[] }],
+              };
+          await getDataStore().setUserProfile(profileToSync);
+        }
+      }
       const users = await getDataStore().getCompanyUsers(currentTenantId);
       setCompanyUsers(users);
     } catch {
       setCompanyUsers([]);
+      setDirectoryError('Could not load user directory. Try refreshing.');
     } finally {
       setDirectoryLoading(false);
     }
@@ -318,6 +335,8 @@ const InviteUserPage: React.FC = () => {
         </h2>
         {directoryLoading ? (
           <p style={{ color: '#6b7280', fontSize: '14px' }}>Loading users…</p>
+        ) : directoryError ? (
+          <p style={{ color: '#b91c1c', fontSize: '14px' }}>{directoryError}</p>
         ) : companyUsers.length === 0 ? (
           <p style={{ color: '#6b7280', fontSize: '14px' }}>No users in this company yet.</p>
         ) : (
