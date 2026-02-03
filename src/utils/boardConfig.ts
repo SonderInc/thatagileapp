@@ -10,14 +10,15 @@ export const EPIC_COLUMNS: KanbanColumn[] = [
   { id: 'done', name: 'Done', status: 'done', workItemIds: [], order: 5 },
 ];
 
-// Feature level (value stream): Discover → Define → Design → Develop → Release → Operate
+// Feature level: Funnel → Analyzing → Program Backlog → Implementing → Validating → Deploying → Releasing
 export const FEATURE_COLUMNS: KanbanColumn[] = [
-  { id: 'intake', name: 'Discover', status: 'intake', workItemIds: [], order: 0 },
-  { id: 'define', name: 'Define', status: 'define', workItemIds: [], order: 1 },
-  { id: 'design', name: 'Design', status: 'design', workItemIds: [], order: 2 },
-  { id: 'develop', name: 'Develop', status: 'develop', workItemIds: [], order: 3 },
-  { id: 'release', name: 'Release', status: 'release', workItemIds: [], order: 4 },
-  { id: 'done', name: 'Operate', status: 'done', workItemIds: [], order: 5 },
+  { id: 'funnel', name: 'Funnel', status: 'funnel', workItemIds: [], order: 0 },
+  { id: 'analysis', name: 'Analyzing', status: 'analysis', workItemIds: [], order: 1 },
+  { id: 'program-backlog', name: 'Program Backlog', status: 'program-backlog', workItemIds: [], order: 2 },
+  { id: 'implementation', name: 'Implementing', status: 'implementation', workItemIds: [], order: 3 },
+  { id: 'validating', name: 'Validating', status: 'validating', workItemIds: [], order: 4 },
+  { id: 'deploying', name: 'Deploying', status: 'deploying', workItemIds: [], order: 5 },
+  { id: 'releasing', name: 'Releasing', status: 'releasing', workItemIds: [], order: 6 },
 ];
 
 // Team-level Features: Backlog → To Do → In Progress → Demo → Accepted/Done
@@ -93,6 +94,10 @@ export const getStatusColor = (status: WorkItemStatus): string => {
     develop: '#14b8a6', // teal
     release: '#84cc16', // lime
     operate: '#059669', // emerald (Operate)
+    'program-backlog': '#8b5cf6', // purple
+    validating: '#eab308', // yellow-600
+    deploying: '#0ea5e9', // sky
+    releasing: '#22c55e', // green
     'to-do': '#fbbf24', // yellow
     'in-progress': '#10b981', // green
     demo: '#0ea5e9', // sky

@@ -38,7 +38,7 @@ const FeatureBoard: React.FC = () => {
         columns={FEATURE_COLUMNS}
         workItems={features}
         onAddItem={handleAddItem}
-        addItemColumnId="intake"
+        addItemColumnId="funnel"
       />
 
       {showModal && (
@@ -46,7 +46,7 @@ const FeatureBoard: React.FC = () => {
           itemId={selectedWorkItem}
           onClose={handleCloseModal}
           type="feature"
-          defaultStatus={modalColumnId === 'intake' ? 'intake' : undefined}
+          defaultStatus={modalColumnId === 'funnel' ? 'funnel' : undefined}
         />
       )}
     </div>

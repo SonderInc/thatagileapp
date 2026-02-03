@@ -8,6 +8,8 @@ import { getTypeLabel } from '../utils/hierarchy';
 import EpicHypothesisModal from './EpicHypothesisModal';
 import EpicHypothesisExampleModal from './EpicHypothesisExampleModal';
 
+const FEATURE_STATUSES: WorkItemStatus[] = ['funnel', 'analysis', 'program-backlog', 'implementation', 'validating', 'deploying', 'releasing'];
+
 interface WorkItemModalProps {
   itemId: string | null;
   onClose: () => void;
@@ -15,7 +17,7 @@ interface WorkItemModalProps {
   type?: WorkItemType;
   /** When provided and not editing, restricts the type dropdown to these types (e.g. Team Board Backlog: user-story, task, bug). */
   allowedTypes?: WorkItemType[];
-  /** When provided and not editing, use this as the initial status (e.g. Feature board Discover column: intake). */
+  /** When provided and not editing, use this as the initial status (e.g. Feature board Funnel column: funnel). */
   defaultStatus?: WorkItemStatus;
 }
 
@@ -45,11 +47,12 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
 
   useEffect(() => {
     if (item) {
+      const status = item.type === 'feature' && !FEATURE_STATUSES.includes(item.status) ? 'funnel' : item.status;
       setFormData({
         title: item.title,
         description: item.description,
         type: item.type,
-        status: item.status,
+        status,
         priority: item.priority,
         assignee: item.assignee,
         tags: item.tags,
@@ -67,6 +70,7 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
         parentId,
         type: defaultType,
         ...(defaultStatus != null && { status: defaultStatus }),
+        ...(defaultStatus == null && defaultType === 'feature' && { status: 'funnel' }),
       }));
     }
   }, [item, parentId, type, allowedTypes, defaultStatus]);
@@ -404,7 +408,9 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
                     ? 'backlog'
                     : (formData.type === 'task' || formData.type === 'bug') && !['to-do', 'in-progress', 'done'].includes(formData.status ?? '')
                       ? 'to-do'
-                      : formData.status
+                      : formData.type === 'feature' && !FEATURE_STATUSES.includes((formData.status ?? '') as WorkItemStatus)
+                        ? 'funnel'
+                        : formData.status
                 }
                 onChange={(e) => setFormData({ ...formData, status: e.target.value as WorkItemStatus })}
                 style={{
@@ -428,6 +434,16 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
                     <option value="to-do">Ready</option>
                     <option value="in-progress">In progress</option>
                     <option value="done">Done</option>
+                  </>
+                ) : formData.type === 'feature' ? (
+                  <>
+                    <option value="funnel">Funnel</option>
+                    <option value="analysis">Analyzing</option>
+                    <option value="program-backlog">Program Backlog</option>
+                    <option value="implementation">Implementing</option>
+                    <option value="validating">Validating</option>
+                    <option value="deploying">Deploying</option>
+                    <option value="releasing">Releasing</option>
                   </>
                 ) : (
                   <>

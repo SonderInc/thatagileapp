@@ -6,8 +6,9 @@ export type EpicFeatureSize = 'small' | 'medium' | 'large' | 'xlarge' | 'xxlarge
 export type WorkItemStatus = 
   // Epic Level: Funnel → Reviewing → Analyzing → Portfolio Backlog → Implementing → Done
   | 'funnel' | 'backlog' | 'analysis' | 'prioritization' | 'implementation' | 'done'
-  // Feature Level: Discover → Define → Design → Develop → Release → Operate
+  // Feature: Funnel → Analyzing → Program Backlog → Implementing → Validating → Deploying → Releasing
   | 'intake' | 'define' | 'design' | 'develop' | 'release' | 'operate'
+  | 'program-backlog' | 'validating' | 'deploying' | 'releasing'
   // Team-level Features: Backlog → To Do → In Progress → Demo → Accepted/Done
   | 'demo' | 'accepted'
   // Stories/Bug/Tasks (Sprint): Backlog → Ready → In Progress → Done → Archive

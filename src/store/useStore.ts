@@ -374,7 +374,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   getFeaturesInDevelopState: () => {
     return get().workItems.filter(
-      (i) => i.type === 'feature' && i.status === 'develop'
+      (i) => i.type === 'feature' && i.status === 'implementation'
     );
   },
 
