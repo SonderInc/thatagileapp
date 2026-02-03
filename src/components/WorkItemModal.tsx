@@ -3,8 +3,9 @@ import { WorkItem, WorkItemType, WorkItemStatus, EpicFeatureSize } from '../type
 import { useStore } from '../store/useStore';
 import { getAllowedChildTypes } from '../utils/hierarchy';
 import { SIZE_OPTIONS, STORY_POINT_OPTIONS, DAYS_OPTIONS } from '../utils/estimates';
-import { X, Plus } from 'lucide-react';
+import { X, Plus, FileText } from 'lucide-react';
 import { getTypeLabel } from '../utils/hierarchy';
+import EpicHypothesisModal from './EpicHypothesisModal';
 
 interface WorkItemModalProps {
   itemId: string | null;
@@ -24,6 +25,7 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
   });
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showEpicHypothesis, setShowEpicHypothesis] = useState(false);
 
   const item = itemId ? workItems.find((i) => i.id === itemId) : null;
   const isEditing = !!item;
@@ -240,6 +242,34 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
               {allowedTypes.includes('bug') && <option value="bug">Bug</option>}
             </select>
           </div>
+
+          {!isEditing && formData.type === 'epic' && (
+            <div style={{ marginBottom: '16px' }}>
+              <button
+                type="button"
+                onClick={() => setShowEpicHypothesis(true)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 14px',
+                  border: '1px solid #3b82f6',
+                  borderRadius: '6px',
+                  backgroundColor: '#eff6ff',
+                  color: '#1d4ed8',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                }}
+              >
+                <FileText size={18} />
+                Epic Hypothesis Statement
+              </button>
+              <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#6b7280' }}>
+                Fill the hypothesis form to pre-fill Epic name, description, and owner.
+              </p>
+            </div>
+          )}
 
           {!isEditing && formData.type === 'user-story' && (
             <div style={{ marginBottom: '16px' }}>
@@ -618,6 +648,22 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
           </div>
         </form>
       </div>
+
+      {showEpicHypothesis && (
+        <EpicHypothesisModal
+          onClose={() => setShowEpicHypothesis(false)}
+          onApply={({ title, description, assignee }) => {
+            setFormData((prev) => ({
+              ...prev,
+              title,
+              description,
+              assignee: assignee ?? prev.assignee,
+              status: 'funnel',
+            }));
+            setShowEpicHypothesis(false);
+          }}
+        />
+      )}
     </div>
   );
 };
