@@ -26,8 +26,16 @@ service cloud.firestore {
 
     // User profiles (uid = Firebase Auth uid)
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      // Later: allow company admins to read users in their company.
+      let me = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      let sameCompany = me != null && me.data.companyIds != null && resource.data.companyIds != null
+        && resource.data.companyIds.hasAny(me.data.companyIds);
+      let isAdminForTarget = me != null && me.data.get('adminCompanyIds', null) != null
+        && resource.data.companyIds != null
+        && resource.data.companyIds.hasAny(me.data.adminCompanyIds);
+      allow read: if request.auth != null && (request.auth.uid == userId || sameCompany);
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && (request.auth.uid == userId || isAdminForTarget);
+      allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
     // Invites: pending sign-up links (document id = token).

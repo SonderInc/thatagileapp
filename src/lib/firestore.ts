@@ -221,11 +221,14 @@ export async function setUserProfile(profile: UserProfile): Promise<void> {
   if (!db) return Promise.reject(new Error('Firebase not configured'));
   const ref = doc(db, USERS_COLLECTION, profile.uid);
   const companyIds = profile.companies?.map((c) => c.companyId) ?? (profile.companyId ? [profile.companyId] : []);
+  const adminCompanyIds =
+    profile.companies?.filter((c) => c.roles?.includes('admin')).map((c) => c.companyId) ?? [];
   await setDoc(ref, {
     email: profile.email,
     displayName: profile.displayName,
     companyId: profile.companyId,
     companyIds,
+    adminCompanyIds,
     ...(profile.companies && { companies: profile.companies }),
     ...(profile.mustChangePassword !== undefined && { mustChangePassword: profile.mustChangePassword }),
   });
@@ -246,6 +249,28 @@ export async function getCompanyUserCount(companyId: string): Promise<number> {
   );
   const snapshot = await getDocs(q);
   return snapshot.size;
+}
+
+/** List user profiles that belong to a company (for user directory). */
+export async function getCompanyUsers(companyId: string): Promise<UserProfile[]> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const q = query(
+    collection(db, USERS_COLLECTION),
+    where('companyIds', 'array-contains', companyId)
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => {
+    const data = d.data();
+    const companies = data.companies as { companyId: string; roles: string[] }[] | undefined;
+    return {
+      uid: d.id,
+      email: data.email ?? '',
+      displayName: data.displayName ?? '',
+      companyId: data.companyId ?? null,
+      companies: companies?.map((c) => ({ companyId: c.companyId, roles: c.roles as Role[] })),
+      mustChangePassword: data.mustChangePassword === true,
+    } as UserProfile;
+  });
 }
 
 /** Invite payload for addInvite. */

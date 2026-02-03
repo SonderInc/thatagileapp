@@ -46,7 +46,7 @@ const Navigation: React.FC = () => {
   };
 
   const adminItems = [
-    { id: 'invite-user', label: 'User Settings' },
+    { id: 'invite-user', label: 'User Management' },
     { id: 'licence', label: 'Licence' },
     { id: 'company-profile', label: 'Company profile' },
     { id: 'settings', label: 'Settings' },

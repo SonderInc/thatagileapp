@@ -16,6 +16,7 @@ export interface IDataStore {
   setUserProfile(profile: UserProfile): Promise<void>;
   clearMustChangePassword(uid: string): Promise<void>;
   getCompanyUserCount(companyId: string): Promise<number>;
+  getCompanyUsers(companyId: string): Promise<UserProfile[]>;
   addInvite(invite: { email: string; companyId: string; roles: Role[]; invitedBy: string }): Promise<{ token: string }>;
   getInviteByToken(token: string): Promise<{ email: string; companyId: string; roles: Role[] } | null>;
   markInviteUsed(token: string): Promise<void>;
