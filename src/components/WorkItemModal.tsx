@@ -3,9 +3,10 @@ import { WorkItem, WorkItemType, WorkItemStatus, EpicFeatureSize } from '../type
 import { useStore } from '../store/useStore';
 import { getAllowedChildTypes } from '../utils/hierarchy';
 import { SIZE_OPTIONS, STORY_POINT_OPTIONS, DAYS_OPTIONS } from '../utils/estimates';
-import { X, Plus, FileText } from 'lucide-react';
+import { X, Plus, FileText, BookOpen } from 'lucide-react';
 import { getTypeLabel } from '../utils/hierarchy';
 import EpicHypothesisModal from './EpicHypothesisModal';
+import EpicHypothesisExampleModal from './EpicHypothesisExampleModal';
 
 interface WorkItemModalProps {
   itemId: string | null;
@@ -28,6 +29,7 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showEpicHypothesis, setShowEpicHypothesis] = useState(false);
+  const [showEpicHypothesisExample, setShowEpicHypothesisExample] = useState(false);
 
   const item = itemId ? workItems.find((i) => i.id === itemId) : null;
   const isEditing = !!item;
@@ -248,26 +250,48 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
 
           {!isEditing && formData.type === 'epic' && (
             <div style={{ marginBottom: '16px' }}>
-              <button
-                type="button"
-                onClick={() => setShowEpicHypothesis(true)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 14px',
-                  border: '1px solid #3b82f6',
-                  borderRadius: '6px',
-                  backgroundColor: '#eff6ff',
-                  color: '#1d4ed8',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                }}
-              >
-                <FileText size={18} />
-                Epic Hypothesis Statement
-              </button>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowEpicHypothesis(true)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 14px',
+                    border: '1px solid #3b82f6',
+                    borderRadius: '6px',
+                    backgroundColor: '#eff6ff',
+                    color: '#1d4ed8',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <FileText size={18} />
+                  Epic Hypothesis Statement
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowEpicHypothesisExample(true)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 14px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    backgroundColor: '#ffffff',
+                    color: '#374151',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <BookOpen size={18} />
+                  Hypothesis Example
+                </button>
+              </div>
               <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#6b7280' }}>
                 Fill the hypothesis form to pre-fill Epic name, description, and owner.
               </p>
@@ -666,6 +690,9 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
             setShowEpicHypothesis(false);
           }}
         />
+      )}
+      {showEpicHypothesisExample && (
+        <EpicHypothesisExampleModal onClose={() => setShowEpicHypothesisExample(false)} />
       )}
     </div>
   );
