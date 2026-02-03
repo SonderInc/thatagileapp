@@ -44,18 +44,26 @@ const InviteUserPage: React.FC = () => {
     setDirectoryError(null);
     try {
       try {
-        const profile = await getDataStore().getUserProfile(currentUser.id);
-        if (profile) {
+        let profile = await getDataStore().getUserProfile(currentUser.id);
+        if (!profile) {
+          profile = {
+            uid: currentUser.id,
+            email: currentUser.email ?? '',
+            displayName: currentUser.name ?? '',
+            companyId: currentTenantId,
+            companies: [{ companyId: currentTenantId, roles: (currentUser.roles ?? []) as Role[] }],
+          };
+        } else {
           const hasCurrentCompany = profile.companies?.some((c) => c.companyId === currentTenantId) || profile.companyId === currentTenantId;
-          const profileToSync = hasCurrentCompany
-            ? profile
-            : {
-                ...profile,
-                companyId: profile.companyId ?? currentTenantId,
-                companies: [...(profile.companies ?? []), { companyId: currentTenantId, roles: (currentUser.roles ?? []) as Role[] }],
-              };
-          await getDataStore().setUserProfile(profileToSync);
+          if (!hasCurrentCompany) {
+            profile = {
+              ...profile,
+              companyId: profile.companyId ?? currentTenantId,
+              companies: [...(profile.companies ?? []), { companyId: currentTenantId, roles: (currentUser.roles ?? []) as Role[] }],
+            };
+          }
         }
+        await getDataStore().setUserProfile(profile);
       } catch (syncErr) {
         console.warn('[InviteUserPage] Profile sync before directory load failed:', syncErr);
       }
@@ -114,18 +122,26 @@ const InviteUserPage: React.FC = () => {
     }
     const seats = company?.seats ?? 50;
     try {
-      const profile = await getDataStore().getUserProfile(currentUser.id);
-      if (profile) {
+      let profile = await getDataStore().getUserProfile(currentUser.id);
+      if (!profile) {
+        profile = {
+          uid: currentUser.id,
+          email: currentUser.email ?? '',
+          displayName: currentUser.name ?? '',
+          companyId: currentTenantId,
+          companies: [{ companyId: currentTenantId, roles: (currentUser.roles ?? []) as Role[] }],
+        };
+      } else {
         const hasCurrentCompany = profile.companies?.some((c) => c.companyId === currentTenantId) || profile.companyId === currentTenantId;
-        const profileToSync = hasCurrentCompany
-          ? profile
-          : {
-              ...profile,
-              companyId: profile.companyId ?? currentTenantId,
-              companies: [...(profile.companies ?? []), { companyId: currentTenantId, roles: (currentUser.roles ?? []) as Role[] }],
-            };
-        await getDataStore().setUserProfile(profileToSync);
+        if (!hasCurrentCompany) {
+          profile = {
+            ...profile,
+            companyId: profile.companyId ?? currentTenantId,
+            companies: [...(profile.companies ?? []), { companyId: currentTenantId, roles: (currentUser.roles ?? []) as Role[] }],
+          };
+        }
       }
+      await getDataStore().setUserProfile(profile);
       const count = await getDataStore().getCompanyUserCount(currentTenantId);
       if (count >= seats) {
         setError('Seat limit reached. Add a licence or buy more seats.');
