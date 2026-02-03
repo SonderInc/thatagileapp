@@ -1,5 +1,5 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import Modal from './Modal';
 
 export interface FeatureColumnsExplainedModalProps {
   onClose: () => void;
@@ -63,65 +63,9 @@ const SECTIONS = [
   },
 ];
 
-const FeatureColumnsExplainedModal: React.FC<FeatureColumnsExplainedModalProps> = ({ onClose }) => {
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '12px',
-          padding: '24px',
-          width: '90%',
-          maxWidth: '560px',
-          maxHeight: '90vh',
-          overflow: 'auto',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '20px',
-          }}
-        >
-          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#111827' }}>
-            Columns Explained
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '4px',
-              display: 'flex',
-              alignItems: 'center',
-              color: '#6b7280',
-            }}
-            aria-label="Close"
-          >
-            <X size={24} />
-          </button>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+const FeatureColumnsExplainedModal: React.FC<FeatureColumnsExplainedModalProps> = ({ onClose }) => (
+  <Modal title="Columns Explained" onClose={onClose} maxWidth="560px">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {SECTIONS.map((section) => (
             <section key={section.title}>
               <h3
@@ -161,10 +105,8 @@ const FeatureColumnsExplainedModal: React.FC<FeatureColumnsExplainedModalProps> 
               )}
             </section>
           ))}
-        </div>
-      </div>
     </div>
-  );
-};
+  </Modal>
+);
 
 export default FeatureColumnsExplainedModal;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import Modal from './Modal';
 
 export interface EpicHypothesisData {
   funnelEntryDate: string;
@@ -105,41 +105,8 @@ const EpicHypothesisModal: React.FC<EpicHypothesisModalProps> = ({ onClose, onAp
   const hintStyle: React.CSSProperties = { fontSize: '12px', color: '#6b7280', marginTop: '4px' };
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1100,
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '12px',
-          padding: '24px',
-          width: '90%',
-          maxWidth: '640px',
-          maxHeight: '90vh',
-          overflow: 'auto',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '600' }}>Epic Hypothesis Statement</h3>
-          <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
-            <X size={22} />
-          </button>
-        </div>
-
-        <div style={sectionStyle}>
+    <Modal title="Epic Hypothesis Statement" onClose={onClose} maxWidth="640px" zIndex={1100}>
+      <div style={sectionStyle}>
           <label style={labelStyle}>Funnel Entry Date</label>
           <input
             type="date"
@@ -292,8 +259,7 @@ const EpicHypothesisModal: React.FC<EpicHypothesisModalProps> = ({ onClose, onAp
             Apply to Epic
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 };
 

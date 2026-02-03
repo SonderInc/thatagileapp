@@ -1,14 +1,13 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState } from 'react';
 import { WorkItem, WorkItemType, WorkItemStatus, EpicFeatureSize } from '../types';
 import { useStore } from '../store/useStore';
-import { getAllowedChildTypes } from '../utils/hierarchy';
 import { SIZE_OPTIONS, STORY_POINT_OPTIONS, DAYS_OPTIONS } from '../utils/estimates';
-import { X, Plus, FileText, BookOpen } from 'lucide-react';
+import { Plus, FileText, BookOpen } from 'lucide-react';
+import Modal from './Modal';
 import { getTypeLabel } from '../utils/hierarchy';
 import EpicHypothesisModal from './EpicHypothesisModal';
 import EpicHypothesisExampleModal from './EpicHypothesisExampleModal';
-
-const FEATURE_STATUSES: WorkItemStatus[] = ['funnel', 'analysis', 'program-backlog', 'implementation', 'validating', 'deploying', 'releasing'];
+import { useWorkItemForm } from '../hooks/useWorkItemForm';
 
 interface WorkItemModalProps {
   itemId: string | null;
@@ -22,181 +21,31 @@ interface WorkItemModalProps {
 }
 
 const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId, type, allowedTypes: allowedTypesProp, defaultStatus }) => {
-  const { workItems, addWorkItem, updateWorkItem, users, getAggregatedStoryPoints, getWorkItemsByParent, getFeaturesInDevelopState, setSelectedWorkItem } = useStore();
-  const [formData, setFormData] = useState<Partial<WorkItem>>({
-    title: '',
-    description: '',
-    type: type || 'user-story',
-    status: 'backlog',
-    priority: 'medium',
-  });
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const { users, getAggregatedStoryPoints, getFeaturesInDevelopState, setSelectedWorkItem } = useStore();
+  const {
+    formData,
+    setFormData,
+    submitError,
+    saving,
+    item,
+    isEditing,
+    allowedTypes,
+    handleSubmit,
+    handleAddTask,
+    handleAddBug,
+    childTasksAndBugs,
+    FEATURE_STATUSES,
+  } = useWorkItemForm({ itemId, onClose, parentId, type, allowedTypes: allowedTypesProp, defaultStatus });
   const [showEpicHypothesis, setShowEpicHypothesis] = useState(false);
   const [showEpicHypothesisExample, setShowEpicHypothesisExample] = useState(false);
 
-  const item = itemId ? workItems.find((i) => i.id === itemId) : null;
-  const isEditing = !!item;
-  const parent = parentId ? workItems.find((i) => i.id === parentId) : null;
-  const allowedTypes: WorkItemType[] = useMemo(() => {
-    if (isEditing) return [item!.type];
-    if (allowedTypesProp?.length) return allowedTypesProp;
-    if (parent) return getAllowedChildTypes(parent.type);
-    return ['company', 'product'];
-  }, [isEditing, item, parent, allowedTypesProp]);
-
-  useEffect(() => {
-    if (item) {
-      const status = item.type === 'feature' && !FEATURE_STATUSES.includes(item.status) ? 'funnel' : item.status;
-      setFormData({
-        title: item.title,
-        description: item.description,
-        type: item.type,
-        status,
-        priority: item.priority,
-        assignee: item.assignee,
-        tags: item.tags,
-        size: item.size,
-        storyPoints: item.storyPoints,
-        acceptanceCriteria: item.acceptanceCriteria,
-        estimatedDays: item.estimatedDays,
-        estimatedHours: item.estimatedHours,
-        parentId: item.parentId || parentId,
-      });
-    } else {
-      const defaultType = (type && (allowedTypes.includes(type) || type === 'user-story')) ? type : allowedTypes[0];
-      setFormData((prev) => ({
-        ...prev,
-        parentId,
-        type: defaultType,
-        ...(defaultStatus != null && { status: defaultStatus }),
-        ...(defaultStatus == null && defaultType === 'feature' && { status: 'funnel' }),
-      }));
-    }
-  }, [item, parentId, type, allowedTypes, defaultStatus]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitError(null);
-    if (isEditing && itemId) {
-      updateWorkItem(itemId, formData);
-      onClose();
-      return;
-    }
-    const newItem: WorkItem = {
-      id: `item-${Date.now()}`,
-      title: formData.title || '',
-      description: formData.description,
-      type: formData.type || 'user-story',
-      status: formData.status || 'backlog',
-      priority: formData.priority || 'medium',
-      assignee: formData.assignee,
-      tags: formData.tags,
-      size: formData.size,
-      storyPoints: formData.storyPoints,
-      acceptanceCriteria: formData.acceptanceCriteria,
-      estimatedDays: formData.estimatedDays,
-      estimatedHours: formData.estimatedHours,
-      parentId: formData.parentId,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      color: formData.color,
-    };
-    setSaving(true);
-    try {
-      await addWorkItem(newItem);
-      onClose();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setSubmitError(msg || 'Failed to save.');
-      console.error('[WorkItemModal] addWorkItem failed:', err);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleAddTask = () => {
-    if (!item || item.type !== 'user-story') return;
-    const newItem: WorkItem = {
-      id: `item-${Date.now()}`,
-      type: 'task',
-      title: 'New task',
-      status: 'backlog',
-      priority: item.priority ?? 'medium',
-      parentId: item.id,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    addWorkItem(newItem).catch((err) => console.error('[WorkItemModal] addWorkItem (task) failed:', err));
-  };
-
-  const handleAddBug = () => {
-    if (!item || item.type !== 'user-story') return;
-    const newItem: WorkItem = {
-      id: `item-${Date.now()}`,
-      type: 'bug',
-      title: 'New bug',
-      status: 'backlog',
-      priority: item.priority ?? 'medium',
-      parentId: item.id,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    addWorkItem(newItem).catch((err) => console.error('[WorkItemModal] addWorkItem (bug) failed:', err));
-  };
-
-  const childTasksAndBugs = item && item.type === 'user-story'
-    ? getWorkItemsByParent(item.id).filter((i) => i.type === 'task' || i.type === 'bug')
-    : [];
-
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-      }}
-      onClick={onClose}
+    <Modal
+      title={isEditing ? 'Edit Work Item' : 'Create Work Item'}
+      onClose={onClose}
+      maxWidth="600px"
     >
-      <div
-        style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '12px',
-          padding: '24px',
-          width: '90%',
-          maxWidth: '600px',
-          maxHeight: '90vh',
-          overflow: 'auto',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '600' }}>
-            {isEditing ? 'Edit Work Item' : 'Create Work Item'}
-          </h2>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '4px',
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
-            <X size={24} />
-          </button>
-        </div>
-
-        {submitError && (
+      {submitError && (
           <div
             style={{
               marginBottom: '16px',
@@ -721,7 +570,6 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
             </button>
           </div>
         </form>
-      </div>
 
       {showEpicHypothesis && (
         <EpicHypothesisModal
@@ -741,7 +589,7 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
       {showEpicHypothesisExample && (
         <EpicHypothesisExampleModal onClose={() => setShowEpicHypothesisExample(false)} />
       )}
-    </div>
+    </Modal>
   );
 };
 

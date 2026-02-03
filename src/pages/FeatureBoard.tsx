@@ -3,54 +3,25 @@ import { useStore } from '../store/useStore';
 import KanbanBoard from '../components/KanbanBoard';
 import WorkItemModal from '../components/WorkItemModal';
 import FeatureColumnsExplainedModal from '../components/FeatureColumnsExplainedModal';
+import BoardPageHeader from '../components/BoardPageHeader';
+import Button from '../components/Button';
+import { useBoardWorkItemModal } from '../hooks/useBoardWorkItemModal';
 import { FEATURE_COLUMNS } from '../utils/boardConfig';
+import { spacing } from '../styles/theme';
 
 const FeatureBoard: React.FC = () => {
-  const { getWorkItemsByType, selectedWorkItem, setSelectedWorkItem } = useStore();
-  const [showModal, setShowModal] = useState(false);
-  const [modalColumnId, setModalColumnId] = useState<string | null>(null);
+  const { getWorkItemsByType, selectedWorkItem } = useStore();
+  const { showModal, modalColumnId, handleAddItem, handleCloseModal } = useBoardWorkItemModal();
   const [showColumnsExplained, setShowColumnsExplained] = useState(false);
-
   const features = getWorkItemsByType('feature');
 
-  const handleAddItem = (columnId: string) => {
-    setModalColumnId(columnId);
-    setShowModal(true);
-  };
-
-  const handleCloseModal = () => {
-    setShowModal(false);
-    setModalColumnId(null);
-    setSelectedWorkItem(null);
-  };
-
   return (
-    <div style={{ padding: '24px' }}>
-      <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: '32px', fontWeight: '700', color: '#111827' }}>
-            Feature Board
-          </h1>
-          <p style={{ margin: '8px 0 0 0', color: '#6b7280', fontSize: '14px' }}>
-            Track value-added work for epics
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowColumnsExplained(true)}
-          style={{
-            padding: '8px 12px',
-            border: '1px solid #d1d5db',
-            borderRadius: '8px',
-            backgroundColor: '#ffffff',
-            color: '#374151',
-            cursor: 'pointer',
-            fontSize: '14px',
-          }}
-        >
+    <div style={{ padding: spacing.xxl }}>
+      <BoardPageHeader title="Feature Board" subtitle="Track value-added work for epics">
+        <Button variant="secondary" onClick={() => setShowColumnsExplained(true)}>
           Columns Explained
-        </button>
-      </div>
+        </Button>
+      </BoardPageHeader>
 
       <KanbanBoard
         boardId="feature-board"

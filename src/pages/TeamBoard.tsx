@@ -5,6 +5,7 @@ import WorkItemModal from '../components/WorkItemModal';
 import SprintBurndownModal from '../components/SprintBurndownModal';
 import { TEAM_BOARD_COLUMNS } from '../utils/boardConfig';
 import { Settings, TrendingDown } from 'lucide-react';
+import Button from '../components/Button';
 
 const TeamBoard: React.FC = () => {
   const {
@@ -79,48 +80,16 @@ const TeamBoard: React.FC = () => {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           {teamBoardMode !== 'kanban' && (
-            <button
-              type="button"
-              onClick={() => setShowBurndown(true)}
-              style={{
-                padding: '8px 12px',
-                border: '1px solid #d1d5db',
-                borderRadius: '8px',
-                backgroundColor: '#ffffff',
-                color: '#374151',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontSize: '14px',
-              }}
-              title="Sprint Burndown"
-            >
+            <Button variant="secondary" onClick={() => setShowBurndown(true)} title="Sprint Burndown">
               <TrendingDown size={18} />
               Sprint Burndown
-            </button>
+            </Button>
           )}
           {canAccessTeamBoardSettings() && (
-            <button
-              type="button"
-              onClick={() => setViewMode('settings')}
-              style={{
-                padding: '8px 12px',
-                border: '1px solid #d1d5db',
-                borderRadius: '8px',
-                backgroundColor: '#ffffff',
-                color: '#6b7280',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontSize: '14px',
-              }}
-              title="Settings"
-            >
+            <Button variant="secondary" onClick={() => setViewMode('settings')} title="Settings">
               <Settings size={20} />
               Settings
-            </button>
+            </Button>
           )}
         </div>
       </div>

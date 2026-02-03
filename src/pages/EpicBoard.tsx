@@ -1,62 +1,45 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useStore } from '../store/useStore';
 import KanbanBoard from '../components/KanbanBoard';
 import WorkItemModal from '../components/WorkItemModal';
+import BoardPageHeader from '../components/BoardPageHeader';
+import { useBoardWorkItemModal } from '../hooks/useBoardWorkItemModal';
 import { EPIC_COLUMNS } from '../utils/boardConfig';
 import { Plus } from 'lucide-react';
+import { colors, radius, spacing, typography } from '../styles/theme';
 
 const EpicBoard: React.FC = () => {
-  const { getWorkItemsByType, selectedWorkItem, setSelectedWorkItem } = useStore();
-  const [showModal, setShowModal] = useState(false);
-  const [modalColumnId, setModalColumnId] = useState<string | null>(null);
-  
+  const { getWorkItemsByType, selectedWorkItem } = useStore();
+  const { showModal, setShowModal, modalColumnId, setModalColumnId, handleAddItem, handleCloseModal } = useBoardWorkItemModal();
   const epics = getWorkItemsByType('epic');
 
-  const handleAddItem = (columnId: string) => {
-    setModalColumnId(columnId);
-    setShowModal(true);
-  };
-
-  const handleCloseModal = () => {
-    setShowModal(false);
-    setModalColumnId(null);
-    setSelectedWorkItem(null);
-  };
-
   return (
-    <div style={{ padding: '24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: '32px', fontWeight: '700', color: '#111827' }}>
-            Epic Board
-          </h1>
-          <p style={{ margin: '8px 0 0 0', color: '#6b7280', fontSize: '14px' }}>
-            Manage epics across the value stream
-          </p>
-        </div>
+    <div style={{ padding: spacing.xxl }}>
+      <BoardPageHeader title="Epic Board" subtitle="Manage epics across the value stream">
         <button
+          type="button"
           onClick={() => {
             setModalColumnId(null);
             setShowModal(true);
           }}
           style={{
-            padding: '12px 24px',
-            backgroundColor: '#3b82f6',
-            color: '#ffffff',
+            padding: `${spacing.md} ${spacing.xxl}`,
+            backgroundColor: colors.primary,
+            color: colors.background,
             border: 'none',
-            borderRadius: '8px',
-            fontSize: '14px',
-            fontWeight: '500',
+            borderRadius: radius.md,
+            fontSize: typography.fontSizeBase,
+            fontWeight: typography.fontWeightMedium,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
+            gap: spacing.sm,
           }}
         >
           <Plus size={20} />
           New Epic
         </button>
-      </div>
+      </BoardPageHeader>
 
       <KanbanBoard
         boardId="epic-board"

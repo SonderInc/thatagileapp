@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { X } from 'lucide-react';
+import Modal from './Modal';
 
 export interface SprintBurndownModalProps {
   totalStoryPoints: number;
@@ -112,63 +112,8 @@ const SprintBurndownModal: React.FC<SprintBurndownModalProps> = ({
   }, [totalStoryPoints]);
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '12px',
-          padding: '24px',
-          width: '90%',
-          maxWidth: '420px',
-          maxHeight: '90vh',
-          overflow: 'auto',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '16px',
-          }}
-        >
-          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#111827' }}>
-            Sprint Burndown
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '4px',
-              display: 'flex',
-              alignItems: 'center',
-              color: '#6b7280',
-            }}
-            aria-label="Close"
-          >
-            <X size={24} />
-          </button>
-        </div>
-
-        {sprintDays <= 0 ? (
+    <Modal title="Sprint Burndown" onClose={onClose} maxWidth="420px">
+      {sprintDays <= 0 ? (
           <p style={{ color: '#6b7280', fontSize: '14px' }}>No sprint selected.</p>
         ) : (
           <>
@@ -307,8 +252,7 @@ const SprintBurndownModal: React.FC<SprintBurndownModalProps> = ({
             </div>
           </>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 };
 

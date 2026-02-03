@@ -1,5 +1,5 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import Modal from './Modal';
 
 interface EpicHypothesisExampleModalProps {
   onClose: () => void;
@@ -11,41 +11,8 @@ const blockStyle: React.CSSProperties = { fontSize: '14px', color: '#374151', li
 const listStyle: React.CSSProperties = { margin: '4px 0 0 0', paddingLeft: '20px', fontSize: '14px', color: '#374151', lineHeight: 1.6 };
 
 const EpicHypothesisExampleModal: React.FC<EpicHypothesisExampleModalProps> = ({ onClose }) => (
-  <div
-    style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1100,
-    }}
-    onClick={onClose}
-  >
-    <div
-      style={{
-        backgroundColor: '#ffffff',
-        borderRadius: '12px',
-        padding: '24px',
-        width: '90%',
-        maxWidth: '640px',
-        maxHeight: '90vh',
-        overflow: 'auto',
-      }}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '600' }}>Hypothesis Example</h3>
-        <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
-          <X size={22} />
-        </button>
-      </div>
-
-      <div style={sectionStyle}>
+  <Modal title="Hypothesis Example" onClose={onClose} maxWidth="640px" zIndex={1100}>
+    <div style={sectionStyle}>
         <span style={labelStyle}>Epic Name</span>
         <p style={blockStyle}>Unified Billing Experience Across Products</p>
       </div>
@@ -115,8 +82,7 @@ const EpicHypothesisExampleModal: React.FC<EpicHypothesisExampleModalProps> = ({
           Close
         </button>
       </div>
-    </div>
-  </div>
+  </Modal>
 );
 
 export default EpicHypothesisExampleModal;
