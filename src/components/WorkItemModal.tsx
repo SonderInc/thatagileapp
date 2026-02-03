@@ -110,7 +110,7 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
             </select>
           </div>
 
-          {!isEditing && formData.type === 'epic' && (
+          {formData.type === 'epic' && (
             <div style={{ marginBottom: '16px' }}>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <button
@@ -155,7 +155,9 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
                 </button>
               </div>
               <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#6b7280' }}>
-                Fill the hypothesis form to pre-fill Epic name, description, and owner.
+                {isEditing
+                  ? 'Use the hypothesis form to update Epic name, description, and owner.'
+                  : 'Fill the hypothesis form to pre-fill Epic name, description, and owner.'}
               </p>
             </div>
           )}
