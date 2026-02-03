@@ -39,11 +39,11 @@ const InviteUserPage: React.FC = () => {
   };
 
   const loadDirectory = async () => {
-    if (!currentTenantId) return;
+    if (!currentTenantId || !currentUser?.id) return;
     setDirectoryLoading(true);
     setDirectoryError(null);
     try {
-      if (currentUser?.id) {
+      try {
         const profile = await getDataStore().getUserProfile(currentUser.id);
         if (profile) {
           const hasCurrentCompany = profile.companies?.some((c) => c.companyId === currentTenantId) || profile.companyId === currentTenantId;
@@ -56,6 +56,8 @@ const InviteUserPage: React.FC = () => {
               };
           await getDataStore().setUserProfile(profileToSync);
         }
+      } catch (syncErr) {
+        if (import.meta.env.DEV) console.warn('[InviteUserPage] Profile sync before directory load failed:', syncErr);
       }
       const users = await getDataStore().getCompanyUsers(currentTenantId);
       setCompanyUsers(users);
@@ -68,8 +70,8 @@ const InviteUserPage: React.FC = () => {
   };
 
   useEffect(() => {
-    if (currentTenantId) loadDirectory();
-  }, [currentTenantId]);
+    if (currentTenantId && currentUser?.id) loadDirectory();
+  }, [currentTenantId, currentUser?.id]);
 
   // Ensure current user's profile has adminCompanyIds so Firestore rules allow role updates (one-time sync for existing admins)
   useEffect(() => {
@@ -336,7 +338,12 @@ const InviteUserPage: React.FC = () => {
         {directoryLoading ? (
           <p style={{ color: '#6b7280', fontSize: '14px' }}>Loading users…</p>
         ) : directoryError ? (
-          <p style={{ color: '#b91c1c', fontSize: '14px' }}>{directoryError}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <p style={{ color: '#b91c1c', fontSize: '14px', margin: 0 }}>{directoryError}</p>
+            <button type="button" className="btn-secondary" onClick={() => loadDirectory()}>
+              Retry
+            </button>
+          </div>
         ) : companyUsers.length === 0 ? (
           <p style={{ color: '#6b7280', fontSize: '14px' }}>No users in this company yet.</p>
         ) : (
