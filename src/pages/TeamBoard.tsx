@@ -1,15 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import TeamKanbanBoard from '../components/TeamKanbanBoard';
 import WorkItemModal from '../components/WorkItemModal';
+import SprintBurndownModal from '../components/SprintBurndownModal';
 import { TEAM_BOARD_COLUMNS } from '../utils/boardConfig';
-import { Settings } from 'lucide-react';
+import { Settings, TrendingDown } from 'lucide-react';
 
 const TeamBoard: React.FC = () => {
   const {
     sprints,
     getTeamBoardLanes,
     getStoriesForLane,
+    getWorkItemsBySprint,
     selectedWorkItem,
     setSelectedWorkItem,
     currentTenantId,
@@ -21,6 +23,7 @@ const TeamBoard: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [modalColumnId, setModalColumnId] = useState<string | null>(null);
   const [selectedSprintId, setSelectedSprintId] = useState<string | null>(null);
+  const [showBurndown, setShowBurndown] = useState(false);
 
   useEffect(() => {
     hydrateTeamBoardSettings(currentTenantId);
@@ -29,6 +32,28 @@ const TeamBoard: React.FC = () => {
   const lanes = getTeamBoardLanes();
   const currentSprint = sprints.find((s) => s.status === 'in-progress');
   const upcomingSprints = sprints.filter((s) => s.status === 'upcoming');
+  const burndownSprint = selectedSprintId
+    ? sprints.find((s) => s.id === selectedSprintId)
+    : currentSprint ?? null;
+
+  const burndownProps = useMemo(() => {
+    if (!burndownSprint) {
+      return { totalStoryPoints: 0, sprintDays: 0 };
+    }
+    const items = getWorkItemsBySprint(burndownSprint.id);
+    const totalStoryPoints = items.reduce(
+      (sum, i) => sum + (typeof i.storyPoints === 'number' ? i.storyPoints : 0),
+      0
+    );
+    const start = burndownSprint.startDate instanceof Date
+      ? burndownSprint.startDate.getTime()
+      : (burndownSprint.startDate as { toMillis?: () => number })?.toMillis?.() ?? 0;
+    const end = burndownSprint.endDate instanceof Date
+      ? burndownSprint.endDate.getTime()
+      : (burndownSprint.endDate as { toMillis?: () => number })?.toMillis?.() ?? 0;
+    const sprintDays = Math.max(1, Math.ceil((end - start) / 86400000));
+    return { totalStoryPoints, sprintDays };
+  }, [burndownSprint, getWorkItemsBySprint]);
 
   const handleAddItem = (columnId: string) => {
     setModalColumnId(columnId);
@@ -52,28 +77,52 @@ const TeamBoard: React.FC = () => {
             Sprint-based work management
           </p>
         </div>
-        {canAccessTeamBoardSettings() && (
-          <button
-            type="button"
-            onClick={() => setViewMode('settings')}
-            style={{
-              padding: '8px 12px',
-              border: '1px solid #d1d5db',
-              borderRadius: '8px',
-              backgroundColor: '#ffffff',
-              color: '#6b7280',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '14px',
-            }}
-            title="Settings"
-          >
-            <Settings size={20} />
-            Settings
-          </button>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {teamBoardMode !== 'kanban' && (
+            <button
+              type="button"
+              onClick={() => setShowBurndown(true)}
+              style={{
+                padding: '8px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                backgroundColor: '#ffffff',
+                color: '#374151',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '14px',
+              }}
+              title="Sprint Burndown"
+            >
+              <TrendingDown size={18} />
+              Sprint Burndown
+            </button>
+          )}
+          {canAccessTeamBoardSettings() && (
+            <button
+              type="button"
+              onClick={() => setViewMode('settings')}
+              style={{
+                padding: '8px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                backgroundColor: '#ffffff',
+                color: '#6b7280',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '14px',
+              }}
+              title="Settings"
+            >
+              <Settings size={20} />
+              Settings
+            </button>
+          )}
+        </div>
       </div>
 
       {teamBoardMode === 'kanban' ? (
@@ -163,6 +212,13 @@ const TeamBoard: React.FC = () => {
           onClose={handleCloseModal}
           type={modalColumnId === 'backlog' ? 'user-story' : undefined}
           allowedTypes={modalColumnId === 'backlog' ? ['user-story', 'task', 'bug'] : undefined}
+        />
+      )}
+      {showBurndown && (
+        <SprintBurndownModal
+          totalStoryPoints={burndownProps.totalStoryPoints}
+          sprintDays={burndownProps.sprintDays}
+          onClose={() => setShowBurndown(false)}
         />
       )}
     </div>
