@@ -213,6 +213,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     displayName: data.displayName ?? '',
     companyId: data.companyId ?? null,
     companies: companies?.map((c) => ({ companyId: c.companyId, roles: c.roles as Role[] })),
+    mustChangePassword: data.mustChangePassword === true,
   };
 }
 
@@ -226,7 +227,14 @@ export async function setUserProfile(profile: UserProfile): Promise<void> {
     companyId: profile.companyId,
     companyIds,
     ...(profile.companies && { companies: profile.companies }),
+    ...(profile.mustChangePassword !== undefined && { mustChangePassword: profile.mustChangePassword }),
   });
+}
+
+export async function clearMustChangePassword(uid: string): Promise<void> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = doc(db, USERS_COLLECTION, uid);
+  await updateDoc(ref, { mustChangePassword: false });
 }
 
 /** Count users that belong to a company (for seat enforcement). */

@@ -26,6 +26,8 @@ interface AppState {
   currentTenantId: string | null;
   /** Current auth user (null when signed out). Provider-agnostic. */
   firebaseUser: AuthUser | null;
+  /** When true, user must change password before using the app (e.g. first login after invite). */
+  mustChangePassword: boolean;
 
   // UI State
   selectedBoard: string | null;
@@ -56,7 +58,8 @@ interface AppState {
   setCurrentTenantId: (id: string | null) => void;
   setFirebaseUser: (user: AuthUser | null) => void;
   setCurrentUser: (user: User | null) => void;
-  
+  setMustChangePassword: (value: boolean) => void;
+
   // Computed
   getProductBacklog: () => WorkItem[];
   getWorkItemsByType: (type: WorkItem['type']) => WorkItem[];
@@ -87,6 +90,7 @@ export const useStore = create<AppState>((set, get) => ({
   tenantCompanies: [],
   currentTenantId: null,
   firebaseUser: null,
+  mustChangePassword: false,
   selectedBoard: null,
   selectedWorkItem: null,
   selectedProductId: null,
@@ -206,6 +210,7 @@ export const useStore = create<AppState>((set, get) => ({
   setCurrentTenantId: (id) => set({ currentTenantId: id }),
   setFirebaseUser: (user) => set({ firebaseUser: user }),
   setCurrentUser: (user) => set({ currentUser: user }),
+  setMustChangePassword: (value) => set({ mustChangePassword: value }),
   
   // Computed
   getProductBacklog: () => {

@@ -10,6 +10,7 @@ export interface IAuth {
   signInWithEmailAndPassword(email: string, password: string): Promise<AuthUser>;
   createUserWithEmailAndPassword(email: string, password: string): Promise<AuthUser>;
   updateDisplayName(uid: string, displayName: string): Promise<void>;
+  updatePassword(newPassword: string): Promise<void>;
   signOut(): Promise<void>;
   /** Whether the provider is configured (e.g. Firebase project set). */
   isConfigured(): boolean;

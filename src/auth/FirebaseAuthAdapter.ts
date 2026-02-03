@@ -7,6 +7,7 @@ import {
   signInWithEmailAndPassword as fbSignIn,
   createUserWithEmailAndPassword as fbCreateUser,
   updateProfile as fbUpdateProfile,
+  updatePassword as fbUpdatePassword,
   signOut as fbSignOut,
 } from 'firebase/auth';
 import { auth, isFirebaseConfigured } from '../lib/firebase';
@@ -40,6 +41,12 @@ export const FirebaseAuthAdapter: IAuth = {
     if (current?.uid === uid) {
       await fbUpdateProfile(current, { displayName });
     }
+  },
+  async updatePassword(newPassword) {
+    if (!auth) throw new Error('Auth not configured');
+    const current = auth.currentUser;
+    if (!current) throw new Error('No signed-in user');
+    await fbUpdatePassword(current, newPassword);
   },
   async signOut() {
     if (auth) await fbSignOut(auth);

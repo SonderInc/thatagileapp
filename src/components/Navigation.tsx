@@ -9,6 +9,7 @@ const Navigation: React.FC = () => {
   const adminMenuRef = useRef<HTMLDivElement>(null);
 
   const isAdmin = currentUser?.roles?.includes('admin') ?? false;
+  const isHR = currentUser?.roles?.includes('hr') ?? false;
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -45,11 +46,17 @@ const Navigation: React.FC = () => {
   };
 
   const adminItems = [
-    { id: 'invite-user', label: 'User management' },
+    { id: 'invite-user', label: 'User Settings' },
     { id: 'licence', label: 'Licence' },
     { id: 'company-profile', label: 'Company profile' },
     { id: 'settings', label: 'Settings' },
   ] as const;
+
+  const visibleAdminItems = isAdmin
+    ? adminItems
+    : isHR
+      ? adminItems.filter((a) => a.id === 'invite-user')
+      : [];
 
   const handleAdminItem = (id: typeof adminItems[number]['id']) => {
     setViewMode(id);
@@ -105,7 +112,7 @@ const Navigation: React.FC = () => {
           </button>
         );
       })}
-      {isAdmin && (
+      {(isAdmin || isHR) && (
         <div ref={adminMenuRef} style={{ position: 'relative' }}>
           <button
             type="button"
@@ -113,12 +120,12 @@ const Navigation: React.FC = () => {
             style={{
               padding: '12px 16px',
               border: 'none',
-              borderBottom: adminItems.some((a) => viewMode === a.id) ? '3px solid #3b82f6' : '3px solid transparent',
+              borderBottom: visibleAdminItems.some((a) => viewMode === a.id) ? '3px solid #3b82f6' : '3px solid transparent',
               backgroundColor: 'transparent',
-              color: adminItems.some((a) => viewMode === a.id) ? '#3b82f6' : '#6b7280',
+              color: visibleAdminItems.some((a) => viewMode === a.id) ? '#3b82f6' : '#6b7280',
               cursor: 'pointer',
               fontSize: '14px',
-              fontWeight: adminItems.some((a) => viewMode === a.id) ? '600' : '400',
+              fontWeight: visibleAdminItems.some((a) => viewMode === a.id) ? '600' : '400',
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
@@ -143,7 +150,7 @@ const Navigation: React.FC = () => {
                 padding: '4px 0',
               }}
             >
-              {adminItems.map((item) => (
+              {visibleAdminItems.map((item) => (
                 <button
                   key={item.id}
                   type="button"

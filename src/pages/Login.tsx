@@ -11,7 +11,7 @@ function getInviteTokenFromUrl(): string | null {
 }
 
 const Login: React.FC = () => {
-  const { setCurrentTenantId, setCurrentUser } = useStore();
+  const { setCurrentTenantId, setCurrentUser, setMustChangePassword } = useStore();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,6 +21,8 @@ const Login: React.FC = () => {
   const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [inviteRecord, setInviteRecord] = useState<{ email: string; companyId: string; roles: string[] } | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
+
+  const DEFAULT_INVITE_PASSWORD = '12341234';
 
   useEffect(() => {
     const token = getInviteTokenFromUrl();
@@ -35,6 +37,7 @@ const Login: React.FC = () => {
         if (inv) {
           setInviteRecord(inv);
           setEmail(inv.email);
+          setPassword(DEFAULT_INVITE_PASSWORD);
         } else {
           setInviteError('Invalid or expired invite link');
         }
@@ -117,8 +120,10 @@ const Login: React.FC = () => {
         displayName: (displayName.trim() || user.email?.split('@')[0]) ?? 'User',
         companyId,
         companies: [{ companyId, roles: roles as Role[] }],
+        mustChangePassword: true,
       };
       await getDataStore().setUserProfile(profile);
+      setMustChangePassword(true);
       if (inviteToken) {
         await getDataStore().markInviteUsed(inviteToken);
         setInviteToken(null);
@@ -220,19 +225,26 @@ const Login: React.FC = () => {
           <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
             Password
           </label>
+          {showInviteForm && (
+            <p style={{ margin: '0 0 8px 0', fontSize: '13px', color: '#6b7280' }}>
+              Your temporary password is 12341234. You will be required to change it after signing in.
+            </p>
+          )}
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
             minLength={6}
-            placeholder="••••••••"
+            placeholder={showInviteForm ? '12341234' : '••••••••'}
+            readOnly={showInviteForm}
             style={{
               width: '100%',
               padding: '8px 12px',
               border: '1px solid #d1d5db',
               borderRadius: '6px',
               fontSize: '14px',
+              ...(showInviteForm && { backgroundColor: '#f3f4f6', cursor: 'not-allowed' }),
             }}
           />
         </div>

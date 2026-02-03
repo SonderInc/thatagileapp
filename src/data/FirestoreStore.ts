@@ -15,6 +15,7 @@ export const FirestoreStore: IDataStore = {
   deleteWorkItem: firestore.deleteWorkItem,
   getUserProfile: firestore.getUserProfile,
   setUserProfile: firestore.setUserProfile,
+  clearMustChangePassword: firestore.clearMustChangePassword,
   getCompanyUserCount: firestore.getCompanyUserCount,
   addInvite: firestore.addInvite,
   getInviteByToken: firestore.getInviteByToken,
