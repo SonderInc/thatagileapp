@@ -89,7 +89,17 @@ const InviteUserPage: React.FC = () => {
     const seats = company?.seats ?? 50;
     try {
       const profile = await getDataStore().getUserProfile(currentUser.id);
-      if (profile) await getDataStore().setUserProfile(profile);
+      if (profile) {
+        const hasCurrentCompany = profile.companies?.some((c) => c.companyId === currentTenantId) || profile.companyId === currentTenantId;
+        const profileToSync = hasCurrentCompany
+          ? profile
+          : {
+              ...profile,
+              companyId: profile.companyId ?? currentTenantId,
+              companies: [...(profile.companies ?? []), { companyId: currentTenantId, roles: (currentUser.roles ?? []) as Role[] }],
+            };
+        await getDataStore().setUserProfile(profileToSync);
+      }
       const count = await getDataStore().getCompanyUserCount(currentTenantId);
       if (count >= seats) {
         setError('Seat limit reached. Add a licence or buy more seats.');
