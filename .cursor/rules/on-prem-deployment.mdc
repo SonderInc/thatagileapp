@@ -33,4 +33,9 @@ This project must support **cloud SaaS** and **customer-hosted/on-prem** without
 - List files modified and which rule they satisfy.
 - Confirm no UI/UX or behavior change; cloud dependencies remain swappable.
 
-See `docs/DEPLOYMENT.md` for env vars, build/start, and deployment notes.
+## Deployment mode & USB bundle
+- Single switch: `DEPLOYMENT_MODE=saas | onprem | airgapped` (read from `src/config.ts` and `src/config/server.ts` only).
+- Mode controls auth choice, API base URL, email verification (saas required; onprem/airgapped optional) via config only; no UI layout change.
+- Offline install: `npm run bundle:onprem` produces `dist-install/` (docker-compose, install.sh, load-images.sh, pre-built app). Copy to USB; run `install.sh` on target with Docker. No internet at install time if images are pre-loaded.
+
+See `docs/DEPLOYMENT.md` and `docs/INSTALL_ONPREM.md`.

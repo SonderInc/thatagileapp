@@ -2,10 +2,20 @@
 
 This app supports **cloud SaaS** (e.g. Netlify) and **customer-hosted / on-prem** without rewrite. All configuration is env-based (12-factor).
 
+## Deployment mode
+
+Single switch for all mode-specific behavior (auth, API, email verification): **`DEPLOYMENT_MODE`**
+
+- **Frontend**: `VITE_DEPLOYMENT_MODE=saas | onprem | airgapped` (read in `src/config.ts`)
+- **Backend**: `DEPLOYMENT_MODE` (read in `src/config/server.ts`)
+
+SaaS = hosted (e.g. Netlify); onprem = internal server; airgapped = no outbound. No UI/layout changes; behavior differences are config-driven only.
+
 ## Required env vars (frontend)
 
 | Variable | Description | Default |
 |----------|-------------|---------|
+| `VITE_DEPLOYMENT_MODE` | `saas` \| `onprem` \| `airgapped` | `saas` |
 | `VITE_APP_BASE_URL` | Base URL of the app | (empty) |
 | `VITE_API_BASE_URL` | Backend API base URL (empty = same origin) | (empty) |
 | `VITE_AUTH_PROVIDER` | `firebase` \| `oidc` \| `local` | `firebase` |
@@ -27,6 +37,7 @@ See `.env.example` for a full template.
 - **Build:** `npm run build`
 - **Production serve:** `npm run start` (runs `vite preview`; default port 4173)
 - **Dev:** `npm run dev` (default port 5173)
+- **On-prem USB bundle:** `npm run bundle:onprem` → produces `dist-install/` to copy to USB; see `docs/INSTALL_ONPREM.md`
 
 ## Ports
 
