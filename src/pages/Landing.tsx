@@ -49,14 +49,14 @@ const Landing: React.FC = () => {
         </h1>
         <div
           style={{
-            marginTop: '16px',
-            padding: '20px',
+            marginTop: '12px',
+            padding: '12px',
             backgroundColor: '#ffffff',
             border: '1px solid #e5e7eb',
             borderRadius: '8px',
             display: 'flex',
             alignItems: 'flex-start',
-            gap: '20px',
+            gap: '12px',
             flexWrap: 'wrap',
           }}
         >
@@ -65,8 +65,8 @@ const Landing: React.FC = () => {
               src={tenant.logoUrl}
               alt={`${tenant.name} logo`}
               style={{
-                width: '80px',
-                height: '80px',
+                width: '160px',
+                height: '160px',
                 objectFit: 'contain',
                 flexShrink: 0,
               }}
