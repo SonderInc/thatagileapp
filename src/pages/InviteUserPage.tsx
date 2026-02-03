@@ -8,7 +8,7 @@ import type { UserProfile } from '../types';
 const ALL_ROLES = Object.keys(ROLE_LABELS) as Role[];
 
 const InviteUserPage: React.FC = () => {
-  const { currentUser, currentTenantId, setViewMode, canAddUser, getCurrentCompany } = useStore();
+  const { currentUser, currentTenantId, setViewMode, canAddUser, getCurrentCompany, getRoleLabel } = useStore();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -291,7 +291,7 @@ const InviteUserPage: React.FC = () => {
             >
               {ALL_ROLES.map((role) => (
                 <option key={role} value={role}>
-                  {ROLE_LABELS[role]}
+                  {getRoleLabel(role)}
                 </option>
               ))}
             </select>
@@ -347,7 +347,7 @@ const InviteUserPage: React.FC = () => {
                                   color: '#374151',
                                 }}
                               >
-                                {ROLE_LABELS[r]}
+                                {getRoleLabel(r)}
                               </span>
                             ))}
                             {getRolesForCompany(profile).length === 0 && (
@@ -402,7 +402,7 @@ const InviteUserPage: React.FC = () => {
                                   checked={editingRoles.includes(role)}
                                   onChange={() => toggleEditingRole(role)}
                                 />
-                                <span>{ROLE_LABELS[role]}</span>
+                                <span>{getRoleLabel(role)}</span>
                               </label>
                             ))}
                           </div>

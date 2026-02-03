@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { WorkItem, Sprint, KanbanBoard, User, WorkItemType, TenantCompany, AuthUser } from '../types';
+import { WorkItem, Sprint, KanbanBoard, User, WorkItemType, TenantCompany, AuthUser, Role } from '../types';
 import { getAllowedChildTypes } from '../utils/hierarchy';
-import { getTypeLabel as getTypeLabelFromNomenclature } from '../utils/nomenclature';
+import { getTypeLabel as getTypeLabelFromNomenclature, getRoleLabel as getRoleLabelFromNomenclature } from '../utils/nomenclature';
 import { getDataStore } from '../lib/adapters';
 
 const TYPE_ORDER: Record<WorkItemType, number> = {
@@ -93,6 +93,8 @@ interface AppState {
   getCurrentCompany: () => TenantCompany | null;
   /** Type label for current company's nomenclature (e.g. Epic vs Program). */
   getTypeLabel: (type: WorkItemType) => string;
+  /** Role label for current company's nomenclature (e.g. Participant vs Customer for training). */
+  getRoleLabel: (role: Role) => string;
 }
 
 const TEAM_BOARD_STORAGE_KEY = 'thatagileapp_teamBoard';
@@ -432,5 +434,10 @@ export const useStore = create<AppState>((set, get) => ({
   getTypeLabel: (type) => {
     const companyType = get().getCurrentCompany()?.companyType ?? 'software';
     return getTypeLabelFromNomenclature(type, companyType);
+  },
+
+  getRoleLabel: (role) => {
+    const companyType = get().getCurrentCompany()?.companyType ?? 'software';
+    return getRoleLabelFromNomenclature(role, companyType);
   },
 }));
