@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
-import { WorkItem, WorkItemStatus } from '../types';
+import { WorkItem } from '../types';
 import { ArrowLeft } from 'lucide-react';
 
 const AddProductPage: React.FC = () => {
   const { addWorkItem, setViewMode, selectedCompanyId } = useStore();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [status, setStatus] = useState<WorkItemStatus>('backlog');
-  const [priority, setPriority] = useState<WorkItem['priority']>('medium');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -25,8 +23,7 @@ const AddProductPage: React.FC = () => {
       type: 'product',
       title: title.trim() || 'New Product',
       description: description.trim() || undefined,
-      status,
-      priority,
+      status: 'backlog',
       parentId: selectedCompanyId ?? undefined,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -142,60 +139,6 @@ const AddProductPage: React.FC = () => {
                 fontFamily: 'inherit',
               }}
             />
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
-                Status
-              </label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as WorkItemStatus)}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                }}
-              >
-                <option value="funnel">Funnel</option>
-                <option value="backlog">Backlog</option>
-                <option value="analysis">Analysis</option>
-                <option value="prioritization">Prioritization</option>
-                <option value="implementation">Implementation</option>
-                <option value="intake">Intake</option>
-                <option value="define">Define</option>
-                <option value="design">Design</option>
-                <option value="develop">Develop</option>
-                <option value="release">Release</option>
-                <option value="to-do">To Do</option>
-                <option value="in-progress">In Progress</option>
-                <option value="done">Done</option>
-              </select>
-            </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
-                Priority
-              </label>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as WorkItem['priority'])}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                }}
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="critical">Critical</option>
-              </select>
-            </div>
           </div>
 
           <div style={{ display: 'flex', gap: '12px' }}>

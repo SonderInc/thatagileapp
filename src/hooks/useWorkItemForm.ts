@@ -69,6 +69,7 @@ export function useWorkItemForm({
         type: defaultType,
         ...(defaultStatus != null && { status: defaultStatus }),
         ...(defaultStatus == null && defaultType === 'feature' && { status: 'funnel' }),
+        ...(defaultType === 'product' && { status: 'backlog', priority: undefined }),
       }));
     }
   }, [item, parentId, type, allowedTypes, defaultStatus]);
@@ -76,8 +77,10 @@ export function useWorkItemForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
+    const isProduct = formData.type === 'product';
     if (isEditing && itemId) {
-      updateWorkItem(itemId, formData);
+      const payload = isProduct ? { ...formData, status: 'backlog' as const, priority: undefined } : formData;
+      updateWorkItem(itemId, payload);
       onClose();
       return;
     }
@@ -86,8 +89,8 @@ export function useWorkItemForm({
       title: formData.title || '',
       description: formData.description,
       type: formData.type || 'user-story',
-      status: formData.status || 'backlog',
-      priority: formData.priority || 'medium',
+      status: isProduct ? 'backlog' : (formData.status || 'backlog'),
+      priority: isProduct ? undefined : (formData.priority || 'medium'),
       assignee: formData.assignee,
       tags: formData.tags,
       size: formData.size,

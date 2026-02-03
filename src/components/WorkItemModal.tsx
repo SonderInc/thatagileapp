@@ -247,97 +247,99 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
-                Status
-              </label>
-              <select
-                value={
-                  formData.type === 'user-story' && !['backlog', 'to-do', 'in-progress', 'done', 'archive'].includes(formData.status ?? '')
-                    ? 'backlog'
-                    : (formData.type === 'task' || formData.type === 'bug') && !['to-do', 'in-progress', 'done'].includes(formData.status ?? '')
-                      ? 'to-do'
-                      : formData.type === 'feature' && !FEATURE_STATUSES.includes((formData.status ?? '') as WorkItemStatus)
-                        ? 'funnel'
-                        : formData.status
-                }
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as WorkItemStatus })}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                }}
-              >
-                {formData.type === 'user-story' ? (
-                  <>
-                    <option value="backlog">Backlog</option>
-                    <option value="to-do">Ready</option>
-                    <option value="in-progress">In Progress</option>
-                    <option value="done">Done</option>
-                    <option value="archive">Archive</option>
-                  </>
-                ) : (formData.type === 'task' || formData.type === 'bug') ? (
-                  <>
-                    <option value="to-do">Ready</option>
-                    <option value="in-progress">In progress</option>
-                    <option value="done">Done</option>
-                  </>
-                ) : formData.type === 'feature' ? (
-                  <>
-                    <option value="funnel">Funnel</option>
-                    <option value="analysis">Analyzing</option>
-                    <option value="program-backlog">Program Backlog</option>
-                    <option value="implementation">Implementing</option>
-                    <option value="validating">Validating</option>
-                    <option value="deploying">Deploying</option>
-                    <option value="releasing">Releasing</option>
-                  </>
-                ) : (
-                  <>
-                    <option value="funnel">Funnel</option>
-                    <option value="backlog">Backlog</option>
-                    <option value="analysis">Analysis</option>
-                    <option value="prioritization">Prioritization</option>
-                    <option value="implementation">Implementation</option>
-                    <option value="intake">Intake</option>
-                    <option value="define">Define</option>
-                    <option value="design">Design</option>
-                    <option value="develop">Develop</option>
-                    <option value="release">Release</option>
-                    <option value="to-do">To Do</option>
-                    <option value="in-progress">In Progress</option>
-                    <option value="done">Done</option>
-                    <option value="archive">Archive</option>
-                  </>
-                )}
-              </select>
-            </div>
+          {formData.type !== 'product' && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
+                  Status
+                </label>
+                <select
+                  value={
+                    formData.type === 'user-story' && !['backlog', 'to-do', 'in-progress', 'done', 'archive'].includes(formData.status ?? '')
+                      ? 'backlog'
+                      : (formData.type === 'task' || formData.type === 'bug') && !['to-do', 'in-progress', 'done'].includes(formData.status ?? '')
+                        ? 'to-do'
+                        : formData.type === 'feature' && !FEATURE_STATUSES.includes((formData.status ?? '') as WorkItemStatus)
+                          ? 'funnel'
+                          : formData.status
+                  }
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value as WorkItemStatus })}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                  }}
+                >
+                  {formData.type === 'user-story' ? (
+                    <>
+                      <option value="backlog">Backlog</option>
+                      <option value="to-do">Ready</option>
+                      <option value="in-progress">In Progress</option>
+                      <option value="done">Done</option>
+                      <option value="archive">Archive</option>
+                    </>
+                  ) : (formData.type === 'task' || formData.type === 'bug') ? (
+                    <>
+                      <option value="to-do">Ready</option>
+                      <option value="in-progress">In progress</option>
+                      <option value="done">Done</option>
+                    </>
+                  ) : formData.type === 'feature' ? (
+                    <>
+                      <option value="funnel">Funnel</option>
+                      <option value="analysis">Analyzing</option>
+                      <option value="program-backlog">Program Backlog</option>
+                      <option value="implementation">Implementing</option>
+                      <option value="validating">Validating</option>
+                      <option value="deploying">Deploying</option>
+                      <option value="releasing">Releasing</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="funnel">Funnel</option>
+                      <option value="backlog">Backlog</option>
+                      <option value="analysis">Analysis</option>
+                      <option value="prioritization">Prioritization</option>
+                      <option value="implementation">Implementation</option>
+                      <option value="intake">Intake</option>
+                      <option value="define">Define</option>
+                      <option value="design">Design</option>
+                      <option value="develop">Develop</option>
+                      <option value="release">Release</option>
+                      <option value="to-do">To Do</option>
+                      <option value="in-progress">In Progress</option>
+                      <option value="done">Done</option>
+                      <option value="archive">Archive</option>
+                    </>
+                  )}
+                </select>
+              </div>
 
-            <div>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
-                Priority
-              </label>
-              <select
-                value={formData.priority}
-                onChange={(e) => setFormData({ ...formData, priority: e.target.value as WorkItem['priority'] })}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                }}
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="critical">Critical</option>
-              </select>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
+                  Priority
+                </label>
+                <select
+                  value={formData.priority}
+                  onChange={(e) => setFormData({ ...formData, priority: e.target.value as WorkItem['priority'] })}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                  }}
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="critical">Critical</option>
+                </select>
+              </div>
             </div>
-          </div>
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
             <div>

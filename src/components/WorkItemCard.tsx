@@ -39,7 +39,7 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({ item, onClick, compact, bor
       onClick={handleClick}
       style={{
         backgroundColor: '#ffffff',
-        border: `2px solid ${borderColorOverride ?? item.color ?? getStatusColor(item.status)}`,
+        border: `2px solid ${borderColorOverride ?? item.color ?? (item.type === 'product' ? '#d1d5db' : getStatusColor(item.status))}`,
         borderRadius: compact ? 6 : 8,
         padding,
         cursor: 'pointer',
@@ -76,7 +76,7 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({ item, onClick, compact, bor
             {item.title}
           </h4>
         </div>
-        {item.priority && (
+        {item.priority && item.type !== 'product' && (
           <div
             style={{
               width: compact ? 6 : 8,
