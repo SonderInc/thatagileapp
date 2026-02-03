@@ -75,6 +75,8 @@ function App() {
       });
   }, [firebaseUser?.uid, setCurrentTenantId, setCurrentUser, setMustChangePassword]);
 
+  // Load tenant companies only when auth is configured and user is signed in,
+  // so incognito/fresh sessions load companies after login instead of before (when auth would fail).
   useEffect(() => {
     if (!getAuth().isConfigured()) {
       setTenantCompanies(mockTenantCompanies);
@@ -86,13 +88,34 @@ function App() {
       setCurrentUser(mockUsers[0]);
       return;
     }
-    getDataStore().getTenantCompanies()
+    if (!firebaseUser) {
+      setTenantCompanies([]);
+      setCurrentTenantId(null);
+      return;
+    }
+    const uid = firebaseUser.uid;
+    getDataStore()
+      .getTenantCompanies()
       .then((companies) => {
         setTenantCompanies(companies);
         if (companies.length > 0) {
           const first = companies[0].id;
           const current = useStore.getState().currentTenantId;
-          setCurrentTenantId(current ?? first);
+          const currentInList = current && companies.some((c) => c.id === current);
+          if (currentInList) {
+            setCurrentTenantId(current);
+            return;
+          }
+          getDataStore()
+            .getUserProfile(uid)
+            .then((profile) => {
+              const preferred =
+                profile?.companyId && companies.some((c) => c.id === profile.companyId)
+                  ? profile.companyId
+                  : first;
+              setCurrentTenantId(preferred);
+            })
+            .catch(() => setCurrentTenantId(first));
         } else {
           setCurrentTenantId(SEED_TENANT_ID);
           setWorkItems(mockWorkItems);
@@ -107,7 +130,7 @@ function App() {
     setBoards(mockBoards);
     setUsers(mockUsers);
     setCurrentUser(mockUsers[0]);
-  }, [setTenantCompanies, setCurrentTenantId, setWorkItems, setSprints, setBoards, setUsers, setCurrentUser]);
+  }, [firebaseUser?.uid, setTenantCompanies, setCurrentTenantId, setWorkItems, setSprints, setBoards, setUsers, setCurrentUser]);
 
   useEffect(() => {
     if (!currentTenantId) return;
