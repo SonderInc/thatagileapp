@@ -59,4 +59,4 @@ Builds will run automatically on every push to `main`. The site will get a URL l
 | Netlify            | New site → Import from GitHub → Select repo → Deploy |
 | Future updates     | Push to `main` → Netlify auto-deploys |
 
-Build config is in **`netlify.toml`** (Node 20, `npm run build`, publish `dist`, SPA redirects).
+Build config is in **`netlify.toml`** (Node 20, `npm run build`, publish `dist`, SPA redirects). For Firebase and using your own database, see **`docs/DEPLOYMENT.md`** (env vars and in-app Settings).

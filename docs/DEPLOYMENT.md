@@ -32,6 +32,13 @@ When using Firebase:
 
 See `.env.example` for a full template.
 
+### Using your own database
+
+When self-hosting, you can point the app at your own Firebase project in two ways:
+
+1. **Deploy-time:** Set `VITE_FIREBASE_*` to your Firebase project (from Firebase Console → Project settings → Your apps), then rebuild and deploy.
+2. **In-app:** Admin → Settings → **Use my own database**, paste Project ID, API Key, Auth Domain (and optional fields), then **Save**. The app will reload and use your project. Config is stored in the browser (localStorage). To switch back to the default (ThatAgile Cloud), use **Clear and use ThatAgile Cloud** in Settings.
+
 ## Build & start
 
 - **Build:** `npm run build`
