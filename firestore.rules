@@ -5,23 +5,33 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Tenant companies (registered companies)
+    // Tenant companies. User can read only their companies; only admins can update/delete.
     match /companies/{companyId} {
-      // Allow read if user is authenticated (later: check user profile has this companyId).
-      allow read: if request.auth != null;
-      // Allow create for any authenticated user (company registration).
+      let me = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      allow read: if request.auth != null
+        && me != null
+        && me.data.get('companyIds', null) != null
+        && companyId in me.data.companyIds;
       allow create: if request.auth != null;
-      // Allow update/delete only for owner or admin (later: check users/{uid}.companies or custom claims).
-      allow update, delete: if request.auth != null;
+      allow update, delete: if request.auth != null
+        && me != null
+        && me.data.get('adminCompanyIds', null) != null
+        && companyId in me.data.adminCompanyIds;
     }
 
-    // Work items (scoped by companyId = tenant id)
+    // Work items (scoped by companyId = tenant id). User can only access items for their companies.
     match /workItems/{itemId} {
-      // Phase 1: permissive; Phase 3: allow read/write only if resource.data.companyId is in user's companies.
-      allow read, write: if request.auth != null;
-      // Example for Phase 3 (requires reading users collection): 
-      // allow read, write: if request.auth != null && 
-      //   resource.data.companyId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companies;
+      let me = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      allow read, update, delete: if request.auth != null
+        && me != null
+        && me.data.get('companyIds', null) != null
+        && resource.data.companyId != null
+        && resource.data.companyId in me.data.companyIds;
+      allow create: if request.auth != null
+        && me != null
+        && me.data.get('companyIds', null) != null
+        && request.resource.data.companyId != null
+        && request.resource.data.companyId in me.data.companyIds;
     }
 
     // User profiles (uid = Firebase Auth uid)
