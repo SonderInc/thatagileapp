@@ -1,10 +1,24 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { getAuth } from '../lib/adapters';
 import { useStore } from '../store/useStore';
-import { LayoutDashboard, Layers, Package, Users, List, ListOrdered, Home, LogOut, Key } from 'lucide-react';
+import { LayoutDashboard, Layers, Package, Users, List, ListOrdered, Home, LogOut, Shield } from 'lucide-react';
 
 const Navigation: React.FC = () => {
-  const { viewMode, setViewMode, setSelectedProductId, firebaseUser, setFirebaseUser, setCurrentUser, setCurrentTenantId, canAddUser } = useStore();
+  const { viewMode, setViewMode, setSelectedProductId, firebaseUser, setFirebaseUser, setCurrentUser, setCurrentTenantId, currentUser } = useStore();
+  const [adminMenuOpen, setAdminMenuOpen] = useState(false);
+  const adminMenuRef = useRef<HTMLDivElement>(null);
+
+  const isAdmin = currentUser?.roles?.includes('admin') ?? false;
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (adminMenuRef.current && !adminMenuRef.current.contains(e.target as Node)) {
+        setAdminMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleSignOut = () => {
     const auth = getAuth();
@@ -28,6 +42,18 @@ const Navigation: React.FC = () => {
     setViewMode(id as typeof viewMode);
     if (id === 'landing') setSelectedProductId(null);
     if (id === 'backlog') setSelectedProductId(null);
+  };
+
+  const adminItems = [
+    { id: 'invite-user', label: 'User management' },
+    { id: 'licence', label: 'Licence' },
+    { id: 'company-profile', label: 'Company profile' },
+    { id: 'settings', label: 'Settings' },
+  ] as const;
+
+  const handleAdminItem = (id: typeof adminItems[number]['id']) => {
+    setViewMode(id);
+    setAdminMenuOpen(false);
   };
 
   return (
@@ -79,49 +105,67 @@ const Navigation: React.FC = () => {
           </button>
         );
       })}
-      {canAddUser() && (
-        <>
+      {isAdmin && (
+        <div ref={adminMenuRef} style={{ position: 'relative' }}>
           <button
             type="button"
-            onClick={() => setViewMode('invite-user')}
+            onClick={() => setAdminMenuOpen((o) => !o)}
             style={{
               padding: '12px 16px',
               border: 'none',
-              borderBottom: viewMode === 'invite-user' ? '3px solid #3b82f6' : '3px solid transparent',
+              borderBottom: adminItems.some((a) => viewMode === a.id) ? '3px solid #3b82f6' : '3px solid transparent',
               backgroundColor: 'transparent',
-              color: viewMode === 'invite-user' ? '#3b82f6' : '#6b7280',
+              color: adminItems.some((a) => viewMode === a.id) ? '#3b82f6' : '#6b7280',
               cursor: 'pointer',
               fontSize: '14px',
-              fontWeight: viewMode === 'invite-user' ? '600' : '400',
+              fontWeight: adminItems.some((a) => viewMode === a.id) ? '600' : '400',
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
             }}
           >
-            <Users size={18} />
-            Invite user
+            <Shield size={18} />
+            Admin
           </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('licence')}
-            style={{
-              padding: '12px 16px',
-              border: 'none',
-              borderBottom: viewMode === 'licence' ? '3px solid #3b82f6' : '3px solid transparent',
-              backgroundColor: 'transparent',
-              color: viewMode === 'licence' ? '#3b82f6' : '#6b7280',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: viewMode === 'licence' ? '600' : '400',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            <Key size={18} />
-            Licence
-          </button>
-        </>
+          {adminMenuOpen && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                marginTop: 0,
+                minWidth: '180px',
+                backgroundColor: '#fff',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                zIndex: 1000,
+                padding: '4px 0',
+              }}
+            >
+              {adminItems.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => handleAdminItem(item.id)}
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    padding: '10px 16px',
+                    textAlign: 'left',
+                    border: 'none',
+                    backgroundColor: viewMode === item.id ? '#eff6ff' : 'transparent',
+                    color: '#374151',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                  }}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       )}
       {firebaseUser && (
         <button

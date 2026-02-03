@@ -14,8 +14,6 @@ const Landing: React.FC = () => {
     setSelectedProductId,
     setViewMode,
     canAddProduct,
-    canAddCompany,
-    firebaseUser,
   } = useStore();
   const companies = getCompanies();
   const products = selectedCompanyId
@@ -40,10 +38,6 @@ const Landing: React.FC = () => {
     setViewMode('add-product');
   };
 
-  const handleAddCompany = () => {
-    setViewMode('add-company');
-  };
-
   return (
     <div style={{ padding: '24px' }}>
       {/* Company section */}
@@ -55,50 +49,8 @@ const Landing: React.FC = () => {
             </h1>
             <p style={{ margin: '8px 0 0 0', color: '#6b7280', fontSize: '14px' }}>
               Select a company to filter its products below, or show all products.
-              {firebaseUser && (
-                <>
-                  {' '}
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('register-company')}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#3b82f6',
-                      cursor: 'pointer',
-                      padding: 0,
-                      fontSize: 'inherit',
-                      textDecoration: 'underline',
-                    }}
-                  >
-                    Register your company
-                  </button>
-                </>
-              )}
             </p>
           </div>
-          {canAddCompany() && (
-            <button
-              type="button"
-              onClick={handleAddCompany}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: '#3b82f6',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}
-            >
-              <Plus size={20} />
-              Add Company
-            </button>
-          )}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', marginBottom: '12px' }}>
           <button

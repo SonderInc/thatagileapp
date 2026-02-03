@@ -30,6 +30,7 @@ function App() {
     setFirebaseUser,
     currentTenantId,
     firebaseUser,
+    tenantCompanies,
   } = useStore();
 
   useEffect(() => {
@@ -112,6 +113,30 @@ function App() {
       });
   }, [currentTenantId, setWorkItems]);
 
+  useEffect(() => {
+    if (!firebaseUser || !tenantCompanies.length) return;
+    const pathSlug = typeof window !== 'undefined' ? window.location.pathname.slice(1).split('/')[0] : '';
+    if (pathSlug) {
+      const tenant = tenantCompanies.find((c) => c.slug === pathSlug);
+      if (tenant) {
+        if (useStore.getState().currentTenantId !== tenant.id) {
+          setCurrentTenantId(tenant.id);
+        }
+      } else {
+        const first = tenantCompanies[0];
+        setCurrentTenantId(first.id);
+        if (typeof window !== 'undefined') {
+          window.history.replaceState(null, '', '/' + first.slug);
+        }
+      }
+    } else {
+      const current = tenantCompanies.find((c) => c.id === currentTenantId) ?? tenantCompanies[0];
+      if (current && typeof window !== 'undefined') {
+        window.history.replaceState(null, '', '/' + current.slug);
+      }
+    }
+  }, [firebaseUser, tenantCompanies, currentTenantId, setCurrentTenantId]);
+
   const renderBoard = () => {
     switch (viewMode) {
       case 'landing':
@@ -136,6 +161,20 @@ function App() {
         return <InviteUserPage />;
       case 'licence':
         return <LicencePage />;
+      case 'company-profile':
+        return (
+          <div style={{ padding: '24px', maxWidth: '500px', margin: '0 auto' }}>
+            <h1 style={{ fontSize: '24px', fontWeight: '600', color: '#111827' }}>Company profile</h1>
+            <p style={{ marginTop: '8px', color: '#6b7280' }}>Coming soon.</p>
+          </div>
+        );
+      case 'settings':
+        return (
+          <div style={{ padding: '24px', maxWidth: '500px', margin: '0 auto' }}>
+            <h1 style={{ fontSize: '24px', fontWeight: '600', color: '#111827' }}>Settings</h1>
+            <p style={{ marginTop: '8px', color: '#6b7280' }}>Coming soon.</p>
+          </div>
+        );
       default:
         return <Landing />;
     }

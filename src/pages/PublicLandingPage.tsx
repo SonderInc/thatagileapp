@@ -72,6 +72,9 @@ const PublicLandingPage: React.FC = () => {
       });
       setFirebaseUser(user);
       setViewMode('landing');
+      if (typeof window !== 'undefined') {
+        window.history.replaceState(null, '', '/' + company.slug);
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
