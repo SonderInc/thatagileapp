@@ -76,7 +76,16 @@ service firebase.storage {
 }
 ```
 
-4. Click **Publish**. Company profile logo uploads will then be stored in Firebase Storage and the app will save the resulting URL.
+4. Click **Publish**.
+
+5. **Configure CORS** so the browser can upload from your app origin (e.g. thatagileapp.netlify.app). Otherwise you’ll see “blocked by CORS policy” when uploading a logo.
+   - Your Firebase Storage bucket name is in Firebase Console → Storage → Files (e.g. `your-project.firebasestorage.app` or `your-project.appspot.com`).
+   - In the project root there is **storage-cors.json**. Edit it if your app runs on other origins (add your Netlify/custom domain and localhost).
+   - Install [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) and log in: `gcloud auth login`.
+   - Apply CORS (replace `YOUR_BUCKET` with your bucket name):
+     - **gcloud (recommended):** `gcloud storage buckets update gs://YOUR_BUCKET --cors-file=storage-cors.json`
+     - **gsutil:** `gsutil cors set storage-cors.json gs://YOUR_BUCKET`
+   - After this, logo uploads from your deployed app and localhost should succeed.
 
 ---
 
@@ -133,7 +142,7 @@ To use a domain like **thatagileapp.com**, follow the "Custom domain and DNS" se
 | 3 | Project settings | Add web app, copy config |
 | 4 | Authentication | Add authorized domains |
 | 5 | Firestore | Create DB, paste and publish firestore.rules |
-| 5b | Storage | Enable Storage, add rules for `tenants/` (logo uploads) |
+| 5b | Storage | Enable Storage, add rules for `tenants/`; apply CORS with storage-cors.json |
 | 6 | Local | `.env.local` with `VITE_FIREBASE_*` |
 | 7 | Netlify (or host) | Same env vars, deploy |
 | 8 | Optional | Custom domain + add to Auth domains |
