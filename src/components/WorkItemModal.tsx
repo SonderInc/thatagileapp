@@ -55,6 +55,7 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
         tags: item.tags,
         size: item.size,
         storyPoints: item.storyPoints,
+        acceptanceCriteria: item.acceptanceCriteria,
         estimatedDays: item.estimatedDays,
         estimatedHours: item.estimatedHours,
         parentId: item.parentId || parentId,
@@ -89,6 +90,7 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
       tags: formData.tags,
       size: formData.size,
       storyPoints: formData.storyPoints,
+      acceptanceCriteria: formData.acceptanceCriteria,
       estimatedDays: formData.estimatedDays,
       estimatedHours: formData.estimatedHours,
       parentId: formData.parentId,
@@ -368,6 +370,28 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
               }}
             />
           </div>
+
+          {formData.type === 'user-story' && (
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
+                Acceptance criteria
+              </label>
+              <textarea
+                value={formData.acceptanceCriteria || ''}
+                onChange={(e) => setFormData({ ...formData, acceptanceCriteria: e.target.value })}
+                rows={4}
+                placeholder="e.g. Given… When… Then… or bullet list"
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontFamily: 'inherit',
+                }}
+              />
+            </div>
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
             <div>

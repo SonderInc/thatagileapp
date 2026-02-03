@@ -84,6 +84,8 @@ export interface WorkItem {
   sprintId?: string; // For stories/tasks in sprints
   size?: EpicFeatureSize; // Epic, Feature: Small, Medium, Large, XLarge, XXLarge, ?
   storyPoints?: number | null; // User Story: Fibonacci or ? (null)
+  /** User Story: acceptance criteria (e.g. bullet list). */
+  acceptanceCriteria?: string;
   estimatedDays?: number | null; // Task, Bug: ?, 0.5, 1, 1.5, 2
   estimatedHours?: number; // legacy / optional
   actualHours?: number;
