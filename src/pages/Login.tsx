@@ -237,7 +237,7 @@ const Login: React.FC = () => {
             required
             minLength={6}
             placeholder={showInviteForm ? '12341234' : '••••••••'}
-            readOnly={showInviteForm}
+            readOnly={!!showInviteForm}
             style={{
               width: '100%',
               padding: '8px 12px',
