@@ -65,5 +65,10 @@ service cloud.firestore {
       allow read, update: if request.auth != null;
       allow create: if request.auth != null;
     }
+
+    // Phase 2: tenant Firebase config registry (doc id = company slug). Read by Netlify function (Admin SDK only).
+    match /tenantFirebaseConfigs/{slug} {
+      allow read, write: if false;
+    }
   }
 }
