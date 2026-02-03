@@ -15,9 +15,11 @@ interface WorkItemModalProps {
   type?: WorkItemType;
   /** When provided and not editing, restricts the type dropdown to these types (e.g. Team Board Backlog: user-story, task, bug). */
   allowedTypes?: WorkItemType[];
+  /** When provided and not editing, use this as the initial status (e.g. Feature board Discover column: intake). */
+  defaultStatus?: WorkItemStatus;
 }
 
-const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId, type, allowedTypes: allowedTypesProp }) => {
+const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId, type, allowedTypes: allowedTypesProp, defaultStatus }) => {
   const { workItems, addWorkItem, updateWorkItem, users, getAggregatedStoryPoints, getWorkItemsByParent, getFeaturesInDevelopState, setSelectedWorkItem } = useStore();
   const [formData, setFormData] = useState<Partial<WorkItem>>({
     title: '',
@@ -59,9 +61,14 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
       });
     } else {
       const defaultType = (type && (allowedTypes.includes(type) || type === 'user-story')) ? type : allowedTypes[0];
-      setFormData((prev) => ({ ...prev, parentId, type: defaultType }));
+      setFormData((prev) => ({
+        ...prev,
+        parentId,
+        type: defaultType,
+        ...(defaultStatus != null && { status: defaultStatus }),
+      }));
     }
-  }, [item, parentId, type, allowedTypes]);
+  }, [item, parentId, type, allowedTypes, defaultStatus]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

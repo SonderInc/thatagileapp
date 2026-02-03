@@ -11,9 +11,11 @@ interface KanbanBoardProps {
   columns: KanbanColumn[];
   workItems: WorkItem[];
   onAddItem?: (columnId: string) => void;
+  /** When set, only this column shows the Add Item button. Omit to show on all columns when onAddItem is provided. */
+  addItemColumnId?: string;
 }
 
-const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId, columns, workItems, onAddItem }) => {
+const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId, columns, workItems, onAddItem, addItemColumnId }) => {
   const { moveWorkItem } = useStore();
 
   const boardKey = boardId;
@@ -98,7 +100,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId, columns, workItems, 
                     {provided.placeholder}
                   </div>
                   
-                  {onAddItem && (
+                  {onAddItem && (addItemColumnId === undefined || column.id === addItemColumnId) && (
                     <button
                       onClick={() => onAddItem(column.id)}
                       style={{
