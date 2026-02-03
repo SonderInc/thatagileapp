@@ -9,6 +9,8 @@ import type { IObjectStore } from '../storage/IObjectStore';
 import { FirestoreStore } from '../data/FirestoreStore';
 import { FirebaseAuthAdapter } from '../auth/FirebaseAuthAdapter';
 import { NoOpObjectStore } from '../storage/NoOpObjectStore';
+import { FirebaseStorageObjectStore } from '../storage/FirebaseStorageObjectStore';
+import { isFirebaseConfigured } from './firebase';
 
 let dataStoreInstance: IDataStore | null = null;
 let authInstance: IAuth | null = null;
@@ -38,8 +40,8 @@ export function getAuth(): IAuth {
 
 export function getObjectStore(): IObjectStore {
   if (!objectStoreInstance) {
-    if (config.STORAGE_PROVIDER === 'firebase') {
-      objectStoreInstance = NoOpObjectStore;
+    if (config.STORAGE_PROVIDER === 'firebase' && isFirebaseConfigured()) {
+      objectStoreInstance = FirebaseStorageObjectStore;
     } else {
       objectStoreInstance = NoOpObjectStore;
     }

@@ -1,6 +1,7 @@
 import { initializeApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
+import { getStorage, FirebaseStorage } from 'firebase/storage';
 import { getAnalytics, Analytics } from 'firebase/analytics';
 import { getFirebaseConfig } from './firebaseConfig';
 
@@ -9,12 +10,14 @@ const firebaseConfig = getFirebaseConfig();
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let db: Firestore | null = null;
+let storage: FirebaseStorage | null = null;
 let analytics: Analytics | null = null;
 
 if (firebaseConfig?.projectId && firebaseConfig?.apiKey) {
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
   db = getFirestore(app);
+  storage = getStorage(app);
   if (firebaseConfig.measurementId && import.meta.env.VITE_FIREBASE_ANALYTICS_ENABLED) {
     analytics = getAnalytics(app);
   }
@@ -27,5 +30,5 @@ if (firebaseConfig?.projectId && firebaseConfig?.apiKey) {
   }
 }
 
-export { db, auth, analytics };
+export { db, auth, storage, analytics };
 export const isFirebaseConfigured = (): boolean => !!db;
