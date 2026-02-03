@@ -217,6 +217,8 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     companyId: data.companyId ?? null,
     companies: companies?.map((c) => ({ companyId: c.companyId, roles: c.roles as Role[] })),
     mustChangePassword: data.mustChangePassword === true,
+    employeeNumber: typeof data.employeeNumber === 'string' ? data.employeeNumber : undefined,
+    phone: typeof data.phone === 'string' ? data.phone : undefined,
   };
 }
 
@@ -234,6 +236,8 @@ export async function setUserProfile(profile: UserProfile): Promise<void> {
     adminCompanyIds,
     ...(profile.companies && { companies: profile.companies }),
     ...(profile.mustChangePassword !== undefined && { mustChangePassword: profile.mustChangePassword }),
+    ...(profile.employeeNumber !== undefined && { employeeNumber: profile.employeeNumber }),
+    ...(profile.phone !== undefined && { phone: profile.phone }),
   });
 }
 
@@ -272,6 +276,8 @@ export async function getCompanyUsers(companyId: string): Promise<UserProfile[]>
       companyId: data.companyId ?? null,
       companies: companies?.map((c) => ({ companyId: c.companyId, roles: c.roles as Role[] })),
       mustChangePassword: data.mustChangePassword === true,
+      employeeNumber: typeof data.employeeNumber === 'string' ? data.employeeNumber : undefined,
+      phone: typeof data.phone === 'string' ? data.phone : undefined,
     } as UserProfile;
   });
 }
@@ -282,6 +288,10 @@ export interface InviteInput {
   companyId: string;
   roles: Role[];
   invitedBy: string;
+  firstName?: string;
+  lastName?: string;
+  employeeNumber?: string;
+  phone?: string;
 }
 
 /** Invite record returned by getInviteByToken. */
@@ -289,6 +299,10 @@ export interface InviteRecord {
   email: string;
   companyId: string;
   roles: Role[];
+  firstName?: string;
+  lastName?: string;
+  employeeNumber?: string;
+  phone?: string;
 }
 
 function generateToken(): string {
@@ -308,6 +322,10 @@ export async function addInvite(invite: InviteInput): Promise<{ token: string }>
     roles: invite.roles,
     invitedBy: invite.invitedBy,
     createdAt: Timestamp.now(),
+    ...(invite.firstName !== undefined && { firstName: invite.firstName }),
+    ...(invite.lastName !== undefined && { lastName: invite.lastName }),
+    ...(invite.employeeNumber !== undefined && { employeeNumber: invite.employeeNumber }),
+    ...(invite.phone !== undefined && { phone: invite.phone }),
   });
   return { token };
 }
@@ -322,6 +340,10 @@ export async function getInviteByToken(token: string): Promise<InviteRecord | nu
     email: data.email ?? '',
     companyId: data.companyId ?? '',
     roles: (data.roles as Role[]) ?? [],
+    firstName: typeof data.firstName === 'string' ? data.firstName : undefined,
+    lastName: typeof data.lastName === 'string' ? data.lastName : undefined,
+    employeeNumber: typeof data.employeeNumber === 'string' ? data.employeeNumber : undefined,
+    phone: typeof data.phone === 'string' ? data.phone : undefined,
   };
 }
 

@@ -140,6 +140,8 @@ export interface UserProfile {
   companies?: { companyId: string; roles: Role[] }[];
   /** When true, user must change password on next login (e.g. after invite with default password). */
   mustChangePassword?: boolean;
+  employeeNumber?: string;
+  phone?: string;
 }
 
 /** Auth user (provider-agnostic). Use this in UI/store; do not import firebase/auth types. */

@@ -19,7 +19,15 @@ const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [inviteToken, setInviteToken] = useState<string | null>(null);
-  const [inviteRecord, setInviteRecord] = useState<{ email: string; companyId: string; roles: string[] } | null>(null);
+  const [inviteRecord, setInviteRecord] = useState<{
+    email: string;
+    companyId: string;
+    roles: string[];
+    firstName?: string;
+    lastName?: string;
+    employeeNumber?: string;
+    phone?: string;
+  } | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
 
   const DEFAULT_INVITE_PASSWORD = '12341234';
@@ -38,6 +46,8 @@ const Login: React.FC = () => {
           setInviteRecord(inv);
           setEmail(inv.email);
           setPassword(DEFAULT_INVITE_PASSWORD);
+          const nameFromInvite = [inv.firstName, inv.lastName].filter(Boolean).join(' ').trim();
+          if (nameFromInvite) setDisplayName(nameFromInvite);
         } else {
           setInviteError('Invalid or expired invite link');
         }
@@ -114,13 +124,16 @@ const Login: React.FC = () => {
       }
       const companyId = inviteRecord?.companyId ?? SEED_TENANT_ID;
       const roles = inviteRecord?.roles ?? [];
+      const displayNameFromInvite = [inviteRecord?.firstName, inviteRecord?.lastName].filter(Boolean).join(' ').trim();
       const profile: UserProfile = {
         uid: user.uid,
         email: user.email ?? email,
-        displayName: (displayName.trim() || user.email?.split('@')[0]) ?? 'User',
+        displayName: displayNameFromInvite || displayName.trim() || user.email?.split('@')[0] || 'User',
         companyId,
         companies: [{ companyId, roles: roles as Role[] }],
         mustChangePassword: true,
+        ...(inviteRecord?.employeeNumber && { employeeNumber: inviteRecord.employeeNumber }),
+        ...(inviteRecord?.phone && { phone: inviteRecord.phone }),
       };
       await getDataStore().setUserProfile(profile);
       setMustChangePassword(true);

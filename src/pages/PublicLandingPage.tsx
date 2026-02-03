@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { getAuth, getDataStore } from '../lib/adapters';
 import Login from './Login';
-import type { TenantCompany, UserProfile, Role } from '../types';
+import type { TenantCompany, UserProfile, Role, CompanyType } from '../types';
 
 const TRIAL_DAYS = 30;
 const TRIAL_SEATS = 50;
@@ -20,6 +20,7 @@ const PublicLandingPage: React.FC = () => {
   const [adminName, setAdminName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [companyType, setCompanyType] = useState<CompanyType>('software');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -47,6 +48,7 @@ const PublicLandingPage: React.FC = () => {
       updatedAt: now,
       trialEndsAt,
       seats: TRIAL_SEATS,
+      companyType,
     };
     try {
       const user = await auth.createUserWithEmailAndPassword(email.trim(), password);
@@ -136,6 +138,17 @@ const PublicLandingPage: React.FC = () => {
               placeholder="Acme Inc"
               style={{ width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px' }}
             />
+          </div>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>Company type</label>
+            <select
+              value={companyType}
+              onChange={(e) => setCompanyType(e.target.value as CompanyType)}
+              style={{ width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px' }}
+            >
+              <option value="software">Software Development</option>
+              <option value="training">Training company</option>
+            </select>
           </div>
           <div style={{ marginBottom: '16px', paddingTop: '8px', borderTop: '1px solid #e5e7eb' }}>
             <span style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>Admin</span>

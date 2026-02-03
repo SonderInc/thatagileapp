@@ -9,7 +9,11 @@ const ALL_ROLES = Object.keys(ROLE_LABELS) as Role[];
 
 const InviteUserPage: React.FC = () => {
   const { currentUser, currentTenantId, setViewMode, canAddUser, getCurrentCompany } = useStore();
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [employeeNumber, setEmployeeNumber] = useState('');
+  const [phone, setPhone] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<Role[]>(['developer']);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -22,10 +26,9 @@ const InviteUserPage: React.FC = () => {
   const company = getCurrentCompany();
   const isAdmin = currentUser?.roles?.includes('admin') ?? false;
 
-  const toggleRole = (role: Role) => {
-    setSelectedRoles((prev) =>
-      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
-    );
+  const handleRolesMultiChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selected = Array.from(e.target.selectedOptions, (opt) => opt.value as Role);
+    setSelectedRoles(selected);
   };
 
   const toggleEditingRole = (role: Role) => {
@@ -96,6 +99,14 @@ const InviteUserPage: React.FC = () => {
       setLoading(false);
       return;
     }
+    const trimmedFirst = firstName.trim();
+    const trimmedLast = lastName.trim();
+    const trimmedEmail = email.trim();
+    if (!trimmedFirst || !trimmedLast) {
+      setError('First name and last name are required.');
+      setLoading(false);
+      return;
+    }
     if (selectedRoles.length === 0) {
       setError('Select at least one role.');
       setLoading(false);
@@ -103,15 +114,23 @@ const InviteUserPage: React.FC = () => {
     }
     try {
       const { token } = await getDataStore().addInvite({
-        email: email.trim(),
+        email: trimmedEmail,
         companyId: currentTenantId,
         roles: selectedRoles,
         invitedBy: currentUser.id,
+        firstName: trimmedFirst,
+        lastName: trimmedLast,
+        ...(employeeNumber.trim() && { employeeNumber: employeeNumber.trim() }),
+        ...(phone.trim() && { phone: phone.trim() }),
       });
       const base = typeof window !== 'undefined' ? window.location.origin + window.location.pathname : '';
       const link = `${base}?invite=${token}`;
       setInviteLink(link);
+      setFirstName('');
+      setLastName('');
       setEmail('');
+      setEmployeeNumber('');
+      setPhone('');
       await loadDirectory();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -197,6 +216,28 @@ const InviteUserPage: React.FC = () => {
         )}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
+            <label className="form-label">First name *</label>
+            <input
+              type="text"
+              className="form-input"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              required
+              placeholder="Jane"
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Last name *</label>
+            <input
+              type="text"
+              className="form-input"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              required
+              placeholder="Doe"
+            />
+          </div>
+          <div className="form-group">
             <label className="form-label">Email *</label>
             <input
               type="email"
@@ -207,32 +248,50 @@ const InviteUserPage: React.FC = () => {
               placeholder="user@company.com"
             />
           </div>
+          <div className="form-group">
+            <label className="form-label">Employee number</label>
+            <input
+              type="text"
+              className="form-input"
+              value={employeeNumber}
+              onChange={(e) => setEmployeeNumber(e.target.value)}
+              placeholder="Optional"
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Phone number</label>
+            <input
+              type="text"
+              className="form-input"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="Optional"
+            />
+          </div>
           <div className="form-group" style={{ marginBottom: '24px' }}>
             <label className="form-label">Roles *</label>
-            <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#6b7280' }}>
-              Select one or more roles for the invited user.
+            <p style={{ margin: '0 0 8px 0', fontSize: '13px', color: '#6b7280' }}>
+              Hold Ctrl (Windows) or Cmd (Mac) to select multiple roles.
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <select
+              multiple
+              size={6}
+              value={selectedRoles}
+              onChange={handleRolesMultiChange}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '14px',
+              }}
+            >
               {ALL_ROLES.map((role) => (
-                <label
-                  key={role}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedRoles.includes(role)}
-                    onChange={() => toggleRole(role)}
-                  />
-                  <span>{ROLE_LABELS[role]}</span>
-                </label>
+                <option key={role} value={role}>
+                  {ROLE_LABELS[role]}
+                </option>
               ))}
-            </div>
+            </select>
           </div>
           <button type="submit" className="btn-primary" disabled={loading}>
             {loading ? 'Adding…' : 'Add User'}
