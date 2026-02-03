@@ -1,10 +1,10 @@
 import React from 'react';
 import { getAuth } from '../lib/adapters';
 import { useStore } from '../store/useStore';
-import { LayoutDashboard, Layers, Package, Users, List, ListOrdered, Home, LogOut } from 'lucide-react';
+import { LayoutDashboard, Layers, Package, Users, List, ListOrdered, Home, LogOut, Key } from 'lucide-react';
 
 const Navigation: React.FC = () => {
-  const { viewMode, setViewMode, setSelectedProductId, firebaseUser, setFirebaseUser, setCurrentUser, setCurrentTenantId } = useStore();
+  const { viewMode, setViewMode, setSelectedProductId, firebaseUser, setFirebaseUser, setCurrentUser, setCurrentTenantId, canAddUser } = useStore();
 
   const handleSignOut = () => {
     const auth = getAuth();
@@ -79,6 +79,50 @@ const Navigation: React.FC = () => {
           </button>
         );
       })}
+      {canAddUser() && (
+        <>
+          <button
+            type="button"
+            onClick={() => setViewMode('invite-user')}
+            style={{
+              padding: '12px 16px',
+              border: 'none',
+              borderBottom: viewMode === 'invite-user' ? '3px solid #3b82f6' : '3px solid transparent',
+              backgroundColor: 'transparent',
+              color: viewMode === 'invite-user' ? '#3b82f6' : '#6b7280',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: viewMode === 'invite-user' ? '600' : '400',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
+            <Users size={18} />
+            Invite user
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('licence')}
+            style={{
+              padding: '12px 16px',
+              border: 'none',
+              borderBottom: viewMode === 'licence' ? '3px solid #3b82f6' : '3px solid transparent',
+              backgroundColor: 'transparent',
+              color: viewMode === 'licence' ? '#3b82f6' : '#6b7280',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: viewMode === 'licence' ? '600' : '400',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
+            <Key size={18} />
+            Licence
+          </button>
+        </>
+      )}
       {firebaseUser && (
         <button
           type="button"

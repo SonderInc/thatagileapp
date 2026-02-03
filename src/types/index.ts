@@ -15,6 +15,7 @@ export type WorkItemStatus =
 
 export type Role =
   | 'admin'
+  | 'hr'
   | 'developer'
   | 'scrum-master-team-coach'
   | 'product-owner'
@@ -31,6 +32,7 @@ export type Role =
 /** Display labels for UI (e.g. "Scrum Master/Team Coach"). */
 export const ROLE_LABELS: Record<Role, string> = {
   admin: 'Admin',
+  hr: 'HR',
   developer: 'Developer',
   'scrum-master-team-coach': 'Scrum Master/Team Coach',
   'product-owner': 'Product Owner',
@@ -52,6 +54,12 @@ export interface TenantCompany {
   slug: string;
   createdAt: Date;
   updatedAt: Date;
+  /** When trial ends (set on first registration). */
+  trialEndsAt?: Date;
+  /** Max users (default 50 for trial; overwritten by licence). */
+  seats: number;
+  /** Set when a licence is redeemed. */
+  licenseKey?: string;
 }
 
 export interface WorkItem {

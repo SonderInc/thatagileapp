@@ -21,12 +21,15 @@ const RegisterCompanyPage: React.FC = () => {
     }
     const companyId = `company-${Date.now()}`;
     const now = new Date();
+    const trialEndsAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
     const company: TenantCompany = {
       id: companyId,
       name: name.trim() || 'New Company',
       slug: (slug.trim() || name.trim().toLowerCase().replace(/\s+/g, '-')) || 'new-company',
       createdAt: now,
       updatedAt: now,
+      trialEndsAt,
+      seats: 50,
     };
     try {
       await getDataStore().addTenantCompany(company);

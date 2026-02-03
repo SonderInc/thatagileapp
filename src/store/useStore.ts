@@ -32,7 +32,7 @@ interface AppState {
   selectedWorkItem: string | null;
   selectedProductId: string | null;
   selectedCompanyId: string | null;
-  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing' | 'add-product' | 'add-company' | 'register-company';
+  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing' | 'add-product' | 'add-company' | 'register-company' | 'invite-user' | 'licence';
   
   // Actions
   setWorkItems: (items: WorkItem[]) => void;
@@ -69,10 +69,12 @@ interface AppState {
   getCompanies: () => WorkItem[];
   getProductsByCompany: (companyId: string) => WorkItem[];
   canAddCompany: () => boolean;
+  canAddUser: () => boolean;
   getFeaturesWithUserStories: () => WorkItem[];
   getFeaturesInDevelopState: () => WorkItem[];
   getTeamBoardLanes: () => { id: string; title: string }[];
   getStoriesForLane: (laneId: string) => WorkItem[];
+  getCurrentCompany: () => TenantCompany | null;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -267,6 +269,12 @@ export const useStore = create<AppState>((set, get) => ({
     return user.roles.includes('admin');
   },
 
+  canAddUser: () => {
+    const user = get().currentUser;
+    if (!user?.roles?.length) return false;
+    return user.roles.includes('admin') || user.roles.includes('hr');
+  },
+
   getFeaturesWithUserStories: () => {
     const items = get().workItems;
     const features = items.filter((i) => i.type === 'feature');
@@ -321,5 +329,11 @@ export const useStore = create<AppState>((set, get) => ({
       return items.filter((i) => i.type === 'bug' && i.parentId == null);
     }
     return items.filter((i) => i.parentId === laneId && i.type === 'user-story');
+  },
+
+  getCurrentCompany: () => {
+    const { tenantCompanies, currentTenantId } = get();
+    if (!currentTenantId) return null;
+    return tenantCompanies.find((c) => c.id === currentTenantId) ?? null;
   },
 }));

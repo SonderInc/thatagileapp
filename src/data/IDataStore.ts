@@ -8,11 +8,18 @@ export interface IDataStore {
   getWorkItems(companyId: string): Promise<WorkItem[]>;
   getTenantCompanies(): Promise<TenantCompany[]>;
   addTenantCompany(company: TenantCompany): Promise<void>;
+  updateCompany(companyId: string, updates: Partial<Pick<TenantCompany, 'seats' | 'licenseKey' | 'updatedAt'>>): Promise<void>;
   addWorkItem(item: WorkItem): Promise<void>;
   updateWorkItem(id: string, updates: Partial<WorkItem>): Promise<void>;
   deleteWorkItem(id: string): Promise<void>;
   getUserProfile(uid: string): Promise<UserProfile | null>;
   setUserProfile(profile: UserProfile): Promise<void>;
+  getCompanyUserCount(companyId: string): Promise<number>;
+  addInvite(invite: { email: string; companyId: string; roles: Role[]; invitedBy: string }): Promise<{ token: string }>;
+  getInviteByToken(token: string): Promise<{ email: string; companyId: string; roles: Role[] } | null>;
+  markInviteUsed(token: string): Promise<void>;
+  getLicenceByKey(key: string): Promise<{ seats: number } | null>;
+  redeemLicence(companyId: string, key: string): Promise<void>;
 }
 
 export type { WorkItem, TenantCompany, UserProfile, Role };

@@ -11,8 +11,10 @@ import FeatureBoard from './pages/FeatureBoard';
 import TeamBoard from './pages/TeamBoard';
 import { getAuth, getDataStore } from './lib/adapters';
 import { mockWorkItems, mockSprints, mockBoards, mockUsers, mockTenantCompanies, SEED_TENANT_ID } from './utils/mockData';
-import Login from './pages/Login';
 import RegisterCompanyPage from './pages/RegisterCompanyPage';
+import PublicLandingPage from './pages/PublicLandingPage';
+import InviteUserPage from './pages/InviteUserPage';
+import LicencePage from './pages/LicencePage';
 import './App.css';
 
 function App() {
@@ -130,6 +132,10 @@ function App() {
         return <FeatureBoard />;
       case 'team':
         return <TeamBoard />;
+      case 'invite-user':
+        return <InviteUserPage />;
+      case 'licence':
+        return <LicencePage />;
       default:
         return <Landing />;
     }
@@ -140,7 +146,7 @@ function App() {
   if (firebaseReady && firebaseUser === null) {
     return (
       <div className="app" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f9fafb' }}>
-        <Login />
+        <PublicLandingPage />
       </div>
     );
   }

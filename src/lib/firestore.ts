@@ -16,6 +16,8 @@ import type { WorkItem, TenantCompany, UserProfile, Role } from '../types';
 const WORK_ITEMS_COLLECTION = 'workItems';
 const COMPANIES_COLLECTION = 'companies';
 const USERS_COLLECTION = 'users';
+const INVITES_COLLECTION = 'invites';
+const LICENCES_COLLECTION = 'licences';
 
 type WorkItemData = Record<string, unknown>;
 
@@ -88,6 +90,7 @@ export async function getTenantCompanies(): Promise<TenantCompany[]> {
     const data = d.data();
     const createdAt = data.createdAt;
     const updatedAt = data.updatedAt;
+    const trialEndsAt = data.trialEndsAt;
     return {
       id: d.id,
       name: data.name ?? '',
@@ -104,6 +107,14 @@ export async function getTenantCompanies(): Promise<TenantCompany[]> {
           : updatedAt instanceof Date
             ? updatedAt
             : new Date(updatedAt as string),
+      trialEndsAt:
+        trialEndsAt && typeof (trialEndsAt as Timestamp).toDate === 'function'
+          ? (trialEndsAt as Timestamp).toDate()
+          : trialEndsAt instanceof Date
+            ? trialEndsAt
+            : undefined,
+      seats: typeof data.seats === 'number' ? data.seats : 50,
+      licenseKey: typeof data.licenseKey === 'string' ? data.licenseKey : undefined,
     } as TenantCompany;
   });
 }
@@ -112,12 +123,30 @@ export async function getTenantCompanies(): Promise<TenantCompany[]> {
 export async function addTenantCompany(company: TenantCompany): Promise<void> {
   if (!db) return Promise.reject(new Error('Firebase not configured'));
   const ref = doc(db, COMPANIES_COLLECTION, company.id);
-  await setDoc(ref, {
+  const payload: Record<string, unknown> = {
     name: company.name,
     slug: company.slug,
     createdAt: company.createdAt instanceof Date ? Timestamp.fromDate(company.createdAt) : company.createdAt,
     updatedAt: company.updatedAt instanceof Date ? Timestamp.fromDate(company.updatedAt) : company.updatedAt,
-  });
+    seats: company.seats ?? 50,
+  };
+  if (company.trialEndsAt !== undefined) {
+    payload.trialEndsAt = company.trialEndsAt instanceof Date ? Timestamp.fromDate(company.trialEndsAt) : company.trialEndsAt;
+  }
+  if (company.licenseKey !== undefined) payload.licenseKey = company.licenseKey;
+  await setDoc(ref, payload);
+}
+
+/** Update a tenant company (partial). */
+export async function updateCompany(companyId: string, updates: Partial<Pick<TenantCompany, 'seats' | 'licenseKey' | 'updatedAt'>>): Promise<void> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = doc(db, COMPANIES_COLLECTION, companyId);
+  const payload: Record<string, unknown> = {
+    updatedAt: Timestamp.now(),
+    ...(updates.seats !== undefined && { seats: updates.seats }),
+    ...(updates.licenseKey !== undefined && { licenseKey: updates.licenseKey }),
+  };
+  await updateDoc(ref, payload);
 }
 
 const SAVE_TIMEOUT_MS = 15000;
@@ -183,10 +212,107 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 export async function setUserProfile(profile: UserProfile): Promise<void> {
   if (!db) return Promise.reject(new Error('Firebase not configured'));
   const ref = doc(db, USERS_COLLECTION, profile.uid);
+  const companyIds = profile.companies?.map((c) => c.companyId) ?? (profile.companyId ? [profile.companyId] : []);
   await setDoc(ref, {
     email: profile.email,
     displayName: profile.displayName,
     companyId: profile.companyId,
+    companyIds,
     ...(profile.companies && { companies: profile.companies }),
+  });
+}
+
+/** Count users that belong to a company (for seat enforcement). */
+export async function getCompanyUserCount(companyId: string): Promise<number> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const q = query(
+    collection(db, USERS_COLLECTION),
+    where('companyIds', 'array-contains', companyId)
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.size;
+}
+
+/** Invite payload for addInvite. */
+export interface InviteInput {
+  email: string;
+  companyId: string;
+  roles: Role[];
+  invitedBy: string;
+}
+
+/** Invite record returned by getInviteByToken. */
+export interface InviteRecord {
+  email: string;
+  companyId: string;
+  roles: Role[];
+}
+
+function generateToken(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let s = '';
+  for (let i = 0; i < 32; i++) s += chars.charAt(Math.floor(Math.random() * chars.length));
+  return s;
+}
+
+export async function addInvite(invite: InviteInput): Promise<{ token: string }> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const token = generateToken();
+  const ref = doc(db, INVITES_COLLECTION, token);
+  await setDoc(ref, {
+    email: invite.email,
+    companyId: invite.companyId,
+    roles: invite.roles,
+    invitedBy: invite.invitedBy,
+    createdAt: Timestamp.now(),
+  });
+  return { token };
+}
+
+export async function getInviteByToken(token: string): Promise<InviteRecord | null> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = doc(db, INVITES_COLLECTION, token);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  return {
+    email: data.email ?? '',
+    companyId: data.companyId ?? '',
+    roles: (data.roles as Role[]) ?? [],
+  };
+}
+
+export async function markInviteUsed(token: string): Promise<void> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = doc(db, INVITES_COLLECTION, token);
+  await deleteDoc(ref);
+}
+
+/** Licence doc: key (doc id), seats, usedByCompanyId?, usedAt? */
+export async function getLicenceByKey(key: string): Promise<{ seats: number } | null> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = doc(db, LICENCES_COLLECTION, key);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  if (data.usedByCompanyId) return null;
+  const seats = typeof data.seats === 'number' ? data.seats : 0;
+  return seats > 0 ? { seats } : null;
+}
+
+export async function redeemLicence(companyId: string, key: string): Promise<void> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const lic = await getLicenceByKey(key);
+  if (!lic) throw new Error('Invalid or already used licence key');
+  const companyRef = doc(db, COMPANIES_COLLECTION, companyId);
+  await updateDoc(companyRef, {
+    seats: lic.seats,
+    licenseKey: key,
+    updatedAt: Timestamp.now(),
+  });
+  const licRef = doc(db, LICENCES_COLLECTION, key);
+  await updateDoc(licRef, {
+    usedByCompanyId: companyId,
+    usedAt: Timestamp.now(),
   });
 }

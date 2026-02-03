@@ -68,3 +68,28 @@ TBD. For Firestore, use Firebase Console backup/export. For future Postgres, use
 - **Storage:** `getObjectStore()` → `IObjectStore` (no-op today; Firebase Storage / S3 later).
 
 UI must not import `firebase/*`; all access goes through these adapters.
+
+## Custom domain and DNS (Netlify)
+
+To use **thatagileapp.com** (or another custom domain) with a Netlify-hosted site:
+
+**Recommended: Netlify DNS**
+
+1. **Add the domain in Netlify** — Site → Domain management → Add custom domain → `thatagileapp.com` (and optionally `www.thatagileapp.com`).
+2. **Change nameservers at your registrar** — Where you bought the domain: set Nameservers to "Custom" and enter the two nameservers Netlify shows (e.g. `dns1.p01.nsone.net`, `dns2.p01.nsone.net`). Save; propagation can take up to 24–48 hours.
+3. **Wait for DNS and HTTPS** — Netlify will verify the domain and issue an SSL certificate. No A/CNAME records to add manually when using Netlify DNS.
+
+**Alternative: DNS at your registrar**
+
+1. Add the domain in Netlify (same as above).
+2. At the registrar, add the records Netlify shows: for the root use ALIAS/ANAME to your Netlify subdomain, or A record to Netlify's load balancer; for `www` use CNAME to your site's `*.netlify.app` domain.
+3. Netlify will still issue HTTPS once the domain is verified.
+
+No code or repo changes are required; configuration is in Netlify and at the domain registrar only.
+
+## Firestore rules
+
+Publish the project’s `firestore.rules` in Firebase Console → Firestore Database → Rules. The rules cover:
+
+- **companies**, **workItems**, **users**: authenticated read/write as documented in the file.
+- **invites**: unauthenticated read by document id (token) for sign-up links; create only by the inviter (`invitedBy == request.auth.uid`); update/delete by inviter or by invitee (email match) when marking an invite used.
