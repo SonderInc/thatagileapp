@@ -9,13 +9,14 @@ import { Plus } from 'lucide-react';
 import { colors, radius, spacing, typography } from '../styles/theme';
 
 const EpicBoard: React.FC = () => {
-  const { getWorkItemsByType, selectedWorkItem } = useStore();
+  const { getWorkItemsByType, selectedWorkItem, getTypeLabel } = useStore();
   const { showModal, setShowModal, modalColumnId, setModalColumnId, handleAddItem, handleCloseModal } = useBoardWorkItemModal();
   const epics = getWorkItemsByType('epic');
+  const epicLabel = getTypeLabel('epic');
 
   return (
     <div style={{ padding: spacing.xxl }}>
-      <BoardPageHeader title="Epic Board" subtitle="Manage epics across the value stream">
+      <BoardPageHeader title={`${epicLabel} Board`} subtitle={`Manage ${epicLabel.toLowerCase()}s across the value stream`}>
         <button
           type="button"
           onClick={() => {
@@ -37,7 +38,7 @@ const EpicBoard: React.FC = () => {
           }}
         >
           <Plus size={20} />
-          New Epic
+          New {epicLabel}
         </button>
       </BoardPageHeader>
 

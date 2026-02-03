@@ -4,7 +4,7 @@ import { useStore } from '../store/useStore';
 import { LayoutDashboard, Layers, Package, Users, List, ListOrdered, Home, LogOut, Shield } from 'lucide-react';
 
 const Navigation: React.FC = () => {
-  const { viewMode, setViewMode, setSelectedProductId, firebaseUser, setFirebaseUser, setCurrentUser, setCurrentTenantId, currentUser } = useStore();
+  const { viewMode, setViewMode, setSelectedProductId, firebaseUser, setFirebaseUser, setCurrentUser, setCurrentTenantId, currentUser, getTypeLabel } = useStore();
   const [adminMenuOpen, setAdminMenuOpen] = useState(false);
   const adminMenuRef = useRef<HTMLDivElement>(null);
 
@@ -32,10 +32,10 @@ const Navigation: React.FC = () => {
 
   const navItems = [
     { id: 'landing', label: 'Home', icon: Home },
-    { id: 'backlog', label: 'Product Backlog', icon: List },
+    { id: 'backlog', label: `${getTypeLabel('product')} Backlog`, icon: List },
     { id: 'list', label: 'Work Items', icon: ListOrdered },
-    { id: 'epic', label: 'Epic Board', icon: Layers },
-    { id: 'feature', label: 'Feature Board', icon: Package },
+    { id: 'epic', label: `${getTypeLabel('epic')} Board`, icon: Layers },
+    { id: 'feature', label: `${getTypeLabel('feature')} Board`, icon: Package },
     { id: 'team', label: 'Team Board', icon: Users },
   ];
 

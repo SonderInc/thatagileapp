@@ -1,7 +1,6 @@
 import React from 'react';
 import { WorkItem } from '../types';
 import { getStatusColor } from '../utils/boardConfig';
-import { getTypeLabel } from '../utils/hierarchy';
 import { getSizeLabel, formatStoryPoints, formatDays } from '../utils/estimates';
 import { useStore } from '../store/useStore';
 
@@ -15,7 +14,7 @@ interface WorkItemCardProps {
 }
 
 const WorkItemCard: React.FC<WorkItemCardProps> = ({ item, onClick, compact, borderColorOverride }) => {
-  const { setSelectedWorkItem, getAggregatedStoryPoints } = useStore();
+  const { setSelectedWorkItem, getAggregatedStoryPoints, getTypeLabel } = useStore();
 
   const handleClick = () => {
     setSelectedWorkItem(item.id);

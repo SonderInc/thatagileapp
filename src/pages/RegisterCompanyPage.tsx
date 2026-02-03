@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { getDataStore } from '../lib/adapters';
-import type { TenantCompany, UserProfile, Role } from '../types';
+import type { TenantCompany, UserProfile, Role, CompanyType } from '../types';
 
 const RegisterCompanyPage: React.FC = () => {
   const { firebaseUser, setViewMode, setCurrentTenantId, setTenantCompanies, setCurrentUser, tenantCompanies } = useStore();
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
+  const [companyType, setCompanyType] = useState<CompanyType>('software');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -30,6 +31,7 @@ const RegisterCompanyPage: React.FC = () => {
       updatedAt: now,
       trialEndsAt,
       seats: 50,
+      companyType,
     };
     try {
       await getDataStore().addTenantCompany(company);
@@ -97,6 +99,25 @@ const RegisterCompanyPage: React.FC = () => {
               fontSize: '14px',
             }}
           />
+        </div>
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
+            Company type
+          </label>
+          <select
+            value={companyType}
+            onChange={(e) => setCompanyType(e.target.value as CompanyType)}
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              fontSize: '14px',
+            }}
+          >
+            <option value="software">Software Development</option>
+            <option value="training">Training company</option>
+          </select>
         </div>
         <div style={{ marginBottom: '24px' }}>
           <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>

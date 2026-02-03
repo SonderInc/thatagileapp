@@ -1,7 +1,6 @@
 import React from 'react';
 import { useStore } from '../store/useStore';
 import { WorkItem } from '../types';
-import { getTypeLabel } from '../utils/hierarchy';
 import { Package, Plus } from 'lucide-react';
 
 const Landing: React.FC = () => {
@@ -15,6 +14,7 @@ const Landing: React.FC = () => {
     setViewMode,
     canAddProduct,
     getCurrentCompany,
+    getTypeLabel,
   } = useStore();
   const tenant = getCurrentCompany();
   const companies = getCompanies();
@@ -231,7 +231,7 @@ const Landing: React.FC = () => {
                   cursor: 'pointer',
                 }}
               >
-                Go to Product Backlog
+                Go to {getTypeLabel('product')} Backlog
               </button>
             </div>
           </div>

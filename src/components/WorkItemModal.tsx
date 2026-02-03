@@ -4,7 +4,6 @@ import { useStore } from '../store/useStore';
 import { SIZE_OPTIONS, STORY_POINT_OPTIONS, DAYS_OPTIONS } from '../utils/estimates';
 import { Plus, FileText, BookOpen } from 'lucide-react';
 import Modal from './Modal';
-import { getTypeLabel } from '../utils/hierarchy';
 import EpicHypothesisModal from './EpicHypothesisModal';
 import EpicHypothesisExampleModal from './EpicHypothesisExampleModal';
 import { useWorkItemForm } from '../hooks/useWorkItemForm';
@@ -21,7 +20,7 @@ interface WorkItemModalProps {
 }
 
 const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId, type, allowedTypes: allowedTypesProp, defaultStatus }) => {
-  const { users, getAggregatedStoryPoints, getFeaturesInDevelopState, setSelectedWorkItem } = useStore();
+  const { users, getAggregatedStoryPoints, getFeaturesInDevelopState, setSelectedWorkItem, getTypeLabel } = useStore();
   const {
     formData,
     setFormData,

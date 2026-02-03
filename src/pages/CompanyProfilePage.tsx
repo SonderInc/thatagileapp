@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { getDataStore, getObjectStore } from '../lib/adapters';
+import type { CompanyType } from '../types';
 
 const CompanyProfilePage: React.FC = () => {
   const { getCurrentCompany, setViewMode, setTenantCompanies, currentTenantId } = useStore();
   const company = getCurrentCompany();
   const [name, setName] = useState(company?.name ?? '');
+  const [companyType, setCompanyType] = useState<CompanyType>(company?.companyType ?? 'software');
   const [vision, setVision] = useState(company?.vision ?? '');
   const [logoUrl, setLogoUrl] = useState(company?.logoUrl ?? '');
   const [error, setError] = useState<string | null>(null);
@@ -17,10 +19,11 @@ const CompanyProfilePage: React.FC = () => {
   useEffect(() => {
     if (company) {
       setName(company.name);
+      setCompanyType(company.companyType ?? 'software');
       setVision(company.vision ?? '');
       setLogoUrl(company.logoUrl ?? '');
     }
-  }, [company?.id, company?.name, company?.vision, company?.logoUrl]);
+  }, [company?.id, company?.name, company?.companyType, company?.vision, company?.logoUrl]);
 
   const handleLogoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -53,6 +56,7 @@ const CompanyProfilePage: React.FC = () => {
     try {
       await getDataStore().updateCompany(currentTenantId, {
         name: name.trim() || company?.name,
+        companyType,
         vision: vision.trim() || undefined,
         logoUrl: logoUrl.trim() || undefined,
       });
@@ -125,6 +129,20 @@ const CompanyProfilePage: React.FC = () => {
             required
             placeholder="Your company name"
           />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Company type</label>
+          <select
+            className="form-input"
+            value={companyType}
+            onChange={(e) => setCompanyType(e.target.value as CompanyType)}
+          >
+            <option value="software">Software Development</option>
+            <option value="training">Training company</option>
+          </select>
+          <p className="form-hint" style={{ marginTop: '4px', fontSize: '12px', color: '#6b7280' }}>
+            Controls terminology in the app (e.g. Epic vs Program).
+          </p>
         </div>
         <div className="form-group" style={{ marginBottom: '24px' }}>
           <label className="form-label">Vision</label>

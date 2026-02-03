@@ -10,14 +10,16 @@ import { FEATURE_COLUMNS } from '../utils/boardConfig';
 import { spacing } from '../styles/theme';
 
 const FeatureBoard: React.FC = () => {
-  const { getWorkItemsByType, selectedWorkItem } = useStore();
+  const { getWorkItemsByType, selectedWorkItem, getTypeLabel } = useStore();
   const { showModal, modalColumnId, handleAddItem, handleCloseModal } = useBoardWorkItemModal();
   const [showColumnsExplained, setShowColumnsExplained] = useState(false);
   const features = getWorkItemsByType('feature');
+  const epicLabel = getTypeLabel('epic');
+  const featureLabel = getTypeLabel('feature');
 
   return (
     <div style={{ padding: spacing.xxl }}>
-      <BoardPageHeader title="Feature Board" subtitle="Track value-added work for epics">
+      <BoardPageHeader title={`${featureLabel} Board`} subtitle={`Track value-added work for ${epicLabel.toLowerCase()}s`}>
         <Button variant="secondary" onClick={() => setShowColumnsExplained(true)}>
           Columns Explained
         </Button>

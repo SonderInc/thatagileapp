@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { getAuth, getDataStore } from '../lib/adapters';
-import type { TenantCompany, UserProfile, Role } from '../types';
+import type { TenantCompany, UserProfile, Role, CompanyType } from '../types';
 
 const InstanceSetupPage: React.FC = () => {
   const {
@@ -12,6 +12,7 @@ const InstanceSetupPage: React.FC = () => {
     setFirebaseUser,
   } = useStore();
   const [companyName, setCompanyName] = useState('');
+  const [companyType, setCompanyType] = useState<CompanyType>('software');
   const [adminName, setAdminName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -42,6 +43,7 @@ const InstanceSetupPage: React.FC = () => {
       updatedAt: now,
       trialEndsAt,
       seats: 50,
+      companyType,
     };
     try {
       const user = await auth.createUserWithEmailAndPassword(email.trim(), password);
@@ -118,6 +120,25 @@ const InstanceSetupPage: React.FC = () => {
               fontSize: '14px',
             }}
           />
+        </div>
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
+            Company type
+          </label>
+          <select
+            value={companyType}
+            onChange={(e) => setCompanyType(e.target.value as CompanyType)}
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              fontSize: '14px',
+            }}
+          >
+            <option value="software">Software Development</option>
+            <option value="training">Training company</option>
+          </select>
         </div>
         <div style={{ marginBottom: '16px', paddingTop: '8px', borderTop: '1px solid #e5e7eb' }}>
           <span style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>First user (admin)</span>

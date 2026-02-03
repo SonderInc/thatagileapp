@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import WorkItemModal from '../components/WorkItemModal';
-import { getAllowedChildTypes, getTypeLabel } from '../utils/hierarchy';
+import { getAllowedChildTypes } from '../utils/hierarchy';
 import { WorkItem, WorkItemType } from '../types';
 import { Plus, ChevronDown, ChevronRight, ArrowLeft } from 'lucide-react';
 
@@ -31,9 +31,10 @@ interface TreeRowProps {
   onToggle: (id: string) => void;
   onAddChild: (parentId: string, type: WorkItemType) => void;
   onEdit: (itemId: string) => void;
+  getTypeLabel: (type: WorkItemType) => string;
 }
 
-const TreeRow: React.FC<TreeRowProps> = ({ item, allItems, depth, collapsed, onToggle, onAddChild, onEdit }) => {
+const TreeRow: React.FC<TreeRowProps> = ({ item, allItems, depth, collapsed, onToggle, onAddChild, onEdit, getTypeLabel }) => {
   const children = getChildren(allItems, item.id);
   const hasChildren = children.length > 0;
   const isCollapsed = collapsed.has(item.id);
@@ -133,6 +134,7 @@ const TreeRow: React.FC<TreeRowProps> = ({ item, allItems, depth, collapsed, onT
             onToggle={onToggle}
             onAddChild={onAddChild}
             onEdit={onEdit}
+            getTypeLabel={getTypeLabel}
           />
         ))}
     </div>
@@ -140,7 +142,7 @@ const TreeRow: React.FC<TreeRowProps> = ({ item, allItems, depth, collapsed, onT
 };
 
 const ProductBacklog: React.FC = () => {
-  const { getProductBacklog, workItems, setSelectedWorkItem, selectedProductId, setSelectedProductId, getProductBacklogItems } = useStore();
+  const { getProductBacklog, workItems, setSelectedWorkItem, selectedProductId, setSelectedProductId, getProductBacklogItems, getTypeLabel } = useStore();
   const [showModal, setShowModal] = useState(false);
   const [modalItemId, setModalItemId] = useState<string | null>(null);
   const [modalParentId, setModalParentId] = useState<string | undefined>(undefined);
@@ -228,12 +230,12 @@ const ProductBacklog: React.FC = () => {
             </button>
           )}
           <h1 style={{ margin: 0, fontSize: '32px', fontWeight: '700', color: '#111827' }}>
-            {product ? `Product Backlog: ${product.title}` : 'Product Backlog'}
+            {product ? `${getTypeLabel('product')} Backlog: ${product.title}` : `${getTypeLabel('product')} Backlog`}
           </h1>
           <p style={{ margin: '8px 0 0 0', color: '#6b7280', fontSize: '14px' }}>
             {product
-              ? `Backlog for ${product.title}. Epics, Features, User Stories, Tasks and Bugs.`
-              : 'Single source of truth for all work items. Products contain Epics, Epics contain Features, Features contain User Stories, User Stories contain Tasks and Bugs.'}
+              ? `Backlog for ${product.title}. ${getTypeLabel('epic')}s, ${getTypeLabel('feature')}s, User Stories, Tasks and Bugs.`
+              : `Single source of truth for all work items. Products contain ${getTypeLabel('epic')}s, ${getTypeLabel('epic')}s contain ${getTypeLabel('feature')}s, ${getTypeLabel('feature')}s contain User Stories, User Stories contain Tasks and Bugs.`}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -290,7 +292,7 @@ const ProductBacklog: React.FC = () => {
       >
         {roots.length === 0 ? (
           <div style={{ padding: '32px', textAlign: 'center', color: '#6b7280' }}>
-            No items in the backlog. Add a Product or Epic to get started.
+            No items in the backlog. Add a {getTypeLabel('product')} or {getTypeLabel('epic')} to get started.
           </div>
         ) : (
           roots.map((item) => (
@@ -303,6 +305,7 @@ const ProductBacklog: React.FC = () => {
               onToggle={handleToggle}
               onAddChild={handleAddChild}
               onEdit={handleEdit}
+              getTypeLabel={getTypeLabel}
             />
           ))
         )}

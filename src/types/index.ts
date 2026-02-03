@@ -48,6 +48,9 @@ export const ROLE_LABELS: Record<Role, string> = {
   customer: 'Customer',
 };
 
+/** Company type drives display nomenclature (e.g. Epic vs Program). */
+export type CompanyType = 'software' | 'training';
+
 /** Tenant (registered company) from Firestore companies collection. */
 export interface TenantCompany {
   id: string;
@@ -65,6 +68,8 @@ export interface TenantCompany {
   vision?: string;
   /** Logo image URL (editable in Company profile). */
   logoUrl?: string;
+  /** Drives work item type labels; default 'software'. */
+  companyType?: CompanyType;
 }
 
 export interface WorkItem {

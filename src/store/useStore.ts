@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { WorkItem, Sprint, KanbanBoard, User, WorkItemType, TenantCompany, AuthUser } from '../types';
 import { getAllowedChildTypes } from '../utils/hierarchy';
+import { getTypeLabel as getTypeLabelFromNomenclature } from '../utils/nomenclature';
 import { getDataStore } from '../lib/adapters';
 
 const TYPE_ORDER: Record<WorkItemType, number> = {
@@ -90,6 +91,8 @@ interface AppState {
   getTeamBoardLanes: () => { id: string; title: string }[];
   getStoriesForLane: (laneId: string) => WorkItem[];
   getCurrentCompany: () => TenantCompany | null;
+  /** Type label for current company's nomenclature (e.g. Epic vs Program). */
+  getTypeLabel: (type: WorkItemType) => string;
 }
 
 const TEAM_BOARD_STORAGE_KEY = 'thatagileapp_teamBoard';
@@ -424,5 +427,10 @@ export const useStore = create<AppState>((set, get) => ({
     const { tenantCompanies, currentTenantId } = get();
     if (!currentTenantId) return null;
     return tenantCompanies.find((c) => c.id === currentTenantId) ?? null;
+  },
+
+  getTypeLabel: (type) => {
+    const companyType = get().getCurrentCompany()?.companyType ?? 'software';
+    return getTypeLabelFromNomenclature(type, companyType);
   },
 }));

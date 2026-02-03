@@ -6,7 +6,7 @@ export const SEED_TENANT_ID = 'seed-tenant-1';
 
 /** Tenant companies (Firestore companies collection) for dev/mock. */
 export const mockTenantCompanies: TenantCompany[] = [
-  { id: SEED_TENANT_ID, name: 'Seed Company', slug: 'seed-company', createdAt: new Date('2024-01-00'), updatedAt: new Date('2024-01-00'), seats: 50 },
+  { id: SEED_TENANT_ID, name: 'Seed Company', slug: 'seed-company', createdAt: new Date('2024-01-00'), updatedAt: new Date('2024-01-00'), seats: 50, companyType: 'software' },
 ];
 
 export const mockUsers: User[] = [

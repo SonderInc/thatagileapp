@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import WorkItemModal from '../components/WorkItemModal';
-import { getTypeLabel } from '../utils/hierarchy';
 import { getSizeLabel, formatStoryPoints, formatDays } from '../utils/estimates';
 import { WorkItem, WorkItemType } from '../types';
 import { Filter } from 'lucide-react';
@@ -25,7 +24,7 @@ function applyFilters(items: WorkItem[], filters: ListViewFilters): WorkItem[] {
 }
 
 const WorkItemList: React.FC = () => {
-  const { workItems, getProductBacklog, setSelectedWorkItem, getAggregatedStoryPoints } = useStore();
+  const { workItems, getProductBacklog, setSelectedWorkItem, getAggregatedStoryPoints, getTypeLabel } = useStore();
   const [filters, setFilters] = useState<ListViewFilters>(defaultFilters);
   const [showModal, setShowModal] = useState(false);
   const [modalItemId, setModalItemId] = useState<string | null>(null);

@@ -1,6 +1,5 @@
 import React from 'react';
 import { useStore } from '../store/useStore';
-import { getTypeLabel } from '../utils/hierarchy';
 import { ChevronRight } from 'lucide-react';
 
 interface WorkItemHierarchyProps {
@@ -8,7 +7,7 @@ interface WorkItemHierarchyProps {
 }
 
 const WorkItemHierarchy: React.FC<WorkItemHierarchyProps> = ({ itemId }) => {
-  const { workItems, getWorkItemsByParent } = useStore();
+  const { workItems, getWorkItemsByParent, getTypeLabel } = useStore();
   const item = workItems.find((i) => i.id === itemId);
   
   if (!item) return null;
