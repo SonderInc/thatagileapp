@@ -73,14 +73,18 @@ async function collectIdsAndStats(tenantId: string): Promise<{
     company = findCompanyWorkItem(items, tenantId) ?? created;
   }
 
-  const productChildIds = (company.childrenIds ?? []).filter((id) => {
-    const item = items.find((i) => i.id === id);
-    return item?.type === 'product';
-  });
+  // Product roots to delete: from company.childrenIds, or parentId === company.id, or orphans (no parent) for this tenant
+  const productRootIds = new Set<string>();
+  for (const item of items) {
+    if (item.type !== 'product' || item.companyId !== tenantId) continue;
+    if ((company.childrenIds ?? []).includes(item.id)) productRootIds.add(item.id);
+    else if (item.parentId === company.id) productRootIds.add(item.id);
+    else if (item.parentId == null || item.parentId === '') productRootIds.add(item.id);
+  }
 
   const byId = new Map(items.map((i) => [i.id, i]));
   const allIds: string[] = [];
-  for (const productId of productChildIds) {
+  for (const productId of productRootIds) {
     if (!byId.has(productId)) continue;
     const subtree = collectSubtreeIdsInDeleteOrder(items, productId);
     allIds.push(...subtree);
