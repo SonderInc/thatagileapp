@@ -55,12 +55,12 @@ service cloud.firestore {
         && me != null
         && resource.data.companyId != null
         && ((me.data.get('companyIds', null) != null && resource.data.companyId in me.data.companyIds)
-            || (me.data.get('adminCompanyIds', null) != null && resource.data.companyId in me.data.adminCompanyIds);
+            || (me.data.get('adminCompanyIds', null) != null && resource.data.companyId in me.data.adminCompanyIds));
       allow create: if request.auth != null
         && me != null
         && request.resource.data.companyId != null
         && ((me.data.get('companyIds', null) != null && request.resource.data.companyId in me.data.companyIds)
-            || (me.data.get('adminCompanyIds', null) != null && request.resource.data.companyId in me.data.adminCompanyIds);
+            || (me.data.get('adminCompanyIds', null) != null && request.resource.data.companyId in me.data.adminCompanyIds));
     }
 
     // Invites: pending sign-up links (document id = token).

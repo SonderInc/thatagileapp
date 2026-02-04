@@ -59,30 +59,40 @@ const InviteUserPage: React.FC = () => {
     );
   };
 
-  const loadDirectory = async () => {
+  const buildProfileWithCompany = async (): Promise<UserProfile | null> => {
+    if (!currentUser?.id || !currentTenantId) return null;
+    let profile = await getDataStore().getUserProfile(currentUser.id);
+    if (!profile) {
+      profile = {
+        uid: currentUser.id,
+        email: currentUser.email ?? '',
+        displayName: currentUser.name ?? '',
+        companyId: currentTenantId,
+        companies: [{ companyId: currentTenantId, roles: (currentUser.roles ?? []) as Role[] }],
+      };
+    } else {
+      const hasCurrentCompany = profile.companies?.some((c) => c.companyId === currentTenantId) || profile.companyId === currentTenantId;
+      if (!hasCurrentCompany) {
+        profile = {
+          ...profile,
+          companyId: profile.companyId ?? currentTenantId,
+          companies: [...(profile.companies ?? []), { companyId: currentTenantId, roles: (currentUser.roles ?? []) as Role[] }],
+        };
+      }
+    }
+    return profile;
+  };
+
+  const loadDirectory = async (retryAfterSync = false) => {
     if (!currentTenantId || !currentUser?.id) return;
     setDirectoryLoading(true);
     setDirectoryError(null);
     try {
       try {
-        let profile = await getDataStore().getUserProfile(currentUser.id);
+        const profile = await buildProfileWithCompany();
         if (!profile) {
-          profile = {
-            uid: currentUser.id,
-            email: currentUser.email ?? '',
-            displayName: currentUser.name ?? '',
-            companyId: currentTenantId,
-            companies: [{ companyId: currentTenantId, roles: (currentUser.roles ?? []) as Role[] }],
-          };
-        } else {
-          const hasCurrentCompany = profile.companies?.some((c) => c.companyId === currentTenantId) || profile.companyId === currentTenantId;
-          if (!hasCurrentCompany) {
-            profile = {
-              ...profile,
-              companyId: profile.companyId ?? currentTenantId,
-              companies: [...(profile.companies ?? []), { companyId: currentTenantId, roles: (currentUser.roles ?? []) as Role[] }],
-            };
-          }
+          setDirectoryLoading(false);
+          return;
         }
         await getDataStore().setUserProfile(profile);
       } catch (syncErr) {
@@ -98,10 +108,26 @@ const InviteUserPage: React.FC = () => {
       const message = err instanceof Error ? err.message : String(err);
       const isPermissionDenied = message.includes('permission-denied') || message.includes('Permission denied') || (err && typeof err === 'object' && 'code' in err && (err as { code?: string }).code === 'permission-denied');
       console.error('[InviteUserPage] Load user directory failed:', err);
+
+      if (isPermissionDenied && !retryAfterSync) {
+        try {
+          const profile = await buildProfileWithCompany();
+          if (profile) {
+            await getDataStore().setUserProfile(profile);
+            const users = await getDataStore().getCompanyUsers(currentTenantId);
+            setCompanyUsers(users);
+            setDirectoryLoading(false);
+            return;
+          }
+        } catch (retryErr) {
+          console.warn('[InviteUserPage] Retry after permission denied failed:', retryErr);
+        }
+      }
+
       setCompanyUsers([]);
       setDirectoryError(
         isPermissionDenied
-          ? 'Permission denied loading user directory. Ensure your profile includes this company, then retry.'
+          ? 'Permission denied. Ensure your profile includes this company and that Firestore rules are deployed (users read with sameCompany/isAdminForTarget). Then retry.'
           : 'Could not load user directory. Try refreshing. See console for details.'
       );
     } finally {

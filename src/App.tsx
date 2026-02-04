@@ -49,8 +49,10 @@ function App() {
 
   useEffect(() => {
     if (!firebaseUser || !getAuth().isConfigured()) return;
+    let cancelled = false;
     getDataStore().getUserProfile(firebaseUser.uid)
-      .then((profile) => {
+      .then(async (profile) => {
+        if (cancelled) return;
         if (profile) {
           setCurrentTenantId(profile.companyId ?? SEED_TENANT_ID);
           setCurrentUser({
@@ -60,12 +62,17 @@ function App() {
             roles: profile.companies?.find((c) => c.companyId === (profile.companyId ?? SEED_TENANT_ID))?.roles ?? [],
           });
           setMustChangePassword(profile.mustChangePassword === true);
-          getDataStore().setUserProfile(profile).catch(() => {});
+          try {
+            await getDataStore().setUserProfile(profile);
+          } catch {
+            // Backfill companyIds/adminCompanyIds; ignore errors so login still proceeds
+          }
         } else {
           setMustChangePassword(false);
         }
       })
       .catch(() => {
+        if (cancelled) return;
         setCurrentTenantId(SEED_TENANT_ID);
         setCurrentUser({
           id: firebaseUser.uid,
@@ -75,6 +82,7 @@ function App() {
         });
         setMustChangePassword(false);
       });
+    return () => { cancelled = true; };
   }, [firebaseUser?.uid, setCurrentTenantId, setCurrentUser, setMustChangePassword]);
 
   // Load tenant companies only when auth is configured and user is signed in,
