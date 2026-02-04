@@ -27,7 +27,8 @@ Import a backlog from a JSON file or pasted JSON. The importer validates the **s
         "assignee": "string",
         "tags": ["string"],
         "sprintId": "string",
-        "color": "string"
+        "color": "string",
+        "existingWorkItemId": "string"
       }
     }
   ]
@@ -60,6 +61,7 @@ Import a backlog from a JSON file or pasted JSON. The importer validates the **s
 - **Epic / Feature:** `size` (`small`, `medium`, `large`, `xlarge`, `xxlarge`, `?`)
 - **User Story:** `storyPoints`, `acceptanceCriteria`
 - **Task / Bug:** `estimatedDays`, `actualHours`
+- **Company (add-to-company only):** `existingWorkItemId` — see [Existing company root placeholder](#existing-company-root-placeholder-add-to-company).
 
 ## Hierarchy rules
 
@@ -72,6 +74,33 @@ Import a backlog from a JSON file or pasted JSON. The importer validates the **s
 
 Validation uses `canBeChildOf(childType, parentType)` from `src/utils/hierarchy.ts`.
 
+## Existing company root placeholder (add-to-company)
+
+In **add-to-company** mode you can use the existing Company work item as the root instead of creating one:
+
+- Include **exactly one** root item with `type: "company"` and `parentImportId: null`.
+- That item **must** have `fields.existingWorkItemId` set to the target company's work item id (same as `targetCompanyId` when importing into the current tenant's Company node).
+- The importer **does not create** a WorkItem for this item. It maps the item's `importId` → existing work item id so that:
+  - Hierarchy validation still passes (company is the root).
+  - Products can use `parentImportId` equal to that company's `importId`.
+- All other items are created as usual. The **existing** Company work item's `childrenIds` is updated to include the ids of newly created products (merged with any existing children).
+
+Example (add-to-company with existing root):
+
+```json
+{
+  "version": "1.0",
+  "mode": "add-to-company",
+  "targetCompanyId": "company-wi-company-123",
+  "items": [
+    { "importId": "c1", "type": "company", "title": "Acme", "parentImportId": null, "fields": { "existingWorkItemId": "company-wi-company-123" } },
+    { "importId": "p1", "type": "product", "title": "Widgets", "parentImportId": "c1" }
+  ]
+}
+```
+
+If `existingWorkItemId` does not equal `targetCompanyId`, the import fails with an error.
+
 ## Idempotency
 
 Each imported item gets:
@@ -82,7 +111,7 @@ Each imported item gets:
 
 If an item with the same `metadata.importKey` already exists for that company, it is **skipped** (not duplicated).
 
-## Example (minimal)
+## Example (minimal, add-to-company with placeholder)
 
 ```json
 {
@@ -90,7 +119,7 @@ If an item with the same `metadata.importKey` already exists for that company, i
   "mode": "add-to-company",
   "targetCompanyId": "company-123",
   "items": [
-    { "importId": "c1", "type": "company", "title": "Acme", "parentImportId": null },
+    { "importId": "c1", "type": "company", "title": "Acme", "parentImportId": null, "fields": { "existingWorkItemId": "company-123" } },
     { "importId": "p1", "type": "product", "title": "Widgets", "parentImportId": "c1" },
     { "importId": "e1", "type": "epic", "title": "Launch v2", "parentImportId": "p1" },
     { "importId": "f1", "type": "feature", "title": "Auth", "parentImportId": "e1" },

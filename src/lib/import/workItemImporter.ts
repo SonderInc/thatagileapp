@@ -39,6 +39,8 @@ export interface ImportItemInput {
     tags?: string[];
     sprintId?: string;
     color?: string;
+    /** In add-to-company mode, root company item: existing WorkItem id (must equal targetCompanyId). Do not create; map importId -> this id. */
+    existingWorkItemId?: string;
   };
 }
 
@@ -149,6 +151,24 @@ export function validateImportPayload(payload: unknown): ValidationResult {
   items.forEach((item) => {
     if (item?.importId && typeof item.importId === 'string') itemMap.set(item.importId, item);
   });
+
+  const rootCompanies = items.filter(
+    (it) => it?.type === 'company' && (it.parentImportId == null || it.parentImportId === '')
+  );
+  if (p.mode === 'add-to-company' && rootCompanies.length > 1) {
+    errors.push({ message: 'In add-to-company mode, at most one root company item is allowed' });
+  }
+  if (p.mode === 'add-to-company' && rootCompanies.length === 1) {
+    const root = rootCompanies[0]!;
+    const existingId = root.fields?.existingWorkItemId;
+    if (existingId === undefined || existingId === null || typeof existingId !== 'string') {
+      errors.push({
+        index: items.indexOf(root),
+        importId: root.importId,
+        message: 'Root company in add-to-company must have fields.existingWorkItemId (string) equal to targetCompanyId',
+      });
+    }
+  }
 
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
@@ -285,7 +305,35 @@ export async function runImport(
   const ordered = getCreationOrder(payload.items);
   const now = new Date();
 
+  // add-to-company: register existing Company root placeholder (do not create; map importId -> companyId)
+  const placeholder =
+    payload.mode === 'add-to-company'
+      ? payload.items.find(
+          (it) =>
+            it.type === 'company' &&
+            (it.parentImportId == null || it.parentImportId === '') &&
+            it.fields?.existingWorkItemId != null
+        )
+      : undefined;
+  if (placeholder) {
+    if (placeholder.fields!.existingWorkItemId !== companyId) {
+      result.errors.push(
+        `Company placeholder existingWorkItemId "${placeholder.fields!.existingWorkItemId}" must equal targetCompanyId "${companyId}"`
+      );
+      return result;
+    }
+    importIdToWorkItemId.set(placeholder.importId, companyId);
+  }
+
   for (const input of ordered) {
+    if (
+      payload.mode === 'add-to-company' &&
+      input.type === 'company' &&
+      (input.parentImportId == null || input.parentImportId === '') &&
+      input.fields?.existingWorkItemId != null
+    ) {
+      continue;
+    }
     const importKey = `${companyId}:${input.importId}`;
     if (existingImportKeys.has(importKey)) {
       const existing = existingWorkItems.find((w) => w.metadata?.importKey === importKey);
@@ -316,9 +364,21 @@ export async function runImport(
     childrenByParentId.set(parentId, list);
   }
 
+  const existingCompany = existingWorkItems.find((w) => w.id === companyId);
+
   for (const [parentId, childIds] of childrenByParentId) {
+    let childrenIds: string[];
+    if (placeholder && parentId === companyId) {
+      const existing = existingCompany?.childrenIds ?? [];
+      childrenIds = [...existing];
+      for (const id of childIds) {
+        if (!childrenIds.includes(id)) childrenIds.push(id);
+      }
+    } else {
+      childrenIds = childIds;
+    }
     try {
-      await updateWorkItem(parentId, { childrenIds: childIds, updatedAt: new Date() });
+      await updateWorkItem(parentId, { childrenIds, updatedAt: new Date() });
     } catch (err) {
       result.errors.push(`Update childrenIds for ${parentId}: ${err instanceof Error ? err.message : String(err)}`);
     }
