@@ -1,87 +1,40 @@
-rules_version = '2';
-// Copy this file to Firebase Console → Firestore Database → Rules and publish.
-// Phase 1: permissive for workItems and companies so app can scope by companyId.
-// Phase 2/3: tighten with auth and (optionally) role checks via custom claims or users collection.
-
+rules_version = "2";
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Tenant companies. User can read only their companies; only admins can update/delete.
     match /companies/{companyId} {
       let me = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      allow read: if request.auth != null
-        && me != null
-        && me.data.get('companyIds', null) != null
-        && companyId in me.data.companyIds;
+      allow read: if request.auth != null && me != null && me.data.get("companyIds", null) != null && companyId in me.data.companyIds;
       allow create: if request.auth != null;
-      allow update, delete: if request.auth != null
-        && me != null
-        && me.data.get('adminCompanyIds', null) != null
-        && companyId in me.data.adminCompanyIds;
+      allow update, delete: if request.auth != null && me != null && me.data.get("adminCompanyIds", null) != null && companyId in me.data.adminCompanyIds;
     }
-
-    // Work items (scoped by companyId = tenant id). User can only access items for their companies.
     match /workItems/{itemId} {
       let me = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      allow read, update, delete: if request.auth != null
-        && me != null
-        && me.data.get('companyIds', null) != null
-        && resource.data.companyId != null
-        && resource.data.companyId in me.data.companyIds;
-      allow create: if request.auth != null
-        && me != null
-        && me.data.get('companyIds', null) != null
-        && request.resource.data.companyId != null
-        && request.resource.data.companyId in me.data.companyIds;
+      allow read, update, delete: if request.auth != null && me != null && me.data.get("companyIds", null) != null && resource.data.companyId != null && resource.data.companyId in me.data.companyIds;
+      allow create: if request.auth != null && me != null && me.data.get("companyIds", null) != null && request.resource.data.companyId != null && request.resource.data.companyId in me.data.companyIds;
     }
-
-    // User profiles (uid = Firebase Auth uid)
     match /users/{userId} {
       let me = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      let sameCompany = me != null && me.data.companyIds != null && resource.data.companyIds != null
-        && resource.data.companyIds.hasAny(me.data.companyIds);
-      let isAdminForTarget = me != null && me.data.get('adminCompanyIds', null) != null
-        && resource.data.companyIds != null
-        && resource.data.companyIds.hasAny(me.data.adminCompanyIds);
+      let sameCompany = me != null && me.data.companyIds != null && resource.data.companyIds != null && resource.data.companyIds.hasAny(me.data.companyIds);
+      let isAdminForTarget = me != null && me.data.get("adminCompanyIds", null) != null && resource.data.companyIds != null && resource.data.companyIds.hasAny(me.data.adminCompanyIds);
       allow read: if request.auth != null && (request.auth.uid == userId || sameCompany || isAdminForTarget);
       allow create: if request.auth != null && request.auth.uid == userId;
       allow update: if request.auth != null && (request.auth.uid == userId || isAdminForTarget);
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
-
-    // Teams (scoped by companyId). User can read/write only teams for their companies.
     match /teams/{teamId} {
       let me = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      allow read, update, delete: if request.auth != null
-        && me != null
-        && resource.data.companyId != null
-        && ((me.data.get('companyIds', null) != null && resource.data.companyId in me.data.companyIds)
-            || (me.data.get('adminCompanyIds', null) != null && resource.data.companyId in me.data.adminCompanyIds));
-      allow create: if request.auth != null
-        && me != null
-        && request.resource.data.companyId != null
-        && ((me.data.get('companyIds', null) != null && request.resource.data.companyId in me.data.companyIds)
-            || (me.data.get('adminCompanyIds', null) != null && request.resource.data.companyId in me.data.adminCompanyIds));
+      allow read, update, delete: if request.auth != null && me != null && resource.data.companyId != null && ((me.data.get("companyIds", null) != null && resource.data.companyId in me.data.companyIds) || (me.data.get("adminCompanyIds", null) != null && resource.data.companyId in me.data.adminCompanyIds));
+      allow create: if request.auth != null && me != null && request.resource.data.companyId != null && ((me.data.get("companyIds", null) != null && request.resource.data.companyId in me.data.companyIds) || (me.data.get("adminCompanyIds", null) != null && request.resource.data.companyId in me.data.adminCompanyIds));
     }
-
-    // Invites: pending sign-up links (document id = token).
-    // Create: only the inviter (invitedBy) can create; app restricts to admin/hr via canAddUser().
-    // Read: allow unauthenticated read so sign-up page can load invite by token.
-    // Update/delete: inviter (cancel) or invitee (email match) when marking used after sign-up.
     match /invites/{token} {
       allow read: if true;
       allow create: if request.auth != null && request.resource.data.invitedBy == request.auth.uid;
-      allow update, delete: if request.auth != null
-        && (resource.data.invitedBy == request.auth.uid
-            || resource.data.email == request.auth.token.email);
+      allow update, delete: if request.auth != null && (resource.data.invitedBy == request.auth.uid || resource.data.email == request.auth.token.email);
     }
-
-    // Licences: key (doc id), seats, usedByCompanyId, usedAt. Read for redemption check; update for redeem.
     match /licences/{key} {
       allow read, update: if request.auth != null;
       allow create: if request.auth != null;
     }
-
-    // Phase 2: tenant Firebase config registry (doc id = company slug). Read by Netlify function (Admin SDK only).
     match /tenantFirebaseConfigs/{slug} {
       allow read, write: if false;
     }

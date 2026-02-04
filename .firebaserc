@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "thatagileapp",
+    "Default": "thatagileapp"
+  },
+  "targets": {},
+  "etags": {}
+}

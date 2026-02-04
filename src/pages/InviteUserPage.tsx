@@ -130,7 +130,7 @@ const InviteUserPage: React.FC = () => {
       setCompanyUsers([]);
       setDirectoryError(
         isPermissionDenied
-          ? 'Permission denied. Ensure your profile includes this company and that Firestore rules are deployed (users read with sameCompany/isAdminForTarget). Then retry.'
+          ? 'Permission denied. In Firebase Console go to Firestore Database → Rules, paste your project\'s firestore.rules and click Publish. Then ensure your user document in users/<uid> has companyIds and adminCompanyIds (see docs/DEPLOYMENT.md).'
           : 'Could not load user directory. Try refreshing. See console for details.'
       );
     } finally {
