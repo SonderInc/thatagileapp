@@ -46,6 +46,35 @@ export const TEAM_BOARD_COLUMNS: KanbanColumn[] = [
   { id: 'archive', name: 'Archive', status: 'archive', workItemIds: [], order: 4 },
 ];
 
+// Kanban mode board: Backlog, Queue, In Progress, Done, Archive
+export const KANBAN_BOARD_COLUMNS: KanbanColumn[] = [
+  { id: 'backlog', name: 'Backlog', status: 'backlog', workItemIds: [], order: 0 },
+  { id: 'queue', name: 'Queue', status: 'to-do', workItemIds: [], order: 1 },
+  { id: 'in-progress', name: 'In Progress', status: 'in-progress', workItemIds: [], order: 2 },
+  { id: 'done', name: 'Done', status: 'done', workItemIds: [], order: 3 },
+  { id: 'archive', name: 'Archive', status: 'archive', workItemIds: [], order: 4 },
+];
+
+/** Status to set when dropping an item into a Kanban board column (queue -> to-do) */
+export function getStatusForKanbanColumn(columnId: string): WorkItemStatus {
+  if (columnId === 'backlog') return 'backlog';
+  if (columnId === 'queue') return 'to-do';
+  if (columnId === 'in-progress') return 'in-progress';
+  if (columnId === 'done') return 'done';
+  if (columnId === 'archive') return 'archive';
+  return 'backlog';
+}
+
+/** Whether a status belongs in the given Kanban board column */
+export function isStatusInKanbanColumn(status: WorkItemStatus, columnId: string): boolean {
+  if (columnId === 'backlog') return status === 'backlog';
+  if (columnId === 'queue') return status === 'to-do';
+  if (columnId === 'in-progress') return status === 'in-progress';
+  if (columnId === 'done') return status === 'done';
+  if (columnId === 'archive') return status === 'archive';
+  return false;
+}
+
 /** Status to set when dropping an item into a team board column */
 export function getStatusForTeamColumn(columnId: string): WorkItemStatus {
   if (columnId === 'backlog') return 'backlog';

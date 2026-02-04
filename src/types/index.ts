@@ -3,6 +3,9 @@ export type WorkItemType = 'company' | 'product' | 'epic' | 'feature' | 'user-st
 
 export type EpicFeatureSize = 'small' | 'medium' | 'large' | 'xlarge' | 'xxlarge' | '?';
 
+/** Kanban board swimlane (task/bug only). */
+export type KanbanLane = 'expedite' | 'fixed-delivery-date' | 'standard' | 'intangible';
+
 export type WorkItemStatus = 
   // Epic Level: Funnel → Reviewing → Analyzing → Portfolio Backlog → Implementing → Done
   | 'funnel' | 'backlog' | 'analysis' | 'prioritization' | 'implementation' | 'done'
@@ -98,6 +101,8 @@ export interface WorkItem {
   color?: string; // For visual distinction
   /** Import tracking for JSON backlog import idempotency. */
   metadata?: { importId?: string; importKey?: string; /** Mirror of Cursor instruction block from description. */ cursorInstruction?: string };
+  /** Kanban board swimlane (tasks/bugs); default 'standard' when missing. */
+  lane?: KanbanLane;
 }
 
 export interface Sprint {

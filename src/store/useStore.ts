@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { WorkItem, Sprint, KanbanBoard, User, WorkItemType, TenantCompany, AuthUser, Role } from '../types';
+import { WorkItem, Sprint, KanbanBoard, User, WorkItemType, TenantCompany, AuthUser, Role, KanbanLane } from '../types';
 import { getAllowedChildTypes } from '../utils/hierarchy';
 import { getTypeLabel as getTypeLabelFromNomenclature, getRoleLabel as getRoleLabelFromNomenclature } from '../utils/nomenclature';
 import { getDataStore } from '../lib/adapters';
@@ -92,6 +92,8 @@ interface AppState {
   getFeaturesInDevelopState: () => WorkItem[];
   getTeamBoardLanes: () => { id: string; title: string }[];
   getStoriesForLane: (laneId: string) => WorkItem[];
+  getKanbanLanes: () => { id: KanbanLane; title: string }[];
+  getItemsForKanbanLane: (laneId: string) => WorkItem[];
   getCurrentCompany: () => TenantCompany | null;
   /** Type label for current company's nomenclature (e.g. Epic vs Program). */
   getTypeLabel: (type: WorkItemType) => string;
@@ -429,6 +431,23 @@ export const useStore = create<AppState>((set, get) => ({
       return items.filter((i) => i.type === 'bug' && i.parentId == null);
     }
     return items.filter((i) => i.parentId === laneId && i.type === 'user-story');
+  },
+
+  getKanbanLanes: () => [
+    { id: 'expedite' as KanbanLane, title: 'Expedite' },
+    { id: 'fixed-delivery-date' as KanbanLane, title: 'Fixed Delivery Date' },
+    { id: 'standard' as KanbanLane, title: 'Standard' },
+    { id: 'intangible' as KanbanLane, title: 'Intangible' },
+  ],
+
+  getItemsForKanbanLane: (laneId: string) => {
+    const { workItems, currentTenantId } = get();
+    return workItems.filter((i) => {
+      if (i.type !== 'task' && i.type !== 'bug') return false;
+      if (currentTenantId != null && i.companyId !== currentTenantId) return false;
+      const itemLane = i.lane ?? 'standard';
+      return itemLane === laneId;
+    });
   },
 
   getCurrentCompany: () => {

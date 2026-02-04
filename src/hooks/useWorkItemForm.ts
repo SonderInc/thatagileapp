@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { WorkItem, WorkItemType, WorkItemStatus } from '../types';
+import { WorkItem, WorkItemType, WorkItemStatus, KanbanLane } from '../types';
 import { useStore } from '../store/useStore';
 import { getAllowedChildTypes } from '../utils/hierarchy';
 
@@ -12,6 +12,7 @@ export interface UseWorkItemFormProps {
   type?: WorkItemType;
   allowedTypes?: WorkItemType[];
   defaultStatus?: WorkItemStatus;
+  showLaneField?: boolean;
 }
 
 export function useWorkItemForm({
@@ -21,6 +22,7 @@ export function useWorkItemForm({
   type,
   allowedTypes: allowedTypesProp,
   defaultStatus,
+  showLaneField,
 }: UseWorkItemFormProps) {
   const { workItems, addWorkItem, updateWorkItem, getWorkItemsByParent } = useStore();
   const [formData, setFormData] = useState<Partial<WorkItem>>({
@@ -60,6 +62,7 @@ export function useWorkItemForm({
         estimatedDays: item.estimatedDays,
         estimatedHours: item.estimatedHours,
         parentId: item.parentId || parentId,
+        lane: item.lane,
       });
     } else {
       const defaultType = (type && (allowedTypes.includes(type) || type === 'user-story')) ? type : allowedTypes[0];
@@ -70,9 +73,10 @@ export function useWorkItemForm({
         ...(defaultStatus != null && { status: defaultStatus }),
         ...(defaultStatus == null && defaultType === 'feature' && { status: 'funnel' }),
         ...(defaultType === 'product' && { status: 'backlog', priority: undefined }),
+        ...(showLaneField && (defaultType === 'task' || defaultType === 'bug') && { lane: (prev.lane ?? 'standard') as KanbanLane }),
       }));
     }
-  }, [item, parentId, type, allowedTypes, defaultStatus]);
+  }, [item, parentId, type, allowedTypes, defaultStatus, showLaneField]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,6 +103,7 @@ export function useWorkItemForm({
       estimatedDays: formData.estimatedDays,
       estimatedHours: formData.estimatedHours,
       parentId: formData.parentId,
+      lane: (formData.type === 'task' || formData.type === 'bug') ? (formData.lane ?? 'standard') : undefined,
       createdAt: new Date(),
       updatedAt: new Date(),
       color: formData.color,

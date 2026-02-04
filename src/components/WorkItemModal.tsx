@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { WorkItem, WorkItemType, WorkItemStatus, EpicFeatureSize } from '../types';
+import { WorkItem, WorkItemType, WorkItemStatus, EpicFeatureSize, KanbanLane } from '../types';
 import { useStore } from '../store/useStore';
 import { SIZE_OPTIONS, STORY_POINT_OPTIONS, DAYS_OPTIONS } from '../utils/estimates';
 import { extractCursorInstruction } from '../lib/cursorInstruction';
@@ -18,9 +18,18 @@ interface WorkItemModalProps {
   allowedTypes?: WorkItemType[];
   /** When provided and not editing, use this as the initial status (e.g. Feature board Funnel column: funnel). */
   defaultStatus?: WorkItemStatus;
+  /** When true, show Lane (swimlane) dropdown for task/bug (Kanban board). */
+  showLaneField?: boolean;
 }
 
-const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId, type, allowedTypes: allowedTypesProp, defaultStatus }) => {
+const KANBAN_LANE_OPTIONS: { value: KanbanLane; label: string }[] = [
+  { value: 'expedite', label: 'Expedite' },
+  { value: 'fixed-delivery-date', label: 'Fixed Delivery Date' },
+  { value: 'standard', label: 'Standard' },
+  { value: 'intangible', label: 'Intangible' },
+];
+
+const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId, type, allowedTypes: allowedTypesProp, defaultStatus, showLaneField }) => {
   const { users, getAggregatedStoryPoints, getFeaturesInDevelopState, setSelectedWorkItem, getTypeLabel, deleteWorkItem, canResetBacklog } = useStore();
   const {
     formData,
@@ -35,7 +44,7 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
     handleAddBug,
     childTasksAndBugs,
     FEATURE_STATUSES,
-  } = useWorkItemForm({ itemId, onClose, parentId, type, allowedTypes: allowedTypesProp, defaultStatus });
+  } = useWorkItemForm({ itemId, onClose, parentId, type, allowedTypes: allowedTypesProp, defaultStatus, showLaneField });
   const [showEpicHypothesis, setShowEpicHypothesis] = useState(false);
   const [showEpicHypothesisExample, setShowEpicHypothesisExample] = useState(false);
   const [copiedHint, setCopiedHint] = useState<'cursor' | 'description' | null>(null);
@@ -403,6 +412,31 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
                   <option value="critical">Critical</option>
                 </select>
               </div>
+            </div>
+          )}
+
+          {showLaneField && (formData.type === 'task' || formData.type === 'bug') && (
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
+                Lane
+              </label>
+              <select
+                value={formData.lane ?? 'standard'}
+                onChange={(e) => setFormData({ ...formData, lane: e.target.value as KanbanLane })}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                }}
+              >
+                {KANBAN_LANE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
             </div>
           )}
 

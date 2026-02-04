@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import TeamKanbanBoard from '../components/TeamKanbanBoard';
+import KanbanModeBoard from '../components/KanbanModeBoard';
 import WorkItemModal from '../components/WorkItemModal';
 import SprintBurndownModal from '../components/SprintBurndownModal';
-import { TEAM_BOARD_COLUMNS } from '../utils/boardConfig';
+import { TEAM_BOARD_COLUMNS, KANBAN_BOARD_COLUMNS } from '../utils/boardConfig';
 import { Settings, TrendingDown } from 'lucide-react';
 import Button from '../components/Button';
 
@@ -12,6 +13,8 @@ const TeamBoard: React.FC = () => {
     sprints,
     getTeamBoardLanes,
     getStoriesForLane,
+    getKanbanLanes,
+    getItemsForKanbanLane,
     getWorkItemsBySprint,
     selectedWorkItem,
     setSelectedWorkItem,
@@ -95,19 +98,14 @@ const TeamBoard: React.FC = () => {
       </div>
 
       {teamBoardMode === 'kanban' ? (
-        <div
-          style={{
-            padding: '48px 24px',
-            textAlign: 'center',
-            backgroundColor: '#f9fafb',
-            border: '1px solid #e5e7eb',
-            borderRadius: '8px',
-            color: '#6b7280',
-            fontSize: '16px',
-          }}
-        >
-          Kanban board coming soon.
-        </div>
+        <KanbanModeBoard
+          boardId="team-board-kanban"
+          columns={KANBAN_BOARD_COLUMNS}
+          lanes={getKanbanLanes()}
+          getItemsForLane={getItemsForKanbanLane}
+          onAddItem={handleAddItem}
+          onOpenItem={() => setShowModal(true)}
+        />
       ) : (
         <>
       {/* Sprint Selector */}
@@ -179,8 +177,24 @@ const TeamBoard: React.FC = () => {
         <WorkItemModal
           itemId={selectedWorkItem}
           onClose={handleCloseModal}
-          type={modalColumnId === 'backlog' ? 'user-story' : undefined}
-          allowedTypes={modalColumnId === 'backlog' ? ['user-story', 'task', 'bug'] : undefined}
+          type={
+            teamBoardMode === 'kanban' && modalColumnId === 'backlog'
+              ? 'task'
+              : modalColumnId === 'backlog'
+                ? 'user-story'
+                : undefined
+          }
+          allowedTypes={
+            teamBoardMode === 'kanban' && modalColumnId === 'backlog'
+              ? ['task']
+              : modalColumnId === 'backlog'
+                ? ['user-story', 'task', 'bug']
+                : undefined
+          }
+          defaultStatus={
+            teamBoardMode === 'kanban' && modalColumnId === 'backlog' ? 'backlog' : undefined
+          }
+          showLaneField={teamBoardMode === 'kanban'}
         />
       )}
       {showBurndown && (

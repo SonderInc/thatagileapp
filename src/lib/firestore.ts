@@ -51,6 +51,7 @@ function serializeWorkItem(item: WorkItem | Partial<WorkItem>): WorkItemData {
   if (item.color !== undefined) out.color = item.color;
   if (item.acceptanceCriteria !== undefined) out.acceptanceCriteria = item.acceptanceCriteria;
   if (item.metadata !== undefined) out.metadata = item.metadata;
+  if ((item as WorkItem).lane !== undefined) out.lane = (item as WorkItem).lane;
   return out as WorkItemData;
 }
 
