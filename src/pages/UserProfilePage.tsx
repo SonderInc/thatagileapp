@@ -40,7 +40,11 @@ const UserProfilePage: React.FC = () => {
             if (count <= 1) {
               const merged = mergeProfileForBackfill(nextProfile, currentTenantId, ['admin']);
               await getDataStore().setUserProfile(merged);
-              nextProfile = { ...nextProfile, companies: merged.companies };
+              nextProfile = {
+                ...nextProfile,
+                companies: merged.companies,
+                ...(merged.adminCompanyIds !== undefined && { adminCompanyIds: merged.adminCompanyIds }),
+              };
               setCurrentUser({
                 ...currentUser,
                 roles: merged.companies?.find((c) => c.companyId === currentTenantId)?.roles ?? currentUser.roles ?? [],
@@ -68,12 +72,19 @@ const UserProfilePage: React.FC = () => {
 
   const company = getCurrentCompany();
   const currentTenantId = company?.id ?? profile?.companyId ?? null;
-  const rolesForCompany =
+  const rolesFromProfile =
     (profile?.companies?.length === 1 ? profile.companies[0].roles : undefined) ??
     profile?.companies?.find((c) => c.companyId === currentTenantId)?.roles ??
     profile?.companies?.find((c) => c.roles?.includes('admin'))?.roles ??
     currentUser?.roles ??
     [];
+  // Show admin when canonical check says so (e.g. adminCompanyIds), so registrars with missing doc data still display correctly
+  const rolesForCompany =
+    rolesFromProfile.length > 0
+      ? rolesFromProfile
+      : profile && currentTenantId && isAdminForCompany(profile, currentTenantId)
+        ? ['admin']
+        : [];
   const allCompaniesWithRoles = profile?.companies ?? [];
 
   useEffect(() => {
