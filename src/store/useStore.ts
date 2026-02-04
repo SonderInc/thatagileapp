@@ -42,7 +42,8 @@ interface AppState {
   selectedWorkItem: string | null;
   selectedProductId: string | null;
   selectedCompanyId: string | null;
-  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing' | 'add-product' | 'add-company' | 'register-company' | 'invite-user' | 'licence' | 'company-profile' | 'settings' | 'import-backlog' | 'user-profile';
+  selectedTeamId: string | null;
+  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing' | 'add-product' | 'add-company' | 'register-company' | 'invite-user' | 'licence' | 'company-profile' | 'settings' | 'import-backlog' | 'user-profile' | 'teams-list';
   
   // Actions
   setWorkItems: (items: WorkItem[]) => void;
@@ -66,6 +67,7 @@ interface AppState {
   setSelectedWorkItem: (itemId: string | null) => void;
   setSelectedProductId: (id: string | null) => void;
   setSelectedCompanyId: (id: string | null) => void;
+  setSelectedTeamId: (id: string | null) => void;
   setViewMode: (mode: AppState['viewMode']) => void;
   setTenantCompanies: (companies: TenantCompany[]) => void;
   setCurrentTenantId: (id: string | null) => void;
@@ -128,6 +130,7 @@ export const useStore = create<AppState>((set, get) => ({
   selectedWorkItem: null,
   selectedProductId: null,
   selectedCompanyId: null,
+  selectedTeamId: null,
   viewMode: 'landing',
   
   // Actions
@@ -257,6 +260,7 @@ export const useStore = create<AppState>((set, get) => ({
   setSelectedWorkItem: (itemId) => set({ selectedWorkItem: itemId }),
   setSelectedProductId: (id) => set({ selectedProductId: id }),
   setSelectedCompanyId: (id) => set({ selectedCompanyId: id }),
+  setSelectedTeamId: (id) => set({ selectedTeamId: id }),
   setViewMode: (mode) => set({ viewMode: mode }),
   setTenantCompanies: (companies) => set({ tenantCompanies: companies }),
   setCurrentTenantId: (id) => set({ currentTenantId: id }),
@@ -417,35 +421,76 @@ export const useStore = create<AppState>((set, get) => ({
     );
   },
 
-  /** Team board lanes: one per feature (with user stories), plus Ad hoc and Bug lanes. */
+  /** Team board lanes: when selectedTeamId set, lanes = features that have that team in teamIds, plus Ad hoc and Bug. Otherwise features with user stories plus Ad hoc and Bug. */
   getTeamBoardLanes: () => {
-    const items = get().workItems;
+    const allItems = get().workItems;
+    const tid = get().selectedTeamId;
     const lanes: { id: string; title: string }[] = [];
-    get().getFeaturesWithUserStories().forEach((f) => {
-      lanes.push({ id: f.id, title: f.title });
-    });
-    const adHocStories = items.filter(
-      (i) =>
-        i.type === 'user-story' &&
-        (i.parentId == null || items.find((p) => p.id === i.parentId)?.type !== 'feature')
-    );
-    if (adHocStories.length > 0) {
-      lanes.push({ id: '__ad_hoc__', title: 'Ad hoc' });
-    }
-    const standaloneBugs = items.filter((i) => i.type === 'bug' && i.parentId == null);
-    if (standaloneBugs.length > 0) {
-      lanes.push({ id: '__bug__', title: 'Bug' });
+    if (tid != null) {
+      const features = allItems.filter((i) => i.type === 'feature');
+      features
+        .filter((f) => (f.teamIds ?? []).includes(tid))
+        .forEach((f) => {
+          lanes.push({ id: f.id, title: f.title });
+        });
+      const adHocStories = allItems.filter(
+        (i) =>
+          i.type === 'user-story' &&
+          i.teamId === tid &&
+          (i.parentId == null || allItems.find((p) => p.id === i.parentId)?.type !== 'feature')
+      );
+      if (adHocStories.length > 0) {
+        lanes.push({ id: '__ad_hoc__', title: 'Ad hoc' });
+      }
+      const standaloneBugs = allItems.filter((i) => i.type === 'bug' && i.parentId == null && (i.teamId === tid || i.teamId == null));
+      if (standaloneBugs.length > 0) {
+        lanes.push({ id: '__bug__', title: 'Bug' });
+      }
+    } else {
+      const items = allItems;
+      const features = items.filter((i) => i.type === 'feature');
+      features
+        .filter((f) => items.some((i) => i.parentId === f.id && i.type === 'user-story'))
+        .forEach((f) => {
+          lanes.push({ id: f.id, title: f.title });
+        });
+      const adHocStories = items.filter(
+        (i) =>
+          i.type === 'user-story' &&
+          (i.parentId == null || items.find((p) => p.id === i.parentId)?.type !== 'feature')
+      );
+      if (adHocStories.length > 0) {
+        lanes.push({ id: '__ad_hoc__', title: 'Ad hoc' });
+      }
+      const standaloneBugs = items.filter((i) => i.type === 'bug' && i.parentId == null);
+      if (standaloneBugs.length > 0) {
+        lanes.push({ id: '__bug__', title: 'Bug' });
+      }
     }
     return lanes;
   },
 
   /**
-   * Items for a lane. For a feature lane: only user stories with that feature as parent.
-   * The board shows tasks/bugs only via getTasksForStory(story.id) for these stories,
-   * so all user stories and their tasks/bugs stay in the same swim lane.
+   * Items for a lane. When selectedTeamId set: feature lane = stories with that team and that parent; Ad hoc = team's stories with no feature parent; Bug = team's or unassigned bugs.
    */
   getStoriesForLane: (laneId: string) => {
-    const items = get().workItems;
+    const allItems = get().workItems;
+    const tid = get().selectedTeamId;
+    if (tid != null) {
+      if (laneId === '__ad_hoc__') {
+        return allItems.filter(
+          (i) =>
+            i.type === 'user-story' &&
+            i.teamId === tid &&
+            (i.parentId == null || allItems.find((p) => p.id === i.parentId)?.type !== 'feature')
+        );
+      }
+      if (laneId === '__bug__') {
+        return allItems.filter((i) => i.type === 'bug' && i.parentId == null && (i.teamId === tid || i.teamId == null));
+      }
+      return allItems.filter((i) => i.parentId === laneId && i.type === 'user-story' && i.teamId === tid);
+    }
+    const items = allItems;
     if (laneId === '__ad_hoc__') {
       return items.filter(
         (i) =>
@@ -467,10 +512,11 @@ export const useStore = create<AppState>((set, get) => ({
   ],
 
   getItemsForKanbanLane: (laneId: string) => {
-    const { workItems, currentTenantId } = get();
+    const { workItems, currentTenantId, selectedTeamId } = get();
     return workItems.filter((i) => {
       if (i.type !== 'task' && i.type !== 'bug') return false;
       if (currentTenantId != null && i.companyId !== currentTenantId) return false;
+      if (selectedTeamId != null && i.teamId !== selectedTeamId && i.teamId != null) return false;
       const itemLane = i.lane ?? 'standard';
       return itemLane === laneId;
     });

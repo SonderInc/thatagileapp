@@ -53,6 +53,8 @@ function serializeWorkItem(item: WorkItem | Partial<WorkItem>): WorkItemData {
   if (item.acceptanceCriteria !== undefined) out.acceptanceCriteria = item.acceptanceCriteria;
   if (item.metadata !== undefined) out.metadata = item.metadata;
   if ((item as WorkItem).lane !== undefined) out.lane = (item as WorkItem).lane;
+  if (item.teamId !== undefined) out.teamId = item.teamId;
+  if (item.teamIds !== undefined) out.teamIds = item.teamIds;
   return out as WorkItemData;
 }
 

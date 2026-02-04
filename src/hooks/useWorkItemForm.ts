@@ -24,7 +24,7 @@ export function useWorkItemForm({
   defaultStatus,
   showLaneField,
 }: UseWorkItemFormProps) {
-  const { workItems, addWorkItem, updateWorkItem, getWorkItemsByParent } = useStore();
+  const { workItems, addWorkItem, updateWorkItem, getWorkItemsByParent, currentTenantId } = useStore();
   const [formData, setFormData] = useState<Partial<WorkItem>>({
     title: '',
     description: '',
@@ -63,6 +63,8 @@ export function useWorkItemForm({
         estimatedHours: item.estimatedHours,
         parentId: item.parentId || parentId,
         lane: item.lane,
+        teamId: item.teamId,
+        teamIds: item.teamIds,
       });
     } else {
       const defaultType = (type && (allowedTypes.includes(type) || type === 'user-story')) ? type : allowedTypes[0];
@@ -74,6 +76,7 @@ export function useWorkItemForm({
         ...(defaultStatus == null && defaultType === 'feature' && { status: 'funnel' }),
         ...(defaultType === 'product' && { status: 'backlog', priority: undefined }),
         ...(showLaneField && (defaultType === 'task' || defaultType === 'bug') && { lane: (prev.lane ?? 'standard') as KanbanLane }),
+        ...(defaultType === 'feature' && { teamIds: prev.teamIds ?? [] }),
       }));
     }
   }, [item, parentId, type, allowedTypes, defaultStatus, showLaneField]);
@@ -107,6 +110,9 @@ export function useWorkItemForm({
       createdAt: new Date(),
       updatedAt: new Date(),
       color: formData.color,
+      companyId: currentTenantId ?? undefined,
+      teamId: formData.teamId,
+      teamIds: formData.type === 'feature' ? (formData.teamIds ?? []) : undefined,
     };
     setSaving(true);
     try {

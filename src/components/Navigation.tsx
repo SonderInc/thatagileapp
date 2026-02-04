@@ -4,17 +4,26 @@ import { useStore } from '../store/useStore';
 import { LayoutDashboard, Layers, Package, Users, List, ListOrdered, Home, LogOut, Shield } from 'lucide-react';
 
 const Navigation: React.FC = () => {
-  const { viewMode, setViewMode, setSelectedProductId, firebaseUser, setFirebaseUser, setCurrentUser, setCurrentTenantId, currentUser, getTypeLabel } = useStore();
+  const { viewMode, setViewMode, setSelectedProductId, setSelectedTeamId, selectedTeamId, teams, loadTeams, currentTenantId, firebaseUser, setFirebaseUser, setCurrentUser, setCurrentTenantId, currentUser, getTypeLabel } = useStore();
   const [adminMenuOpen, setAdminMenuOpen] = useState(false);
+  const [teamBoardMenuOpen, setTeamBoardMenuOpen] = useState(false);
   const adminMenuRef = useRef<HTMLDivElement>(null);
+  const teamBoardMenuRef = useRef<HTMLDivElement>(null);
 
   const isAdmin = currentUser?.roles?.includes('admin') ?? false;
   const isHR = currentUser?.roles?.includes('hr') ?? false;
 
   useEffect(() => {
+    if (currentTenantId) loadTeams(currentTenantId);
+  }, [currentTenantId, loadTeams]);
+
+  useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (adminMenuRef.current && !adminMenuRef.current.contains(e.target as Node)) {
         setAdminMenuOpen(false);
+      }
+      if (teamBoardMenuRef.current && !teamBoardMenuRef.current.contains(e.target as Node)) {
+        setTeamBoardMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -36,13 +45,24 @@ const Navigation: React.FC = () => {
     { id: 'list', label: 'Work Items', icon: ListOrdered },
     { id: 'epic', label: `${getTypeLabel('epic')} Board`, icon: Layers },
     { id: 'feature', label: `${getTypeLabel('feature')} Board`, icon: Package },
-    { id: 'team', label: 'Team Board', icon: Users },
   ];
 
   const handleNavClick = (id: string) => {
     setViewMode(id as typeof viewMode);
     if (id === 'landing') setSelectedProductId(null);
     if (id === 'backlog') setSelectedProductId(null);
+  };
+
+  const handleTeamBoardTeam = (teamId: string) => {
+    setSelectedTeamId(teamId);
+    setViewMode('team');
+    setTeamBoardMenuOpen(false);
+  };
+
+  const handleManageTeams = () => {
+    setSelectedTeamId(null);
+    setViewMode('teams-list');
+    setTeamBoardMenuOpen(false);
   };
 
   const adminItems = [
@@ -100,7 +120,6 @@ const Navigation: React.FC = () => {
       {navItems.map((item) => {
         const Icon = item.icon;
         const isActive = viewMode === item.id;
-        
         return (
           <button
             key={item.id}
@@ -125,6 +144,90 @@ const Navigation: React.FC = () => {
           </button>
         );
       })}
+      <div ref={teamBoardMenuRef} style={{ position: 'relative' }}>
+        <button
+          type="button"
+          onClick={() => setTeamBoardMenuOpen((o) => !o)}
+          style={{
+            padding: '12px 16px',
+            border: 'none',
+            borderBottom: viewMode === 'team' || viewMode === 'teams-list' ? '3px solid #3b82f6' : '3px solid transparent',
+            backgroundColor: 'transparent',
+            color: viewMode === 'team' || viewMode === 'teams-list' ? '#3b82f6' : '#6b7280',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: viewMode === 'team' || viewMode === 'teams-list' ? '600' : '400',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          <Users size={18} />
+          Team Board
+        </button>
+        {teamBoardMenuOpen && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              marginTop: 0,
+              minWidth: '200px',
+              backgroundColor: '#fff',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+              zIndex: 1000,
+              padding: '4px 0',
+            }}
+          >
+            {teams.length === 0 ? (
+              <div style={{ padding: '10px 16px', fontSize: '14px', color: '#6b7280' }}>
+                No teams yet
+              </div>
+            ) : (
+              teams.map((team) => (
+                <button
+                  key={team.id}
+                  type="button"
+                  onClick={() => handleTeamBoardTeam(team.id)}
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    padding: '10px 16px',
+                    textAlign: 'left',
+                    border: 'none',
+                    backgroundColor: viewMode === 'team' && team.id === selectedTeamId ? '#eff6ff' : 'transparent',
+                    color: '#374151',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                  }}
+                >
+                  {team.name}
+                </button>
+              ))
+            )}
+            <button
+              type="button"
+              onClick={handleManageTeams}
+              style={{
+                display: 'block',
+                width: '100%',
+                padding: '10px 16px',
+                textAlign: 'left',
+                border: 'none',
+                borderTop: '1px solid #e5e7eb',
+                backgroundColor: viewMode === 'teams-list' ? '#eff6ff' : 'transparent',
+                color: '#374151',
+                cursor: 'pointer',
+                fontSize: '14px',
+              }}
+            >
+              Manage teams
+            </button>
+          </div>
+        )}
+      </div>
       {(isAdmin || isHR) && (
         <div ref={adminMenuRef} style={{ position: 'relative' }}>
           <button

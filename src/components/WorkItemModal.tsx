@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { WorkItem, WorkItemType, WorkItemStatus, EpicFeatureSize, KanbanLane } from '../types';
 import { useStore } from '../store/useStore';
 import { SIZE_OPTIONS, STORY_POINT_OPTIONS, DAYS_OPTIONS } from '../utils/estimates';
@@ -30,7 +30,7 @@ const KANBAN_LANE_OPTIONS: { value: KanbanLane; label: string }[] = [
 ];
 
 const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId, type, allowedTypes: allowedTypesProp, defaultStatus, showLaneField }) => {
-  const { users, getAggregatedStoryPoints, getFeaturesInDevelopState, setSelectedWorkItem, getTypeLabel, deleteWorkItem, canResetBacklog } = useStore();
+  const { users, teams, loadTeams, currentTenantId, getAggregatedStoryPoints, getFeaturesInDevelopState, setSelectedWorkItem, getTypeLabel, deleteWorkItem, canResetBacklog } = useStore();
   const {
     formData,
     setFormData,
@@ -48,6 +48,10 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
   const [showEpicHypothesis, setShowEpicHypothesis] = useState(false);
   const [showEpicHypothesisExample, setShowEpicHypothesisExample] = useState(false);
   const [copiedHint, setCopiedHint] = useState<'cursor' | 'description' | null>(null);
+
+  useEffect(() => {
+    if (currentTenantId && (formData.type === 'feature' || item?.type === 'feature')) loadTeams(currentTenantId);
+  }, [currentTenantId, formData.type, item?.type, loadTeams]);
 
   const desc = formData.description ?? '';
   const cursorBlock = extractCursorInstruction(desc);
@@ -489,26 +493,61 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
             )}
 
             {formData.type === 'feature' && (
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
-                  Story Points (from User Stories)
-                </label>
-                <input
-                  type="text"
-                  value={isEditing && item ? getAggregatedStoryPoints(item.id) : 0}
-                  readOnly
-                  disabled
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    backgroundColor: '#f9fafb',
-                    color: '#6b7280',
-                  }}
-                />
-              </div>
+              <>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
+                    Teams on this feature
+                  </label>
+                  <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#6b7280' }}>
+                    Add teams to show this feature as a swimlane on their board.
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                    {teams.length === 0 ? (
+                      <span style={{ fontSize: '14px', color: '#6b7280' }}>No teams yet. Create teams from Teams in the nav.</span>
+                    ) : (
+                      teams.map((team) => (
+                        <label
+                          key={team.id}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px' }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={(formData.teamIds ?? []).includes(team.id)}
+                            onChange={() => {
+                              const current = formData.teamIds ?? [];
+                              const next = current.includes(team.id)
+                                ? current.filter((id) => id !== team.id)
+                                : [...current, team.id];
+                              setFormData({ ...formData, teamIds: next });
+                            }}
+                          />
+                          {team.name}
+                        </label>
+                      ))
+                    )}
+                  </div>
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
+                    Story Points (from User Stories)
+                  </label>
+                  <input
+                    type="text"
+                    value={isEditing && item ? getAggregatedStoryPoints(item.id) : 0}
+                    readOnly
+                    disabled
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      backgroundColor: '#f9fafb',
+                      color: '#6b7280',
+                    }}
+                  />
+                </div>
+              </>
             )}
 
             {formData.type === 'user-story' && (

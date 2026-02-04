@@ -9,6 +9,7 @@ import WorkItemList from './pages/WorkItemList';
 import EpicBoard from './pages/EpicBoard';
 import FeatureBoard from './pages/FeatureBoard';
 import TeamBoard from './pages/TeamBoard';
+import TeamsListPage from './pages/TeamsListPage';
 import { getAuth, getDataStore } from './lib/adapters';
 import { mergeProfileForBackfill } from './lib/firestore';
 import { isAdminForCompany } from './lib/roles';
@@ -372,6 +373,8 @@ function App() {
         return <EpicBoard />;
       case 'feature':
         return <FeatureBoard />;
+      case 'teams-list':
+        return <TeamsListPage />;
       case 'team':
         return <TeamBoard />;
       case 'invite-user':

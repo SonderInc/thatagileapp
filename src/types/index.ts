@@ -103,6 +103,10 @@ export interface WorkItem {
   metadata?: { importId?: string; importKey?: string; /** Mirror of Cursor instruction block from description. */ cursorInstruction?: string };
   /** Kanban board swimlane (tasks/bugs); default 'standard' when missing. */
   lane?: KanbanLane;
+  /** Optional team id (from teams collection); used for per-team board filtering (e.g. user stories). */
+  teamId?: string;
+  /** Feature only: team ids added to this feature; each team's board shows a swimlane for this feature. */
+  teamIds?: string[];
 }
 
 export interface Sprint {
