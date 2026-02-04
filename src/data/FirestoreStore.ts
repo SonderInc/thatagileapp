@@ -24,4 +24,8 @@ export const FirestoreStore: IDataStore = {
   markInviteUsed: firestore.markInviteUsed,
   getLicenceByKey: firestore.getLicenceByKey,
   redeemLicence: firestore.redeemLicence,
+  getTeams: firestore.getTeams,
+  addTeam: firestore.addTeam,
+  updateTeam: firestore.updateTeam,
+  deleteTeam: firestore.deleteTeam,
 };

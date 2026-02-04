@@ -12,13 +12,14 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import type { WorkItem, TenantCompany, UserProfile, Role } from '../types';
+import type { WorkItem, TenantCompany, UserProfile, Role, Team } from '../types';
 
 const WORK_ITEMS_COLLECTION = 'workItems';
 const COMPANIES_COLLECTION = 'companies';
 const USERS_COLLECTION = 'users';
 const INVITES_COLLECTION = 'invites';
 const LICENCES_COLLECTION = 'licences';
+const TEAMS_COLLECTION = 'teams';
 
 type WorkItemData = Record<string, unknown>;
 
@@ -399,4 +400,67 @@ export async function redeemLicence(companyId: string, key: string): Promise<voi
     usedByCompanyId: companyId,
     usedAt: Timestamp.now(),
   });
+}
+
+/** Teams (company-scoped). */
+function parseTeamDoc(id: string, data: Record<string, unknown>): Team {
+  const createdAt = data.createdAt;
+  const updatedAt = data.updatedAt;
+  return {
+    id,
+    name: (typeof data.name === 'string' ? data.name : '') || '',
+    companyId: (typeof data.companyId === 'string' ? data.companyId : '') || '',
+    memberIds: Array.isArray(data.memberIds) ? (data.memberIds as string[]) : [],
+    createdAt:
+      createdAt && typeof (createdAt as { toDate?: () => Date }).toDate === 'function'
+        ? (createdAt as { toDate: () => Date }).toDate()
+        : createdAt instanceof Date
+          ? createdAt
+          : new Date(String(createdAt)),
+    updatedAt:
+      updatedAt && typeof (updatedAt as { toDate?: () => Date }).toDate === 'function'
+        ? (updatedAt as { toDate: () => Date }).toDate()
+        : updatedAt instanceof Date
+          ? updatedAt
+          : new Date(String(updatedAt)),
+    ...(data.createdBy != null ? { createdBy: data.createdBy as string } : {}),
+  };
+}
+
+export async function getTeams(companyId: string): Promise<Team[]> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const q = query(
+    collection(db, TEAMS_COLLECTION),
+    where('companyId', '==', companyId)
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => parseTeamDoc(d.id, d.data()));
+}
+
+export async function addTeam(team: Team): Promise<void> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = doc(db, TEAMS_COLLECTION, team.id);
+  await setDoc(ref, {
+    name: team.name,
+    companyId: team.companyId,
+    memberIds: team.memberIds ?? [],
+    createdAt: team.createdAt instanceof Date ? Timestamp.fromDate(team.createdAt) : team.createdAt,
+    updatedAt: team.updatedAt instanceof Date ? Timestamp.fromDate(team.updatedAt) : team.updatedAt,
+    ...(team.createdBy && { createdBy: team.createdBy }),
+  });
+}
+
+export async function updateTeam(id: string, updates: Partial<Team>): Promise<void> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = doc(db, TEAMS_COLLECTION, id);
+  const data: Record<string, unknown> = { updatedAt: Timestamp.now() };
+  if (updates.name !== undefined) data.name = updates.name;
+  if (updates.memberIds !== undefined) data.memberIds = updates.memberIds;
+  await updateDoc(ref, data);
+}
+
+export async function deleteTeam(id: string): Promise<void> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = doc(db, TEAMS_COLLECTION, id);
+  await deleteDoc(ref);
 }

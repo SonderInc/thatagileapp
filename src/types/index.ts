@@ -151,6 +151,17 @@ export interface UserProfile {
   phone?: string;
 }
 
+/** Team (company-scoped group of members). */
+export interface Team {
+  id: string;
+  name: string;
+  companyId: string;
+  memberIds: string[];
+  createdAt: Date;
+  updatedAt: Date;
+  createdBy?: string;
+}
+
 /** Auth user (provider-agnostic). Use this in UI/store; do not import firebase/auth types. */
 export interface AuthUser {
   uid: string;

@@ -1,4 +1,4 @@
-import type { WorkItem, TenantCompany, UserProfile, Role } from '../types';
+import type { WorkItem, TenantCompany, UserProfile, Role, Team } from '../types';
 
 /**
  * Data store interface — Firestore, Postgres, etc.
@@ -24,6 +24,10 @@ export interface IDataStore {
   markInviteUsed(token: string): Promise<void>;
   getLicenceByKey(key: string): Promise<{ seats: number } | null>;
   redeemLicence(companyId: string, key: string): Promise<void>;
+  getTeams(companyId: string): Promise<Team[]>;
+  addTeam(team: Team): Promise<void>;
+  updateTeam(id: string, updates: Partial<Team>): Promise<void>;
+  deleteTeam(id: string): Promise<void>;
 }
 
-export type { WorkItem, TenantCompany, UserProfile, Role };
+export type { WorkItem, TenantCompany, UserProfile, Role, Team };

@@ -4,11 +4,24 @@ import { getDataStore } from '../lib/adapters';
 import { ROLE_LABELS } from '../types';
 import type { Role } from '../types';
 import type { UserProfile } from '../types';
+import type { Team } from '../types';
 
 const ALL_ROLES = Object.keys(ROLE_LABELS) as Role[];
 
 const InviteUserPage: React.FC = () => {
-  const { currentUser, currentTenantId, setViewMode, canAddUser, getCurrentCompany, getRoleLabel } = useStore();
+  const {
+    currentUser,
+    currentTenantId,
+    setViewMode,
+    canAddUser,
+    getCurrentCompany,
+    getRoleLabel,
+    teams,
+    loadTeams,
+    addTeam,
+    updateTeam,
+    deleteTeam,
+  } = useStore();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -24,8 +37,16 @@ const InviteUserPage: React.FC = () => {
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [editingRoles, setEditingRoles] = useState<Role[]>([]);
   const [roleSaveLoading, setRoleSaveLoading] = useState(false);
+  const [newTeamName, setNewTeamName] = useState('');
+  const [teamCreating, setTeamCreating] = useState(false);
+  const [teamError, setTeamError] = useState<string | null>(null);
   const company = getCurrentCompany();
   const isAdmin = currentUser?.roles?.includes('admin') ?? false;
+
+  const resolveMemberName = (uid: string): string => {
+    const p = companyUsers.find((u) => u.uid === uid);
+    return p ? (p.displayName || p.email || uid) : uid;
+  };
 
   const handleRolesMultiChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selected = Array.from(e.target.selectedOptions, (opt) => opt.value as Role);
@@ -66,6 +87,10 @@ const InviteUserPage: React.FC = () => {
         await getDataStore().setUserProfile(profile);
       } catch (syncErr) {
         console.warn('[InviteUserPage] Profile sync before directory load failed:', syncErr);
+        setCompanyUsers([]);
+        setDirectoryError('Could not update your profile for this company. Please retry or ensure you have access.');
+        setDirectoryLoading(false);
+        return;
       }
       const users = await getDataStore().getCompanyUsers(currentTenantId);
       setCompanyUsers(users);
@@ -87,6 +112,10 @@ const InviteUserPage: React.FC = () => {
   useEffect(() => {
     if (currentTenantId && currentUser?.id) loadDirectory();
   }, [currentTenantId, currentUser?.id]);
+
+  useEffect(() => {
+    if (currentTenantId) loadTeams(currentTenantId);
+  }, [currentTenantId, loadTeams]);
 
   // Ensure current user's profile has adminCompanyIds so Firestore rules allow role updates (one-time sync for existing admins)
   useEffect(() => {
@@ -239,6 +268,54 @@ const InviteUserPage: React.FC = () => {
   const getRolesForCompany = (profile: UserProfile): Role[] => {
     const entry = profile.companies?.find((c) => c.companyId === currentTenantId);
     return entry?.roles ?? [];
+  };
+
+  const handleCreateTeam = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentTenantId || !newTeamName.trim()) return;
+    setTeamError(null);
+    setTeamCreating(true);
+    try {
+      const now = new Date();
+      const team: Team = {
+        id: `team-${Date.now()}`,
+        name: newTeamName.trim(),
+        companyId: currentTenantId,
+        memberIds: [],
+        createdAt: now,
+        updatedAt: now,
+        createdBy: currentUser?.id,
+      };
+      await addTeam(team);
+      setNewTeamName('');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setTeamError(msg);
+    } finally {
+      setTeamCreating(false);
+    }
+  };
+
+  const handleAddTeamMember = async (teamId: string, uid: string) => {
+    const team = teams.find((t) => t.id === teamId);
+    if (!team || team.memberIds.includes(uid)) return;
+    await updateTeam(teamId, { memberIds: [...team.memberIds, uid] });
+  };
+
+  const handleRemoveTeamMember = async (teamId: string, uid: string) => {
+    const team = teams.find((t) => t.id === teamId);
+    if (!team) return;
+    await updateTeam(teamId, { memberIds: team.memberIds.filter((id) => id !== uid) });
+  };
+
+  const handleDeleteTeam = async (teamId: string) => {
+    if (!window.confirm('Delete this team? This cannot be undone.')) return;
+    try {
+      await deleteTeam(teamId);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setTeamError(msg);
+    }
   };
 
   return (
@@ -480,6 +557,95 @@ const InviteUserPage: React.FC = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+      </section>
+
+      <section>
+        <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#111827' }}>
+          Teams
+        </h2>
+        {teamError && (
+          <p style={{ color: '#b91c1c', fontSize: '14px', marginBottom: '12px' }}>{teamError}</p>
+        )}
+        <form onSubmit={handleCreateTeam} style={{ marginBottom: '24px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+          <input
+            type="text"
+            value={newTeamName}
+            onChange={(e) => setNewTeamName(e.target.value)}
+            placeholder="Team name"
+            style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px', minWidth: '200px' }}
+          />
+          <button type="submit" className="btn-primary" disabled={teamCreating || !newTeamName.trim()}>
+            {teamCreating ? 'Creating…' : 'Create team'}
+          </button>
+        </form>
+        {teams.length === 0 ? (
+          <p style={{ color: '#6b7280', fontSize: '14px' }}>No teams yet. Create one above.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {teams.map((team) => (
+              <div
+                key={team.id}
+                style={{
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  padding: '16px',
+                  backgroundColor: '#fafafa',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#111827' }}>
+                    {team.name}
+                  </h3>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => handleDeleteTeam(team.id)}
+                    style={{ fontSize: '13px' }}
+                  >
+                    Delete team
+                  </button>
+                </div>
+                <div style={{ marginBottom: '8px', fontSize: '13px', color: '#6b7280' }}>
+                  Members: {team.memberIds.length === 0 ? 'None' : team.memberIds.map((uid) => resolveMemberName(uid)).join(', ')}
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                  <span style={{ fontSize: '13px', color: '#374151' }}>Add member:</span>
+                  <select
+                    value=""
+                    onChange={(e) => {
+                      const uid = e.target.value;
+                      if (uid) handleAddTeamMember(team.id, uid);
+                      e.target.value = '';
+                    }}
+                    style={{ padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }}
+                  >
+                    <option value="">Select user…</option>
+                    {companyUsers
+                      .filter((u) => !team.memberIds.includes(u.uid))
+                      .map((u) => (
+                        <option key={u.uid} value={u.uid}>
+                          {u.displayName || u.email}
+                        </option>
+                      ))}
+                  </select>
+                  {team.memberIds.map((uid) => (
+                    <span key={uid} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px', backgroundColor: '#e5e7eb', borderRadius: '6px', fontSize: '13px' }}>
+                      {resolveMemberName(uid)}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTeamMember(team.id, uid)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', color: '#6b7280', fontSize: '14px' }}
+                        title="Remove from team"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </section>

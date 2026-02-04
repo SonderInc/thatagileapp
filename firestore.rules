@@ -42,10 +42,25 @@ service cloud.firestore {
       let isAdminForTarget = me != null && me.data.get('adminCompanyIds', null) != null
         && resource.data.companyIds != null
         && resource.data.companyIds.hasAny(me.data.adminCompanyIds);
-      allow read: if request.auth != null && (request.auth.uid == userId || sameCompany);
+      allow read: if request.auth != null && (request.auth.uid == userId || sameCompany || isAdminForTarget);
       allow create: if request.auth != null && request.auth.uid == userId;
       allow update: if request.auth != null && (request.auth.uid == userId || isAdminForTarget);
       allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Teams (scoped by companyId). User can read/write only teams for their companies.
+    match /teams/{teamId} {
+      let me = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      allow read, update, delete: if request.auth != null
+        && me != null
+        && resource.data.companyId != null
+        && ((me.data.get('companyIds', null) != null && resource.data.companyId in me.data.companyIds)
+            || (me.data.get('adminCompanyIds', null) != null && resource.data.companyId in me.data.adminCompanyIds);
+      allow create: if request.auth != null
+        && me != null
+        && request.resource.data.companyId != null
+        && ((me.data.get('companyIds', null) != null && request.resource.data.companyId in me.data.companyIds)
+            || (me.data.get('adminCompanyIds', null) != null && request.resource.data.companyId in me.data.adminCompanyIds);
     }
 
     // Invites: pending sign-up links (document id = token).

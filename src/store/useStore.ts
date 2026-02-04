@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { WorkItem, Sprint, KanbanBoard, User, WorkItemType, TenantCompany, AuthUser, Role, KanbanLane } from '../types';
+import { WorkItem, Sprint, KanbanBoard, User, WorkItemType, TenantCompany, AuthUser, Role, KanbanLane, Team } from '../types';
 import { getAllowedChildTypes } from '../utils/hierarchy';
 import { getTypeLabel as getTypeLabelFromNomenclature, getRoleLabel as getRoleLabelFromNomenclature } from '../utils/nomenclature';
 import { getDataStore } from '../lib/adapters';
@@ -20,6 +20,7 @@ interface AppState {
   sprints: Sprint[];
   boards: KanbanBoard[];
   users: User[];
+  teams: Team[];
   currentUser: User | null;
   /** Tenant companies (from Firestore companies collection). */
   tenantCompanies: TenantCompany[];
@@ -56,6 +57,11 @@ interface AppState {
   
   setBoards: (boards: KanbanBoard[]) => void;
   setUsers: (users: User[]) => void;
+  setTeams: (teams: Team[]) => void;
+  loadTeams: (companyId: string) => Promise<void>;
+  addTeam: (team: Team) => Promise<void>;
+  updateTeam: (id: string, updates: Partial<Team>) => Promise<void>;
+  deleteTeam: (id: string) => Promise<void>;
   setSelectedBoard: (boardId: string | null) => void;
   setSelectedWorkItem: (itemId: string | null) => void;
   setSelectedProductId: (id: string | null) => void;
@@ -109,6 +115,7 @@ export const useStore = create<AppState>((set, get) => ({
   sprints: [],
   boards: [],
   users: [],
+  teams: [],
   currentUser: null,
   tenantCompanies: [],
   currentTenantId: null,
@@ -227,6 +234,25 @@ export const useStore = create<AppState>((set, get) => ({
   
   setBoards: (boards) => set({ boards }),
   setUsers: (users) => set({ users }),
+  setTeams: (teams) => set({ teams }),
+  loadTeams: async (companyId) => {
+    const teams = await getDataStore().getTeams(companyId);
+    set({ teams });
+  },
+  addTeam: async (team) => {
+    await getDataStore().addTeam(team);
+    set((state) => ({ teams: [...state.teams, team] }));
+  },
+  updateTeam: async (id, updates) => {
+    await getDataStore().updateTeam(id, updates);
+    set((state) => ({
+      teams: state.teams.map((t) => (t.id === id ? { ...t, ...updates, updatedAt: new Date() } : t)),
+    }));
+  },
+  deleteTeam: async (id) => {
+    await getDataStore().deleteTeam(id);
+    set((state) => ({ teams: state.teams.filter((t) => t.id !== id) }));
+  },
   setSelectedBoard: (boardId) => set({ selectedBoard: boardId }),
   setSelectedWorkItem: (itemId) => set({ selectedWorkItem: itemId }),
   setSelectedProductId: (id) => set({ selectedProductId: id }),
