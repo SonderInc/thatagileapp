@@ -21,8 +21,12 @@ const UserProfilePage: React.FC = () => {
       .then(async (p) => {
         let nextProfile = p ?? null;
         const company = getCurrentCompany();
-        const currentTenantId = company?.id ?? null;
-        const rolesForCompany = nextProfile?.companies?.find((c) => c.companyId === currentTenantId)?.roles ?? [];
+        const currentTenantId = company?.id ?? nextProfile?.companyId ?? null;
+        const rolesForCompany =
+          nextProfile?.companies?.find((c) => c.companyId === currentTenantId)?.roles ??
+          (nextProfile?.companies?.length === 1 ? nextProfile.companies[0].roles : undefined) ??
+          nextProfile?.companies?.find((c) => c.roles?.includes('admin'))?.roles ??
+          [];
         if (
           nextProfile &&
           currentTenantId &&
@@ -45,6 +49,12 @@ const UserProfilePage: React.FC = () => {
             backfillAttempted.current = false;
           }
         }
+        if (nextProfile && rolesForCompany.length > 0) {
+          const hasAll = rolesForCompany.every((r) => currentUser.roles?.includes(r));
+          if (!hasAll) {
+            setCurrentUser({ ...currentUser, roles: rolesForCompany });
+          }
+        }
         setProfile(nextProfile);
       })
       .catch(() => setProfile(null))
@@ -54,8 +64,8 @@ const UserProfilePage: React.FC = () => {
   const company = getCurrentCompany();
   const currentTenantId = company?.id ?? profile?.companyId ?? null;
   const rolesForCompany =
-    profile?.companies?.find((c) => c.companyId === currentTenantId)?.roles ??
     (profile?.companies?.length === 1 ? profile.companies[0].roles : undefined) ??
+    profile?.companies?.find((c) => c.companyId === currentTenantId)?.roles ??
     profile?.companies?.find((c) => c.roles?.includes('admin'))?.roles ??
     currentUser?.roles ??
     [];
