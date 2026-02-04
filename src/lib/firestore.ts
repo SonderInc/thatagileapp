@@ -229,16 +229,19 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const snap = await getDoc(ref);
   if (!snap.exists()) return null;
   const data = snap.data();
-  let companies = data.companies as { companyId: string; roles: string[] }[] | undefined;
+  const rawCompanies = data.companies as { companyId: string; roles: string[] }[] | undefined;
   const companyIds = (data.companyIds as string[] | undefined) ?? (data.companyId ? [data.companyId] : []);
   const adminCompanyIds = (data.adminCompanyIds as string[] | undefined) ?? [];
-  if (!companies?.length && companyIds.length > 0) {
+  let companies: { companyId: string; roles: Role[] }[] | undefined;
+  if (!rawCompanies?.length && companyIds.length > 0) {
     companies = companyIds.map((cid) => ({
       companyId: cid,
       roles: adminCompanyIds.includes(cid) ? (['admin'] as Role[]) : ([] as Role[]),
     }));
-  } else if (companies?.length) {
-    companies = companies.map((c) => ({ companyId: c.companyId, roles: c.roles as Role[] }));
+  } else if (rawCompanies?.length) {
+    companies = rawCompanies.map((c) => ({ companyId: c.companyId, roles: c.roles as Role[] }));
+  } else {
+    companies = rawCompanies?.map((c) => ({ companyId: c.companyId, roles: c.roles as Role[] })) ?? undefined;
   }
   return {
     uid: snap.id,
