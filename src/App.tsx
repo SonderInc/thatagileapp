@@ -11,6 +11,8 @@ import FeatureBoard from './pages/FeatureBoard';
 import TeamBoard from './pages/TeamBoard';
 import { getAuth, getDataStore } from './lib/adapters';
 import { mergeProfileForBackfill } from './lib/firestore';
+import { isAdminForCompany } from './lib/roles';
+import { getFirebaseProjectId } from './lib/firebase';
 import { mockWorkItems, mockSprints, mockBoards, mockUsers, mockTenantCompanies, SEED_TENANT_ID } from './utils/mockData';
 import RegisterCompanyPage from './pages/RegisterCompanyPage';
 import PublicLandingPage from './pages/PublicLandingPage';
@@ -57,7 +59,23 @@ function App() {
         if (cancelled) return;
         if (profile) {
           const tenantId = profile.companyId ?? SEED_TENANT_ID;
-          const roles = profile.companies?.find((c) => c.companyId === tenantId)?.roles ?? [];
+          let roles = profile.companies?.find((c) => c.companyId === tenantId)?.roles ?? [];
+          if (isAdminForCompany(profile, tenantId) && !roles.includes('admin')) {
+            roles = ['admin', ...roles];
+          }
+          if (import.meta.env.DEV) {
+            const isAdmin = roles.includes('admin');
+            console.log('[App] Profile load (admin check)', {
+              uid: profile.uid,
+              profileCompanyId: profile.companyId,
+              profileAdminCompanyIds: profile.adminCompanyIds,
+              profileCompanies: profile.companies?.map((c) => ({ companyId: c.companyId, roles: c.roles })),
+              currentTenantIdUsed: tenantId,
+              roles,
+              isAdmin,
+              isAdminFromHelper: isAdminForCompany(profile, tenantId),
+            });
+          }
           setCurrentTenantId(tenantId);
           setCurrentUser({
             id: profile.uid,
@@ -78,11 +96,23 @@ function App() {
             }
           }
         } else {
+          if (import.meta.env.DEV) {
+            console.warn('[App] Profile missing (user doc may not exist or wrong project)', {
+              uid: firebaseUser.uid,
+              projectId: getFirebaseProjectId(),
+            });
+          }
           setMustChangePassword(false);
         }
       })
       .catch(() => {
         if (cancelled) return;
+        if (import.meta.env.DEV) {
+          console.warn('[App] Profile load failed', {
+            uid: firebaseUser.uid,
+            projectId: getFirebaseProjectId(),
+          });
+        }
         setCurrentTenantId(SEED_TENANT_ID);
         setCurrentUser({
           id: firebaseUser.uid,

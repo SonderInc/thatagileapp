@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { getDataStore } from '../lib/adapters';
 import { mergeProfileForBackfill } from '../lib/firestore';
+import { isAdminForCompany } from '../lib/roles';
 import { ROLE_LABELS } from '../types';
 import type { Role } from '../types';
 import type { UserProfile } from '../types';
@@ -14,6 +15,7 @@ const InviteUserPage: React.FC = () => {
     currentUser,
     currentTenantId,
     setViewMode,
+    setCurrentUser,
     canAddUser,
     getCurrentCompany,
     getRoleLabel,
@@ -41,8 +43,10 @@ const InviteUserPage: React.FC = () => {
   const [newTeamName, setNewTeamName] = useState('');
   const [teamCreating, setTeamCreating] = useState(false);
   const [teamError, setTeamError] = useState<string | null>(null);
+  const [myProfile, setMyProfile] = useState<UserProfile | null>(null);
   const company = getCurrentCompany();
-  const isAdmin = currentUser?.roles?.includes('admin') ?? false;
+  const isAdminFromProfile = Boolean(myProfile && currentTenantId && isAdminForCompany(myProfile, currentTenantId));
+  const isAdmin = isAdminFromProfile || (currentUser?.roles?.includes('admin') ?? false);
 
   const resolveMemberName = (uid: string): string => {
     const p = companyUsers.find((u) => u.uid === uid);
@@ -139,12 +143,41 @@ const InviteUserPage: React.FC = () => {
   };
 
   useEffect(() => {
+    if (!currentTenantId || !currentUser?.id) return;
+    getDataStore()
+      .getUserProfile(currentUser.id)
+      .then((profile) => {
+        setMyProfile(profile ?? null);
+        if (import.meta.env.DEV && profile) {
+          const adminFromHelper = isAdminForCompany(profile, currentTenantId);
+          console.log('[InviteUserPage] Profile loaded (admin check)', {
+            uid: profile.uid,
+            currentTenantId,
+            profileAdminCompanyIds: profile.adminCompanyIds,
+            isAdminForCompany: adminFromHelper,
+          });
+        }
+      })
+      .catch(() => setMyProfile(null));
+  }, [currentTenantId, currentUser?.id]);
+
+  useEffect(() => {
     if (currentTenantId && currentUser?.id) loadDirectory();
   }, [currentTenantId, currentUser?.id]);
 
   useEffect(() => {
     if (currentTenantId) loadTeams(currentTenantId);
   }, [currentTenantId, loadTeams]);
+
+  // Sync store so canAddUser() passes when profile says admin (fixes false-negative permission)
+  useEffect(() => {
+    if (!isAdminFromProfile || !currentUser?.id) return;
+    if (currentUser.roles?.includes('admin')) return;
+    setCurrentUser({
+      ...currentUser,
+      roles: [...new Set([...(currentUser.roles ?? []), 'admin'])] as Role[],
+    });
+  }, [isAdminFromProfile, currentUser?.id, currentUser?.roles, setCurrentUser]);
 
   // Ensure current user's profile has adminCompanyIds so Firestore rules allow role updates (one-time sync for existing admins)
   useEffect(() => {
@@ -153,14 +186,17 @@ const InviteUserPage: React.FC = () => {
       .getUserProfile(currentUser.id)
       .then((profile) => {
         if (profile) {
-          const merged = mergeProfileForBackfill(profile, currentTenantId, currentUser.roles ?? []);
+          const roles = profile.companies?.find((c) => c.companyId === currentTenantId)?.roles ?? currentUser.roles ?? [];
+          const rolesWithAdmin = roles.includes('admin') ? roles : ['admin', ...roles];
+          const merged = mergeProfileForBackfill(profile, currentTenantId, rolesWithAdmin);
           getDataStore().setUserProfile(merged).catch(() => {});
         }
       })
       .catch(() => {});
   }, [isAdmin, currentUser?.id, currentTenantId, currentUser?.roles]);
 
-  if (!canAddUser()) {
+  const canManageUsers = canAddUser() || isAdminFromProfile;
+  if (!canManageUsers) {
     return (
       <div className="page-container">
         <div className="form-error">You do not have permission to manage users.</div>

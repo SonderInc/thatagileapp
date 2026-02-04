@@ -145,6 +145,8 @@ export interface UserProfile {
   displayName: string;
   companyId: string | null;
   companies?: { companyId: string; roles: Role[] }[];
+  /** Company IDs for which the user has admin (mirrors Firestore adminCompanyIds; used for permission checks). */
+  adminCompanyIds?: string[];
   /** When true, user must change password on next login (e.g. after invite with default password). */
   mustChangePassword?: boolean;
   employeeNumber?: string;

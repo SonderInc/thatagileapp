@@ -69,3 +69,5 @@ export function initFirebase(config: FirebaseConfig | null): void {
 
 export { db, auth, storage, analytics };
 export const isFirebaseConfigured = (): boolean => !!db;
+export const getFirebaseProjectId = (): string | null =>
+  (app?.options?.projectId as string | undefined) ?? null;
