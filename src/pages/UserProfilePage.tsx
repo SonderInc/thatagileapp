@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import { getDataStore } from '../lib/adapters';
+import { mergeProfileForBackfill } from '../lib/firestore';
 import type { UserProfile } from '../types';
 import type { Role } from '../types';
 
 const UserProfilePage: React.FC = () => {
-  const { currentUser, firebaseUser, setViewMode, getCurrentCompany, getRoleLabel } = useStore();
+  const { currentUser, firebaseUser, setViewMode, getCurrentCompany, getRoleLabel, setCurrentUser } = useStore();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const backfillAttempted = useRef(false);
 
   useEffect(() => {
     if (!currentUser?.id) {
@@ -16,12 +18,38 @@ const UserProfilePage: React.FC = () => {
     }
     getDataStore()
       .getUserProfile(currentUser.id)
-      .then((p) => {
-        setProfile(p ?? null);
+      .then(async (p) => {
+        let nextProfile = p ?? null;
+        const company = getCurrentCompany();
+        const currentTenantId = company?.id ?? null;
+        const rolesForCompany = nextProfile?.companies?.find((c) => c.companyId === currentTenantId)?.roles ?? [];
+        if (
+          nextProfile &&
+          currentTenantId &&
+          rolesForCompany.length === 0 &&
+          !backfillAttempted.current
+        ) {
+          backfillAttempted.current = true;
+          try {
+            const count = await getDataStore().getCompanyUserCount(currentTenantId);
+            if (count <= 1) {
+              const merged = mergeProfileForBackfill(nextProfile, currentTenantId, ['admin']);
+              await getDataStore().setUserProfile(merged);
+              nextProfile = { ...nextProfile, companies: merged.companies };
+              setCurrentUser({
+                ...currentUser,
+                roles: merged.companies?.find((c) => c.companyId === currentTenantId)?.roles ?? currentUser.roles ?? [],
+              });
+            }
+          } catch {
+            backfillAttempted.current = false;
+          }
+        }
+        setProfile(nextProfile);
       })
       .catch(() => setProfile(null))
       .finally(() => setLoading(false));
-  }, [currentUser?.id]);
+  }, [currentUser?.id, getCurrentCompany, setCurrentUser]);
 
   const company = getCurrentCompany();
   const currentTenantId = company?.id ?? null;
