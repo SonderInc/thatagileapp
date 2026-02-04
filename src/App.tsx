@@ -23,6 +23,7 @@ import SettingsPage from './pages/SettingsPage';
 import ImportBacklogPage from './pages/ImportBacklogPage';
 import UserProfilePage from './pages/UserProfilePage';
 import ChangePasswordRequired from './components/ChangePasswordRequired';
+import type { Role } from './types';
 import './App.css';
 
 function App() {
@@ -79,32 +80,38 @@ function App() {
             setMustChangePassword(profile.mustChangePassword === true);
             setViewMode('register-company');
           } else {
-            let roles = profile.companies?.find((c) => c.companyId === tenantId)?.roles ?? [];
-            if (isAdminForCompany(profile, tenantId) && !roles.includes('admin')) {
-              roles = ['admin', ...roles];
-            }
+            const tenantCompanyId = tenantId;
+            const derivedRolesForTenant =
+              profile.companies?.find((c) => c.companyId === tenantCompanyId)?.roles ?? [];
+            const isAdmin = isAdminForCompany(profile, tenantCompanyId);
+            const finalRoles =
+              isAdmin && !derivedRolesForTenant.includes('admin')
+                ? ['admin', ...derivedRolesForTenant]
+                : derivedRolesForTenant;
             if (import.meta.env.DEV) {
+              if (isAdmin && !finalRoles.includes('admin')) {
+                console.error('[App] Invariant: isAdmin true but finalRoles missing admin', {
+                  tenantCompanyId,
+                  isAdmin,
+                  finalRoles,
+                });
+              }
               console.log('[App] Profile load (admin/tenant diagnostics)', {
-                'Firebase auth uid': uid,
-                tenantId,
+                tenantCompanyId,
+                isAdmin,
+                finalRoles,
                 'profile.companyId': profile.companyId,
-                'profile.companyIds': profile.companyIds,
-                'profile.adminCompanyIds': profile.adminCompanyIds,
-                'profile.companies': profile.companies?.map((c) => ({ companyId: c.companyId, roles: c.roles })),
-                isAdminForCompany: isAdminForCompany(profile, tenantId),
-                derivedRolesForTenant: roles,
-                finalRolesWrittenToCurrentUser: roles,
               });
             }
-            setCurrentTenantId(tenantId);
+            setCurrentTenantId(tenantCompanyId);
             setCurrentUser({
               id: profile.uid,
               name: profile.displayName,
               email: profile.email,
-              roles,
+              roles: finalRoles as Role[],
             });
             setMustChangePassword(profile.mustChangePassword === true);
-            const merged = mergeProfileForBackfill(profile, tenantId, roles);
+            const merged = mergeProfileForBackfill(profile, tenantCompanyId, finalRoles);
             try {
               await getDataStore().setUserProfile(merged);
             } catch (err) {

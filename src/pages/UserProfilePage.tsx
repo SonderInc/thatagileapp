@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import { getDataStore } from '../lib/adapters';
 import { mergeProfileForBackfill } from '../lib/firestore';
+import { isAdminForCompany } from '../lib/roles';
 import type { UserProfile } from '../types';
 import type { Role } from '../types';
 
@@ -50,9 +51,13 @@ const UserProfilePage: React.FC = () => {
           }
         }
         if (nextProfile && rolesForCompany.length > 0) {
-          const hasAll = rolesForCompany.every((r) => currentUser.roles?.includes(r));
+          let rolesToSet = rolesForCompany;
+          if (currentTenantId && isAdminForCompany(nextProfile, currentTenantId) && !rolesToSet.includes('admin')) {
+            rolesToSet = ['admin', ...rolesToSet];
+          }
+          const hasAll = rolesToSet.every((r) => currentUser.roles?.includes(r));
           if (!hasAll) {
-            setCurrentUser({ ...currentUser, roles: rolesForCompany });
+            setCurrentUser({ ...currentUser, roles: rolesToSet });
           }
         }
         setProfile(nextProfile);
@@ -73,9 +78,13 @@ const UserProfilePage: React.FC = () => {
 
   useEffect(() => {
     if (!currentUser || rolesForCompany.length === 0) return;
-    const hasAll = rolesForCompany.every((r) => currentUser.roles?.includes(r));
-    if (!hasAll) setCurrentUser({ ...currentUser, roles: rolesForCompany });
-  }, [currentUser?.id, rolesForCompany.join(','), currentUser?.roles?.join(',')]);
+    let rolesToSet = rolesForCompany;
+    if (profile && currentTenantId && isAdminForCompany(profile, currentTenantId) && !rolesToSet.includes('admin')) {
+      rolesToSet = ['admin', ...rolesToSet];
+    }
+    const hasAll = rolesToSet.every((r) => currentUser.roles?.includes(r));
+    if (!hasAll) setCurrentUser({ ...currentUser, roles: rolesToSet });
+  }, [currentUser?.id, rolesForCompany.join(','), currentUser?.roles?.join(','), profile, currentTenantId]);
 
   if (!firebaseUser || !currentUser) {
     return (
