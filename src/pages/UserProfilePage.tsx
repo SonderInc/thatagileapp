@@ -52,9 +52,20 @@ const UserProfilePage: React.FC = () => {
   }, [currentUser?.id, getCurrentCompany, setCurrentUser]);
 
   const company = getCurrentCompany();
-  const currentTenantId = company?.id ?? null;
-  const rolesForCompany = profile?.companies?.find((c) => c.companyId === currentTenantId)?.roles ?? currentUser?.roles ?? [];
+  const currentTenantId = company?.id ?? profile?.companyId ?? null;
+  const rolesForCompany =
+    profile?.companies?.find((c) => c.companyId === currentTenantId)?.roles ??
+    (profile?.companies?.length === 1 ? profile.companies[0].roles : undefined) ??
+    profile?.companies?.find((c) => c.roles?.includes('admin'))?.roles ??
+    currentUser?.roles ??
+    [];
   const allCompaniesWithRoles = profile?.companies ?? [];
+
+  useEffect(() => {
+    if (!currentUser || rolesForCompany.length === 0) return;
+    const hasAll = rolesForCompany.every((r) => currentUser.roles?.includes(r));
+    if (!hasAll) setCurrentUser({ ...currentUser, roles: rolesForCompany });
+  }, [currentUser?.id, rolesForCompany.join(','), currentUser?.roles?.join(',')]);
 
   if (!firebaseUser || !currentUser) {
     return (

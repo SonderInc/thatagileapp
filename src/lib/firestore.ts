@@ -239,15 +239,26 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
       roles: adminCompanyIds.includes(cid) ? (['admin'] as Role[]) : ([] as Role[]),
     }));
   } else if (rawCompanies?.length) {
-    companies = rawCompanies.map((c) => ({ companyId: c.companyId, roles: c.roles as Role[] }));
+    // Use companies array but ensure adminCompanyIds is reflected (rules use adminCompanyIds; app uses companies).
+    companies = rawCompanies.map((c) => {
+      const roles = (c.roles as Role[]) ?? [];
+      const isAdminByRules = adminCompanyIds.includes(c.companyId);
+      const hasAdmin = roles.includes('admin');
+      return {
+        companyId: c.companyId,
+        roles: isAdminByRules && !hasAdmin ? (['admin', ...roles] as Role[]) : roles,
+      };
+    });
   } else {
     companies = rawCompanies?.map((c) => ({ companyId: c.companyId, roles: c.roles as Role[] })) ?? undefined;
   }
+  const resolvedCompanyId =
+    data.companyId ?? (companyIds.length > 0 ? companyIds[0] : null) ?? (companies?.[0]?.companyId ?? null);
   return {
     uid: snap.id,
     email: data.email ?? '',
     displayName: data.displayName ?? '',
-    companyId: data.companyId ?? null,
+    companyId: resolvedCompanyId,
     companies,
     mustChangePassword: data.mustChangePassword === true,
     employeeNumber: typeof data.employeeNumber === 'string' ? data.employeeNumber : undefined,
@@ -324,15 +335,35 @@ export async function getCompanyUsers(companyId: string): Promise<UserProfile[]>
     where('companyIds', 'array-contains', companyId)
   );
   const snapshot = await getDocs(q);
+  const adminCompanyIdsList = (data: Record<string, unknown>) => (data.adminCompanyIds as string[] | undefined) ?? [];
   return snapshot.docs.map((d) => {
     const data = d.data();
-    const companies = data.companies as { companyId: string; roles: string[] }[] | undefined;
+    const rawCompanies = data.companies as { companyId: string; roles: string[] }[] | undefined;
+    const companyIdsDoc = (data.companyIds as string[] | undefined) ?? (data.companyId ? [data.companyId] : []);
+    const adminCompanyIds = adminCompanyIdsList(data);
+    let companies: { companyId: string; roles: Role[] }[] | undefined;
+    if (rawCompanies?.length) {
+      companies = rawCompanies.map((c) => {
+        const roles = (c.roles as Role[]) ?? [];
+        const isAdminByRules = adminCompanyIds.includes(c.companyId);
+        const hasAdmin = roles.includes('admin');
+        return {
+          companyId: c.companyId,
+          roles: isAdminByRules && !hasAdmin ? (['admin', ...roles] as Role[]) : roles,
+        };
+      });
+    } else if (companyIdsDoc.length > 0) {
+      companies = companyIdsDoc.map((cid) => ({
+        companyId: cid,
+        roles: (adminCompanyIds.includes(cid) ? (['admin'] as Role[]) : []) as Role[],
+      }));
+    }
     return {
       uid: d.id,
       email: data.email ?? '',
       displayName: data.displayName ?? '',
       companyId: data.companyId ?? null,
-      companies: companies?.map((c) => ({ companyId: c.companyId, roles: c.roles as Role[] })),
+      companies,
       mustChangePassword: data.mustChangePassword === true,
       employeeNumber: typeof data.employeeNumber === 'string' ? data.employeeNumber : undefined,
       phone: typeof data.phone === 'string' ? data.phone : undefined,
