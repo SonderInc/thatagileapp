@@ -118,6 +118,9 @@ function App() {
               roles: finalRoles as Role[],
             });
             setMustChangePassword(profile.mustChangePassword === true);
+            if (useStore.getState().viewMode === 'register-company') {
+              setViewMode('landing');
+            }
             const merged = mergeProfileForBackfill(profile, tenantCompanyId, finalRoles);
             try {
               await getDataStore().setUserProfile(merged);
@@ -285,7 +288,13 @@ function App() {
         }
       })
       .catch((err) => {
-        console.error('[Firebase] Load tenant companies failed:', err?.message || err);
+        const msg = err?.message || String(err);
+        console.error('[Firebase] Load tenant companies failed:', msg);
+        if (msg.includes('permission') || msg.includes('insufficient') || msg.includes('Permission')) {
+          if (import.meta.env.DEV) {
+            console.warn('[Firebase] Permissions hint: ensure Firestore has a document at users/' + uid + ' with a companyIds array. If using Settings → "my database", deploy firestore.rules to that project and ensure the user exists there.');
+          }
+        }
         if (isSeedEnabled()) {
           setTenantCompanies(mockTenantCompanies);
           setCurrentTenantId(SEED_TENANT_ID);
@@ -297,7 +306,8 @@ function App() {
           if (import.meta.env.DEV) console.warn('[App] Seed fallback active (load tenant companies failed)', { uid });
         } else {
           setTenantCompanies([]);
-          if (useStore.getState().currentTenantId == null) {
+          const hasTenant = useStore.getState().currentTenantId != null;
+          if (!hasTenant) {
             setCurrentTenantId(null);
             setViewMode('register-company');
           }
