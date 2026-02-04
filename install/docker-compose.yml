@@ -16,12 +16,17 @@ services:
       - api
     restart: unless-stopped
 
-  # API service (placeholder until backend exists; frontend-only app can run without it).
+  # API service: /healthz, /readyz (Rule 5). Build from api/ or use API_IMAGE.
   api:
-    image: ${API_IMAGE:-busybox:1.36}
-    command: ["sleep", "infinity"]
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    image: ${API_IMAGE:-thatagileapp-api:local}
+    ports:
+      - "3000"
+    environment:
+      PORT: 3000
     restart: unless-stopped
-    # When API is implemented: build or use API_IMAGE, expose PORT, connect to db/minio via env.
 
   # Optional: Postgres for future DATA_PROVIDER=postgres. Uncomment when needed.
   # db:

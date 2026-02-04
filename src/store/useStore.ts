@@ -41,7 +41,7 @@ interface AppState {
   selectedWorkItem: string | null;
   selectedProductId: string | null;
   selectedCompanyId: string | null;
-  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing' | 'add-product' | 'add-company' | 'register-company' | 'invite-user' | 'licence' | 'company-profile' | 'settings';
+  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing' | 'add-product' | 'add-company' | 'register-company' | 'invite-user' | 'licence' | 'company-profile' | 'settings' | 'import-backlog';
   
   // Actions
   setWorkItems: (items: WorkItem[]) => void;
@@ -86,6 +86,8 @@ interface AppState {
   getProductsByCompany: (companyId: string) => WorkItem[];
   canAddCompany: () => boolean;
   canAddUser: () => boolean;
+  /** True if current user is admin for the current tenant (e.g. can reset backlog). */
+  canResetBacklog: () => boolean;
   getFeaturesWithUserStories: () => WorkItem[];
   getFeaturesInDevelopState: () => WorkItem[];
   getTeamBoardLanes: () => { id: string; title: string }[];
@@ -353,6 +355,10 @@ export const useStore = create<AppState>((set, get) => ({
     const user = get().currentUser;
     if (!user?.roles?.length) return false;
     return user.roles.includes('admin') || user.roles.includes('hr');
+  },
+  canResetBacklog: () => {
+    const user = get().currentUser;
+    return user?.roles?.includes('admin') ?? false;
   },
   canAccessTeamBoardSettings: () => {
     const user = get().currentUser;

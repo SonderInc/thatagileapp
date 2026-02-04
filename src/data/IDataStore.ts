@@ -12,6 +12,8 @@ export interface IDataStore {
   addWorkItem(item: WorkItem): Promise<void>;
   updateWorkItem(id: string, updates: Partial<WorkItem>): Promise<void>;
   deleteWorkItem(id: string): Promise<void>;
+  /** Delete many work items (e.g. subtree). Prefer children-first order. */
+  batchDeleteWorkItems(ids: string[]): Promise<void>;
   getUserProfile(uid: string): Promise<UserProfile | null>;
   setUserProfile(profile: UserProfile): Promise<void>;
   clearMustChangePassword(uid: string): Promise<void>;

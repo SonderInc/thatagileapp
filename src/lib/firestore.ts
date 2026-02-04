@@ -6,6 +6,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  writeBatch,
   query,
   where,
   Timestamp,
@@ -48,6 +49,8 @@ function serializeWorkItem(item: WorkItem | Partial<WorkItem>): WorkItemData {
   if (item.estimatedHours !== undefined) out.estimatedHours = item.estimatedHours;
   if (item.actualHours !== undefined) out.actualHours = item.actualHours;
   if (item.color !== undefined) out.color = item.color;
+  if (item.acceptanceCriteria !== undefined) out.acceptanceCriteria = item.acceptanceCriteria;
+  if (item.metadata !== undefined) out.metadata = item.metadata;
   return out as WorkItemData;
 }
 
@@ -201,6 +204,21 @@ export async function deleteWorkItem(id: string): Promise<void> {
   if (!db) return;
   const ref = doc(db, WORK_ITEMS_COLLECTION, id);
   await deleteDoc(ref);
+}
+
+const FIRESTORE_BATCH_LIMIT = 500;
+
+/** Delete multiple work items in batches (children-first order recommended). */
+export async function batchDeleteWorkItems(ids: string[]): Promise<void> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  for (let i = 0; i < ids.length; i += FIRESTORE_BATCH_LIMIT) {
+    const chunk = ids.slice(i, i + FIRESTORE_BATCH_LIMIT);
+    const batch = writeBatch(db);
+    for (const id of chunk) {
+      batch.delete(doc(db, WORK_ITEMS_COLLECTION, id));
+    }
+    await batch.commit();
+  }
 }
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {

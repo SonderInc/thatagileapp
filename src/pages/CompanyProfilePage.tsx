@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { getDataStore, getObjectStore } from '../lib/adapters';
+import { getResetBacklogPreview, resetBacklog, type ResetBacklogPreview } from '../lib/workItems/resetBacklog';
 import type { CompanyType } from '../types';
+import Modal from '../components/Modal';
+
+const CONFIRM_RESET_TEXT = 'RESET';
 
 const CompanyProfilePage: React.FC = () => {
-  const { getCurrentCompany, setViewMode, setTenantCompanies, currentTenantId } = useStore();
+  const { getCurrentCompany, setViewMode, setTenantCompanies, currentTenantId, setWorkItems, canResetBacklog } = useStore();
   const company = getCurrentCompany();
   const [name, setName] = useState(company?.name ?? '');
   const [companyType, setCompanyType] = useState<CompanyType>(company?.companyType ?? 'software');
@@ -14,6 +18,11 @@ const CompanyProfilePage: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetPreview, setResetPreview] = useState<ResetBacklogPreview | null>(null);
+  const [resetConfirmText, setResetConfirmText] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
   const storageConfigured = getObjectStore().isConfigured();
 
   useEffect(() => {
@@ -68,6 +77,38 @@ const CompanyProfilePage: React.FC = () => {
       setError(msg);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const openResetModal = async () => {
+    if (!currentTenantId) return;
+    setResetError(null);
+    setResetPreview(null);
+    setResetConfirmText('');
+    setShowResetModal(true);
+    try {
+      const preview = await getResetBacklogPreview(currentTenantId);
+      setResetPreview(preview ?? null);
+      if (!preview) setResetError('No Company work item found for this tenant.');
+    } catch (err: unknown) {
+      setResetError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const confirmResetBacklog = async () => {
+    if (resetConfirmText !== CONFIRM_RESET_TEXT || !currentTenantId || resetLoading) return;
+    setResetError(null);
+    setResetLoading(true);
+    try {
+      await resetBacklog(currentTenantId);
+      const items = await getDataStore().getWorkItems(currentTenantId);
+      setWorkItems(items);
+      setSuccess('Backlog reset. All products and their items have been removed.');
+      setShowResetModal(false);
+    } catch (err: unknown) {
+      setResetError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -163,6 +204,85 @@ const CompanyProfilePage: React.FC = () => {
           </button>
         </div>
       </form>
+
+      {canResetBacklog() && (
+        <section style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid #e5e7eb' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px', color: '#374151' }}>
+            Admin: Reset Backlog
+          </h2>
+          <p style={{ marginBottom: '12px', fontSize: '14px', color: '#6b7280' }}>
+            Permanently remove all Products and their Epics, Features, User Stories, Tasks, and Bugs. The Company work item (name, vision, logo) is kept.
+          </p>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={openResetModal}
+            style={{ borderColor: '#dc2626', color: '#dc2626' }}
+          >
+            Reset Backlog
+          </button>
+        </section>
+      )}
+
+      {showResetModal && (
+        <Modal title="Reset Backlog" onClose={() => !resetLoading && setShowResetModal(false)} maxWidth="400px">
+          {resetError && <div className="form-error" style={{ marginBottom: '12px' }}>{resetError}</div>}
+          {resetPreview && resetPreview.totalCount > 0 && (
+            <>
+              <p style={{ marginBottom: '12px', fontSize: '14px', color: '#374151' }}>
+                The following will be deleted:
+              </p>
+              <ul style={{ marginBottom: '16px', paddingLeft: '20px', fontSize: '14px', color: '#374151' }}>
+                {resetPreview.stats.products > 0 && <li>{resetPreview.stats.products} product(s)</li>}
+                {resetPreview.stats.epics > 0 && <li>{resetPreview.stats.epics} epic(s)</li>}
+                {resetPreview.stats.features > 0 && <li>{resetPreview.stats.features} feature(s)</li>}
+                {resetPreview.stats.userStories > 0 && <li>{resetPreview.stats.userStories} user story(ies)</li>}
+                {resetPreview.stats.tasks > 0 && <li>{resetPreview.stats.tasks} task(s)</li>}
+                {resetPreview.stats.bugs > 0 && <li>{resetPreview.stats.bugs} bug(s)</li>}
+              </ul>
+              <p style={{ marginBottom: '12px', fontSize: '14px', color: '#6b7280' }}>
+                Total: {resetPreview.totalCount} item(s). Type <strong>{CONFIRM_RESET_TEXT}</strong> to confirm.
+              </p>
+              <input
+                type="text"
+                className="form-input"
+                value={resetConfirmText}
+                onChange={(e) => setResetConfirmText(e.target.value)}
+                placeholder={`Type ${CONFIRM_RESET_TEXT}`}
+                style={{ marginBottom: '16px' }}
+                disabled={resetLoading}
+              />
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setShowResetModal(false)}
+                  disabled={resetLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={confirmResetBacklog}
+                  disabled={resetConfirmText !== CONFIRM_RESET_TEXT || resetLoading}
+                  style={resetConfirmText === CONFIRM_RESET_TEXT ? { backgroundColor: '#dc2626' } : undefined}
+                >
+                  {resetLoading ? 'Resetting…' : 'Reset Backlog'}
+                </button>
+              </div>
+            </>
+          )}
+          {resetPreview && resetPreview.totalCount === 0 && !resetError && (
+            <p style={{ fontSize: '14px', color: '#6b7280' }}>
+              No products under the Company. Nothing to reset.
+            </p>
+          )}
+          {!resetPreview && !resetError && (
+            <p style={{ fontSize: '14px', color: '#6b7280' }}>Loading…</p>
+          )}
+        </Modal>
+      )}
     </div>
   );
 };

@@ -17,6 +17,7 @@ import InviteUserPage from './pages/InviteUserPage';
 import LicencePage from './pages/LicencePage';
 import CompanyProfilePage from './pages/CompanyProfilePage';
 import SettingsPage from './pages/SettingsPage';
+import ImportBacklogPage from './pages/ImportBacklogPage';
 import ChangePasswordRequired from './components/ChangePasswordRequired';
 import './App.css';
 
@@ -199,6 +200,8 @@ function App() {
         return <CompanyProfilePage />;
       case 'settings':
         return <SettingsPage />;
+      case 'import-backlog':
+        return <ImportBacklogPage />;
       default:
         return <Landing />;
     }

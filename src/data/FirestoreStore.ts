@@ -13,6 +13,7 @@ export const FirestoreStore: IDataStore = {
   addWorkItem: firestore.addWorkItem,
   updateWorkItem: firestore.updateWorkItem,
   deleteWorkItem: firestore.deleteWorkItem,
+  batchDeleteWorkItems: firestore.batchDeleteWorkItems,
   getUserProfile: firestore.getUserProfile,
   setUserProfile: firestore.setUserProfile,
   clearMustChangePassword: firestore.clearMustChangePassword,

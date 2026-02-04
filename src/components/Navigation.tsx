@@ -47,6 +47,7 @@ const Navigation: React.FC = () => {
 
   const adminItems = [
     { id: 'invite-user', label: 'User Management' },
+    { id: 'import-backlog', label: 'Import Backlog' },
     { id: 'licence', label: 'Licence' },
     { id: 'company-profile', label: 'Company profile' },
     { id: 'settings', label: 'Settings' },

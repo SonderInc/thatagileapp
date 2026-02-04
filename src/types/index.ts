@@ -96,6 +96,8 @@ export interface WorkItem {
   estimatedHours?: number; // legacy / optional
   actualHours?: number;
   color?: string; // For visual distinction
+  /** Import tracking for JSON backlog import idempotency. */
+  metadata?: { importId?: string; importKey?: string };
 }
 
 export interface Sprint {

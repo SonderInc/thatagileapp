@@ -1,0 +1,8 @@
+{
+  "name": "thatagileapp-api",
+  "version": "0.1.0",
+  "description": "Minimal API for health checks; hybrid architecture (Cloud Run + Docker Compose)",
+  "private": true,
+  "main": "index.js",
+  "engines": { "node": ">=18" }
+}
