@@ -21,7 +21,7 @@ interface WorkItemModalProps {
 }
 
 const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId, type, allowedTypes: allowedTypesProp, defaultStatus }) => {
-  const { users, getAggregatedStoryPoints, getFeaturesInDevelopState, setSelectedWorkItem, getTypeLabel } = useStore();
+  const { users, getAggregatedStoryPoints, getFeaturesInDevelopState, setSelectedWorkItem, getTypeLabel, deleteWorkItem, canResetBacklog } = useStore();
   const {
     formData,
     setFormData,
@@ -52,6 +52,13 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
       setCopiedHint(null);
     }
   }, []);
+
+  const handleDelete = useCallback(() => {
+    if (!item?.id || !canResetBacklog()) return;
+    if (!window.confirm(`Delete "${item.title}"? This cannot be undone.`)) return;
+    deleteWorkItem(item.id);
+    onClose();
+  }, [item?.id, item?.title, canResetBacklog, deleteWorkItem, onClose]);
 
   return (
     <Modal
@@ -573,39 +580,61 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                padding: '10px 20px',
-                border: '1px solid #d1d5db',
-                borderRadius: '6px',
-                backgroundColor: '#ffffff',
-                color: '#374151',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '500',
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              style={{
-                padding: '10px 20px',
-                border: 'none',
-                borderRadius: '6px',
-                backgroundColor: saving ? '#9ca3af' : '#3b82f6',
-                color: '#ffffff',
-                cursor: saving ? 'wait' : 'pointer',
-                fontSize: '14px',
-                fontWeight: '500',
-              }}
-            >
-              {saving ? 'Saving…' : isEditing ? 'Update' : 'Create'}
-            </button>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              {isEditing && item && canResetBacklog() && (
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  style={{
+                    padding: '10px 20px',
+                    border: '1px solid #dc2626',
+                    borderRadius: '6px',
+                    backgroundColor: '#ffffff',
+                    color: '#dc2626',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                  }}
+                >
+                  Delete
+                </button>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                type="button"
+                onClick={onClose}
+                style={{
+                  padding: '10px 20px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  backgroundColor: '#ffffff',
+                  color: '#374151',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                style={{
+                  padding: '10px 20px',
+                  border: 'none',
+                  borderRadius: '6px',
+                  backgroundColor: saving ? '#9ca3af' : '#3b82f6',
+                  color: '#ffffff',
+                  cursor: saving ? 'wait' : 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                }}
+              >
+                {saving ? 'Saving…' : isEditing ? 'Update' : 'Create'}
+              </button>
+            </div>
           </div>
         </form>
 
