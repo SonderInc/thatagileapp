@@ -202,7 +202,8 @@ const InviteUserPage: React.FC = () => {
           };
         }
       }
-      await getDataStore().setUserProfile(profile);
+      const merged = mergeProfileForBackfill(profile, currentTenantId, currentUser.roles ?? []);
+      await getDataStore().setUserProfile(merged);
       const count = await getDataStore().getCompanyUserCount(currentTenantId);
       if (count >= seats) {
         setError('Seat limit reached. Add a licence or buy more seats.');

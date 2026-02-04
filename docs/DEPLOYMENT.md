@@ -102,3 +102,7 @@ The rules cover:
 
 - **companies**, **workItems**, **users**: authenticated read/write as documented in the file.
 - **invites**: unauthenticated read by document id (token) for sign-up links; create only by the inviter (`invitedBy == request.auth.uid`); update/delete by inviter or by invitee (email match) when marking an invite used.
+
+### Troubleshooting
+
+- **User Management: "Permission denied" or "Could not check seat limit"** — Deploy Firestore rules (see above). Ensure your user document in `users/<uid>` has `companyIds` and (if admin) `adminCompanyIds` containing your company id. Re-login so the app can backfill, or in Firebase Console → Firestore Database → Data → **users** → your document (uid), add fields **companyIds** (array with your company id) and **adminCompanyIds** (array with your company id), then reload the app.
