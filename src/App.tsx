@@ -221,8 +221,14 @@ function App() {
           const first = companies[0].id;
           const current = useStore.getState().currentTenantId;
           const currentInList = current && companies.some((c) => c.id === current);
+          const applyTenant = (tenantId: string) => {
+            setCurrentTenantId(tenantId);
+            if (useStore.getState().viewMode === 'register-company') {
+              setViewMode('landing');
+            }
+          };
           if (currentInList) {
-            setCurrentTenantId(current);
+            applyTenant(current);
             return;
           }
           getDataStore()
@@ -232,9 +238,9 @@ function App() {
                 profile?.companyId && companies.some((c) => c.id === profile.companyId)
                   ? profile.companyId
                   : first;
-              setCurrentTenantId(preferred);
+              applyTenant(preferred);
             })
-            .catch(() => setCurrentTenantId(first));
+            .catch(() => applyTenant(first));
         } else {
           if (isSeedEnabled()) {
             setCurrentTenantId(SEED_TENANT_ID);
@@ -273,8 +279,9 @@ function App() {
         if (import.meta.env.DEV) console.log('[Firebase] Loaded', data.length, 'work items for tenant', currentTenantId);
       })
       .catch((err) => {
-        console.error('[Firebase] Load work items failed, using mock data:', err?.message || err);
-        setWorkItems(mockWorkItems.filter((i) => i.companyId === currentTenantId));
+        console.error('[Firebase] Load work items failed:', err?.message || err);
+        const fallback = mockWorkItems.filter((i) => i.companyId === currentTenantId);
+        if (fallback.length > 0) setWorkItems(fallback);
       });
   }, [currentTenantId, setWorkItems]);
 

@@ -4,10 +4,24 @@ import { getDataStore } from '../lib/adapters';
 import { ensureCompanyWorkItem } from '../lib/workItems/resetBacklog';
 import type { TenantCompany, UserProfile, Role, CompanyType } from '../types';
 
+function slugify(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/_/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 const RegisterCompanyPage: React.FC = () => {
   const { firebaseUser, setViewMode, setCurrentTenantId, setTenantCompanies, setCurrentUser, tenantCompanies } = useStore();
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [companyType, setCompanyType] = useState<CompanyType>('software');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -21,37 +35,63 @@ const RegisterCompanyPage: React.FC = () => {
       setLoading(false);
       return;
     }
+    const normalizedSlug = slugify(slug.trim() || name);
+    if (!normalizedSlug) {
+      setError('Slug is required. Use only letters, numbers, and hyphens.');
+      setLoading(false);
+      return;
+    }
+    if (!SLUG_PATTERN.test(normalizedSlug)) {
+      setError('Slug must be URL-friendly: lowercase letters, numbers, and hyphens only.');
+      setLoading(false);
+      return;
+    }
     const companyId = `company-${Date.now()}`;
     const now = new Date();
     const trialEndsAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
     const company: TenantCompany = {
       id: companyId,
       name: name.trim() || 'New Company',
-      slug: (slug.trim() || name.trim().toLowerCase().replace(/\s+/g, '-')) || 'new-company',
+      slug: normalizedSlug,
       createdAt: now,
       updatedAt: now,
       trialEndsAt,
       seats: 50,
       companyType,
     };
+    const profile: UserProfile = {
+      uid: firebaseUser.uid,
+      email: firebaseUser.email ?? '',
+      displayName: (firebaseUser.displayName ?? firebaseUser.email?.split('@')[0]) ?? 'User',
+      companyId,
+      companyIds: [companyId],
+      adminCompanyIds: [companyId],
+      companies: [{ companyId, roles: ['admin' as Role] }],
+    };
+    const finalRoles: Role[] = ['admin'];
     try {
       await getDataStore().addTenantCompany(company);
-      await ensureCompanyWorkItem(company.id);
-      const profile: UserProfile = {
-        uid: firebaseUser.uid,
-        email: firebaseUser.email ?? '',
-        displayName: (firebaseUser.displayName ?? firebaseUser.email?.split('@')[0]) ?? 'User',
-        companyId,
-        companies: [{ companyId, roles: ['admin' as Role] }],
-      };
+      if (import.meta.env.DEV) {
+        console.log('[RegisterCompanyPage] Company created', { companyId });
+      }
       await getDataStore().setUserProfile(profile);
+      if (import.meta.env.DEV) {
+        console.log('[RegisterCompanyPage] User profile updated', {
+          companyId: profile.companyId,
+          companyIds: profile.companyIds,
+          adminCompanyIds: profile.adminCompanyIds,
+          companies: profile.companies,
+          finalRoles,
+        });
+      }
+      await ensureCompanyWorkItem(company.id);
       setTenantCompanies([...tenantCompanies, company]);
       setCurrentTenantId(companyId);
       setCurrentUser({
         id: firebaseUser.uid,
         name: profile.displayName,
         email: profile.email,
-        roles: ['admin'],
+        roles: finalRoles,
       });
       setViewMode('landing');
     } catch (err: unknown) {
@@ -90,7 +130,11 @@ const RegisterCompanyPage: React.FC = () => {
           <input
             type="text"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              const next = e.target.value;
+              setName(next);
+              if (!slugManuallyEdited) setSlug(slugify(next));
+            }}
             required
             placeholder="Acme Inc"
             style={{
@@ -128,7 +172,10 @@ const RegisterCompanyPage: React.FC = () => {
           <input
             type="text"
             value={slug}
-            onChange={(e) => setSlug(e.target.value)}
+            onChange={(e) => {
+              setSlugManuallyEdited(true);
+              setSlug(slugify(e.target.value));
+            }}
             placeholder="acme-inc"
             style={{
               width: '100%',
