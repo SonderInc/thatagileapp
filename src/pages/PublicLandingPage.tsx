@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { getAuth, getDataStore } from '../lib/adapters';
+import { ensureCompanyWorkItem } from '../lib/workItems/resetBacklog';
 import Login from './Login';
 import type { TenantCompany, UserProfile, Role, CompanyType } from '../types';
 
@@ -55,6 +56,7 @@ const PublicLandingPage: React.FC = () => {
       const displayName = adminName.trim() || email.trim().split('@')[0] || 'User';
       await auth.updateDisplayName(user.uid, displayName);
       await store.addTenantCompany(company);
+      await ensureCompanyWorkItem(company.id);
       const profile: UserProfile = {
         uid: user.uid,
         email: user.email ?? email.trim(),

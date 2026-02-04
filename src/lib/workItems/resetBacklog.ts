@@ -9,6 +9,8 @@ export interface ResetBacklogPreview {
   totalCount: number;
 }
 
+const COMPANY_WORK_ITEM_ID_PREFIX = 'company-wi-';
+
 /**
  * Get the Company WorkItem for the tenant (type === 'company', companyId === tenantId).
  * Returns the first match; normally there is one per tenant.
@@ -18,8 +20,36 @@ function findCompanyWorkItem(items: WorkItem[], tenantId: string): WorkItem | nu
 }
 
 /**
+ * Ensure a Company WorkItem exists for the tenant (root of backlog). Creates one if missing.
+ * Use when creating a new tenant or when Reset Backlog finds no company work item.
+ * Returns the company work item (existing or newly created), or null if tenant not found.
+ */
+export async function ensureCompanyWorkItem(tenantId: string): Promise<WorkItem | null> {
+  const store = getDataStore();
+  const companies = await store.getTenantCompanies();
+  const tenant = companies.find((c) => c.id === tenantId);
+  if (!tenant) return null;
+  const items = await store.getWorkItems(tenantId);
+  const existing = findCompanyWorkItem(items, tenantId);
+  if (existing) return existing;
+  const now = new Date();
+  const companyWorkItem: WorkItem = {
+    id: `${COMPANY_WORK_ITEM_ID_PREFIX}${tenantId}`,
+    type: 'company',
+    title: tenant.name,
+    status: 'backlog',
+    createdAt: now,
+    updatedAt: now,
+    companyId: tenantId,
+    childrenIds: [],
+  };
+  await store.addWorkItem(companyWorkItem);
+  return companyWorkItem;
+}
+
+/**
  * Collect all product-child subtree ids in delete order and stats.
- * Used for preview and for the actual reset.
+ * Used for preview and for the actual reset. Creates Company WorkItem if missing.
  */
 async function collectIdsAndStats(tenantId: string): Promise<{
   company: WorkItem;
@@ -27,9 +57,14 @@ async function collectIdsAndStats(tenantId: string): Promise<{
   stats: SubtreeStats;
 } | null> {
   const store = getDataStore();
-  const items = await store.getWorkItems(tenantId);
-  const company = findCompanyWorkItem(items, tenantId);
-  if (!company) return null;
+  let items = await store.getWorkItems(tenantId);
+  let company = findCompanyWorkItem(items, tenantId);
+  if (!company) {
+    const created = await ensureCompanyWorkItem(tenantId);
+    if (!created) return null;
+    items = await store.getWorkItems(tenantId);
+    company = findCompanyWorkItem(items, tenantId) ?? created;
+  }
 
   const productChildIds = (company.childrenIds ?? []).filter((id) => {
     const item = items.find((i) => i.id === id);

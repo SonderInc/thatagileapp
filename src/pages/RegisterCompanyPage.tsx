@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { getDataStore } from '../lib/adapters';
+import { ensureCompanyWorkItem } from '../lib/workItems/resetBacklog';
 import type { TenantCompany, UserProfile, Role, CompanyType } from '../types';
 
 const RegisterCompanyPage: React.FC = () => {
@@ -35,6 +36,7 @@ const RegisterCompanyPage: React.FC = () => {
     };
     try {
       await getDataStore().addTenantCompany(company);
+      await ensureCompanyWorkItem(company.id);
       const profile: UserProfile = {
         uid: firebaseUser.uid,
         email: firebaseUser.email ?? '',
