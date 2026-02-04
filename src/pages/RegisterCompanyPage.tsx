@@ -59,6 +59,7 @@ const RegisterCompanyPage: React.FC = () => {
       seats: 50,
       companyType,
     };
+    // Registering user is made admin for this company (unlimited rights: user management, backlog, settings, etc.)
     const profile: UserProfile = {
       uid: firebaseUser.uid,
       email: firebaseUser.email ?? '',

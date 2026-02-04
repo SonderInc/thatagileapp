@@ -229,6 +229,20 @@ function App() {
           };
           if (currentInList) {
             applyTenant(current);
+            getDataStore()
+              .getUserProfile(uid)
+              .then((profile) => {
+                if (profile) {
+                  const derived = profile.companies?.find((c) => c.companyId === current)?.roles ?? [];
+                  const isAdmin = isAdminForCompany(profile, current);
+                  const roles = isAdmin && !derived.includes('admin') ? ['admin', ...derived] : derived;
+                  const state = useStore.getState();
+                  if (state.currentUser?.id === uid && (state.currentUser.roles ?? []).join(',') !== roles.join(',')) {
+                    setCurrentUser({ ...state.currentUser, roles: roles as Role[] });
+                  }
+                }
+              })
+              .catch(() => {});
             return;
           }
           getDataStore()
@@ -239,6 +253,18 @@ function App() {
                   ? profile.companyId
                   : first;
               applyTenant(preferred);
+              if (profile) {
+                const derived = profile.companies?.find((c) => c.companyId === preferred)?.roles ?? [];
+                const isAdmin = isAdminForCompany(profile, preferred);
+                const roles = isAdmin && !derived.includes('admin') ? ['admin', ...derived] : derived;
+                const state = useStore.getState();
+                if (state.currentUser && state.currentUser.id === uid) {
+                  const currentRoles = state.currentUser.roles ?? [];
+                  if (currentRoles.join(',') !== roles.join(',')) {
+                    setCurrentUser({ ...state.currentUser, roles: roles as Role[] });
+                  }
+                }
+              }
             })
             .catch(() => applyTenant(first));
         } else {
