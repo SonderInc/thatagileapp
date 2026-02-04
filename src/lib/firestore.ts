@@ -242,10 +242,35 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   };
 }
 
+/**
+ * Merges current tenant and roles into a profile so that setUserProfile will write
+ * companyIds and adminCompanyIds (required by Firestore rules for user directory reads).
+ * Call this before setUserProfile when the user has a current tenant.
+ */
+export function mergeProfileForBackfill(
+  profile: UserProfile,
+  currentTenantId: string | null,
+  roles: string[]
+): UserProfile {
+  const baseCompanies = profile.companies ?? (profile.companyId ? [{ companyId: profile.companyId, roles: roles as Role[] }] : []);
+  const rolesForTenant = roles as Role[];
+  const otherCompanies = baseCompanies.filter((c) => c.companyId !== currentTenantId);
+  const companies =
+    currentTenantId == null
+      ? baseCompanies
+      : [...otherCompanies, { companyId: currentTenantId, roles: rolesForTenant }];
+  return {
+    ...profile,
+    companyId: profile.companyId ?? currentTenantId ?? null,
+    companies,
+  };
+}
+
 export async function setUserProfile(profile: UserProfile): Promise<void> {
   if (!db) return Promise.reject(new Error('Firebase not configured'));
   const ref = doc(db, USERS_COLLECTION, profile.uid);
-  const companyIds = profile.companies?.map((c) => c.companyId) ?? (profile.companyId ? [profile.companyId] : []);
+  let companyIds = profile.companies?.map((c) => c.companyId) ?? (profile.companyId ? [profile.companyId] : []);
+  if (companyIds.length === 0 && profile.companyId) companyIds = [profile.companyId];
   const adminCompanyIds =
     profile.companies?.filter((c) => c.roles?.includes('admin')).map((c) => c.companyId) ?? [];
   await setDoc(ref, {

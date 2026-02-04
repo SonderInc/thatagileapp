@@ -10,6 +10,7 @@ import EpicBoard from './pages/EpicBoard';
 import FeatureBoard from './pages/FeatureBoard';
 import TeamBoard from './pages/TeamBoard';
 import { getAuth, getDataStore } from './lib/adapters';
+import { mergeProfileForBackfill } from './lib/firestore';
 import { mockWorkItems, mockSprints, mockBoards, mockUsers, mockTenantCompanies, SEED_TENANT_ID } from './utils/mockData';
 import RegisterCompanyPage from './pages/RegisterCompanyPage';
 import PublicLandingPage from './pages/PublicLandingPage';
@@ -55,18 +56,26 @@ function App() {
       .then(async (profile) => {
         if (cancelled) return;
         if (profile) {
-          setCurrentTenantId(profile.companyId ?? SEED_TENANT_ID);
+          const tenantId = profile.companyId ?? SEED_TENANT_ID;
+          const roles = profile.companies?.find((c) => c.companyId === tenantId)?.roles ?? [];
+          setCurrentTenantId(tenantId);
           setCurrentUser({
             id: profile.uid,
             name: profile.displayName,
             email: profile.email,
-            roles: profile.companies?.find((c) => c.companyId === (profile.companyId ?? SEED_TENANT_ID))?.roles ?? [],
+            roles,
           });
           setMustChangePassword(profile.mustChangePassword === true);
+          const merged = mergeProfileForBackfill(profile, tenantId, roles);
           try {
-            await getDataStore().setUserProfile(profile);
-          } catch {
-            // Backfill companyIds/adminCompanyIds; ignore errors so login still proceeds
+            await getDataStore().setUserProfile(merged);
+          } catch (err) {
+            console.error('[App] Backfill setUserProfile failed:', err);
+            try {
+              await getDataStore().setUserProfile(merged);
+            } catch (retryErr) {
+              console.error('[App] Backfill setUserProfile retry failed:', retryErr);
+            }
           }
         } else {
           setMustChangePassword(false);

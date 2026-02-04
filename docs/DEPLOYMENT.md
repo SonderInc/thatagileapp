@@ -96,7 +96,9 @@ No code or repo changes are required; configuration is in Netlify and at the dom
 
 ## Firestore rules
 
-Publish the project’s `firestore.rules` in Firebase Console → Firestore Database → Rules. The rules cover:
+Publish the project’s `firestore.rules` in Firebase Console → Firestore Database → Rules, then click **Publish**. After any change to `firestore.rules`, you must redeploy the rules for user directory (User Management) and company-scoped reads to work; the app relies on `companyIds`/`adminCompanyIds` and rules using `sameCompany`/`isAdminForTarget` for `users` read access.
+
+The rules cover:
 
 - **companies**, **workItems**, **users**: authenticated read/write as documented in the file.
 - **invites**: unauthenticated read by document id (token) for sign-up links; create only by the inviter (`invitedBy == request.auth.uid`); update/delete by inviter or by invitee (email match) when marking an invite used.

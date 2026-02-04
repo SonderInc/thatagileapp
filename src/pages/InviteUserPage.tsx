@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { getDataStore } from '../lib/adapters';
+import { mergeProfileForBackfill } from '../lib/firestore';
 import { ROLE_LABELS } from '../types';
 import type { Role } from '../types';
 import type { UserProfile } from '../types';
@@ -94,7 +95,8 @@ const InviteUserPage: React.FC = () => {
           setDirectoryLoading(false);
           return;
         }
-        await getDataStore().setUserProfile(profile);
+        const merged = mergeProfileForBackfill(profile, currentTenantId, currentUser?.roles ?? []);
+        await getDataStore().setUserProfile(merged);
       } catch (syncErr) {
         console.warn('[InviteUserPage] Profile sync before directory load failed:', syncErr);
         setCompanyUsers([]);
@@ -113,7 +115,8 @@ const InviteUserPage: React.FC = () => {
         try {
           const profile = await buildProfileWithCompany();
           if (profile) {
-            await getDataStore().setUserProfile(profile);
+            const merged = mergeProfileForBackfill(profile, currentTenantId, currentUser?.roles ?? []);
+            await getDataStore().setUserProfile(merged);
             const users = await getDataStore().getCompanyUsers(currentTenantId);
             setCompanyUsers(users);
             setDirectoryLoading(false);
@@ -145,14 +148,17 @@ const InviteUserPage: React.FC = () => {
 
   // Ensure current user's profile has adminCompanyIds so Firestore rules allow role updates (one-time sync for existing admins)
   useEffect(() => {
-    if (!isAdmin || !currentUser?.id) return;
+    if (!isAdmin || !currentUser?.id || !currentTenantId) return;
     getDataStore()
       .getUserProfile(currentUser.id)
       .then((profile) => {
-        if (profile) getDataStore().setUserProfile(profile).catch(() => {});
+        if (profile) {
+          const merged = mergeProfileForBackfill(profile, currentTenantId, currentUser.roles ?? []);
+          getDataStore().setUserProfile(merged).catch(() => {});
+        }
       })
       .catch(() => {});
-  }, [isAdmin, currentUser?.id]);
+  }, [isAdmin, currentUser?.id, currentTenantId, currentUser?.roles]);
 
   if (!canAddUser()) {
     return (
