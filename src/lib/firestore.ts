@@ -297,8 +297,10 @@ export async function setUserProfile(profile: UserProfile): Promise<void> {
   const ref = doc(db, USERS_COLLECTION, profile.uid);
   let companyIds = profile.companies?.map((c) => c.companyId) ?? (profile.companyId ? [profile.companyId] : []);
   if (companyIds.length === 0 && profile.companyId) companyIds = [profile.companyId];
+  // Prefer explicit adminCompanyIds (e.g. from RegisterCompanyPage) so the registrar is always written as admin
   const adminCompanyIds =
-    profile.companies?.filter((c) => c.roles?.includes('admin')).map((c) => c.companyId) ?? [];
+    (profile.adminCompanyIds?.length ? profile.adminCompanyIds : undefined) ??
+    (profile.companies?.filter((c) => c.roles?.includes('admin')).map((c) => c.companyId) ?? []);
   await setDoc(ref, {
     email: profile.email,
     displayName: profile.displayName,
