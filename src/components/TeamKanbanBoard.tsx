@@ -293,7 +293,7 @@ const TeamKanbanBoard: React.FC<TeamKanbanBoardProps> = ({
                     ),
                   })
                 );
-                let taskIndex = 0;
+                let columnIndex = 0;
 
                 return (
                   <div
@@ -343,8 +343,9 @@ const TeamKanbanBoard: React.FC<TeamKanbanBoardProps> = ({
                               return null;
                             }
 
-                            const startIndex = taskIndex;
-                            taskIndex = startIndex + tasksInColumn.length;
+                            const rowStartIndex = columnIndex;
+                            if (showFullStoryCard) columnIndex += 1;
+                            columnIndex += tasksInColumn.length;
 
                             return (
                               <div key={story.id} style={{ marginBottom: '12px' }}>
@@ -357,14 +358,33 @@ const TeamKanbanBoard: React.FC<TeamKanbanBoardProps> = ({
                                         gap: '8px',
                                       }}
                                     >
-                                      <div style={{ flex: 1 }} onClick={(e) => e.stopPropagation()}>
-                                        <div onClick={() => handleOpenItem(story.id)}>
-                                          <WorkItemCard
-                                            item={story}
-                                            borderColorOverride={readyColumnGreenOverride}
-                                          />
-                                        </div>
-                                      </div>
+                                      <Draggable
+                                        key={story.id}
+                                        draggableId={story.id}
+                                        index={rowStartIndex}
+                                      >
+                                        {(providedStory, snapshotStory) => (
+                                          <div
+                                            ref={providedStory.innerRef}
+                                            {...providedStory.draggableProps}
+                                            {...providedStory.dragHandleProps}
+                                            style={{
+                                              ...providedStory.draggableProps.style,
+                                              flex: 1,
+                                              opacity: snapshotStory.isDragging ? 0.8 : 1,
+                                            }}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleOpenItem(story.id);
+                                            }}
+                                          >
+                                            <WorkItemCard
+                                              item={story}
+                                              borderColorOverride={readyColumnGreenOverride}
+                                            />
+                                          </div>
+                                        )}
+                                      </Draggable>
                                       {showDoneCheckbox && (
                                         <button
                                           type="button"
@@ -407,7 +427,7 @@ const TeamKanbanBoard: React.FC<TeamKanbanBoardProps> = ({
                                   <Draggable
                                     key={task.id}
                                     draggableId={task.id}
-                                    index={startIndex + i}
+                                    index={rowStartIndex + (showFullStoryCard ? 1 : 0) + i}
                                   >
                                     {(provided, snapshot) => (
                                       <div
