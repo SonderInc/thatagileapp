@@ -2,7 +2,25 @@
 
 Set these in Netlify: **Site configuration** → **Environment variables** (or **Build & deploy** → **Environment**). Redeploy after changing.
 
-## Required for Firebase (auth + Firestore + Storage)
+## Required for `firebase-config` function (default tenant fallback)
+
+The `/.netlify/functions/firebase-config` function returns a full Firebase web config. When no tenant slug is provided or the tenant is not in the registry, it uses these **server-side** env vars (not `VITE_*`). Set them for **Production** (and any deploy context that runs the function).
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `FIREBASE_PROJECT_ID` | Yes | Default Firebase project ID (e.g. `thatagileapp`) |
+| `FIREBASE_API_KEY` | Yes | Default Firebase web API key (e.g. `AIzaSy...`) |
+| `FIREBASE_AUTH_DOMAIN` | No | Default `{projectId}.firebaseapp.com` if unset |
+| `FIREBASE_STORAGE_BUCKET` | No | Default `{projectId}.appspot.com` if unset |
+| `FIREBASE_MESSAGING_SENDER_ID` | No | From Firebase SDK snippet |
+| `FIREBASE_APP_ID` | No | From Firebase SDK snippet |
+| `FIREBASE_MEASUREMENT_ID` | No | Analytics measurement ID |
+
+If `FIREBASE_PROJECT_ID` or `FIREBASE_API_KEY` are missing when the default path is used, the function returns **HTTP 500** with `{ "error": "Default Firebase config incomplete", "missingKeys": ["..."] }`. The frontend can then fall back to its own config (e.g. from `VITE_*` build-time env).
+
+You also need `FIREBASE_SERVICE_ACCOUNT_JSON` (full JSON key for the **registry** Firebase project) if you use tenant-specific configs via the `tenantFirebaseConfigs` Firestore collection. See `docs/TENANT_FIREBASE_CONFIG_REGISTRY.md`.
+
+## Required for Firebase (auth + Firestore + Storage) — build-time / client
 
 | Variable | Description | Example |
 |----------|-------------|---------|
