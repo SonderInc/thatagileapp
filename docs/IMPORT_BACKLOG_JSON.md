@@ -7,8 +7,9 @@ Import a backlog from a JSON file or pasted JSON. The importer validates the **s
 ```json
 {
   "version": "1.0",
-  "mode": "create-company" | "add-to-company",
+  "mode": "create-company" | "add-to-company" | "add-to-product",
   "targetCompanyId": "company-xxx",
+  "targetProductId": "item-xxx",
   "items": [
     {
       "importId": "string unique within file",
@@ -40,8 +41,9 @@ Import a backlog from a JSON file or pasted JSON. The importer validates the **s
 | Field | Required | Description |
 |-------|----------|-------------|
 | `version` | Yes | Must be `"1.0"`. |
-| `mode` | Yes | `"create-company"` — create a new company from the first `company`-type item and import into it; `"add-to-company"` — import into an existing company. |
+| `mode` | Yes | `"create-company"` — create a new company from the first `company`-type item and import into it; `"add-to-company"` — import into an existing company; `"add-to-product"` — import epics (and children) under an existing Product work item. |
 | `targetCompanyId` | For add-to-company | Company id (e.g. `company-123`) to import into. If omitted when `mode=add-to-company`, the **current** tenant is used. |
+| `targetProductId` | For add-to-product | Product WorkItem id (e.g. `item-1770201001767`) to attach root epics to. Can be set in JSON or in the UI. |
 | `items` | Yes | Array of backlog items. |
 
 ### Item fields
@@ -52,7 +54,7 @@ Import a backlog from a JSON file or pasted JSON. The importer validates the **s
 | `type` | Yes | One of: `company`, `product`, `epic`, `feature`, `user-story`, `task`, `bug`. |
 | `title` | Yes | Display title. |
 | `status` | No | Default `backlog`. Any valid `WorkItemStatus` (e.g. `funnel`, `backlog`, `to-do`, `in-progress`, `done`). |
-| `parentImportId` | No | `importId` of the parent item. Omit or `null` for root; root items must be `type: "company"`. |
+| `parentImportId` | No | `importId` of the parent item. Omit or `null` for root. In create-company/add-to-company, root must be `type: "company"`. In add-to-product, root must be `type: "epic"`. |
 | `fields` | No | Optional fields (see below). |
 
 ### Optional `fields` (by type)
@@ -62,6 +64,30 @@ Import a backlog from a JSON file or pasted JSON. The importer validates the **s
 - **User Story:** `storyPoints`, `acceptanceCriteria`
 - **Task / Bug:** `estimatedDays`, `actualHours`
 - **Company (add-to-company only):** `existingWorkItemId` — see [Existing company root placeholder](#existing-company-root-placeholder-add-to-company).
+- **Any (Cursor):** `cursorInstruction` — see [Cursor Instruction block](#cursor-instruction-block).
+
+### Cursor Instruction block
+
+You can attach a **Cursor instruction** to any item (e.g. Task/Bug) so it can be copied into Cursor in one click. The importer stores it in `WorkItem.description` using a canonical block and optionally in `WorkItem.metadata.cursorInstruction`.
+
+- **Import:** If `fields.cursorInstruction` (string) is present, it is merged into the item's description with the canonical delimiters (`CURSOR INSTRUCTION` header and `==================`). If `fields.description` is also provided, the block is appended after a blank line and not duplicated if already present.
+- **Export:** Exported JSON includes `fields.cursorInstruction` when the item has such a block (extracted from description).
+
+Example Task with `cursorInstruction`:
+
+```json
+{
+  "importId": "t1",
+  "type": "task",
+  "title": "Implement login API",
+  "parentImportId": "s1",
+  "fields": {
+    "description": "Backend endpoint for email/password login.",
+    "cursorInstruction": "CURSOR INSTRUCTION\n==================\nGoal:\nAdd POST /api/auth/login that accepts email and password, validates against DB, returns JWT.\nConstraints: Use existing auth middleware; rate-limit 5/min per IP.\n==================",
+    "estimatedDays": 1
+  }
+}
+```
 
 ## Hierarchy rules
 
@@ -101,6 +127,32 @@ Example (add-to-company with existing root):
 
 If `existingWorkItemId` does not equal `targetCompanyId`, the import fails with an error.
 
+## add-to-product mode
+
+Import epics (and their features, user stories, tasks, bugs) under an **existing Product** work item:
+
+- **mode:** `"add-to-product"`.
+- **targetProductId:** The Product WorkItem id (e.g. `item-1770201001767`). Can be set in JSON or in the UI (Import under Product → Product ID).
+- **Root items:** Items with `parentImportId` null must be `type: "epic"`. They are attached to the target product; no company item in the JSON.
+- **companyId** for created items is taken from the target product's `companyId`.
+- The target product's `childrenIds` is updated to include the new epic ids (merged with existing).
+- Hierarchy is enforced: epic → feature → user-story → task/bug.
+
+Example (add-to-product):
+
+```json
+{
+  "version": "1.0",
+  "mode": "add-to-product",
+  "targetProductId": "item-1770201001767",
+  "items": [
+    { "importId": "e1", "type": "epic", "title": "Launch v2", "parentImportId": null },
+    { "importId": "f1", "type": "feature", "title": "Auth", "parentImportId": "e1" },
+    { "importId": "s1", "type": "user-story", "title": "As a user I can log in", "parentImportId": "f1", "fields": { "storyPoints": 3 } }
+  ]
+}
+```
+
 ## Idempotency
 
 Each imported item gets:
@@ -132,6 +184,7 @@ If an item with the same `metadata.importKey` already exists for that company, i
 ## UI
 
 - **Admin → Import Backlog** opens the import page.
+- **Import under:** Choose "Company" (add-to-company / create-company) or "Product" (add-to-product). When "Product" is selected, enter or select a Product ID (used when not set in JSON).
 - **Step 1:** Paste JSON or upload a `.json` file.
 - **Step 2:** Click **Validate & preview** — see counts by type and first 10 titles; fix any validation errors.
 - **Step 3:** Click **Confirm import** — items are created; parents get `childrenIds` updated.

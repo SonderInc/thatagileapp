@@ -97,7 +97,7 @@ export interface WorkItem {
   actualHours?: number;
   color?: string; // For visual distinction
   /** Import tracking for JSON backlog import idempotency. */
-  metadata?: { importId?: string; importKey?: string };
+  metadata?: { importId?: string; importKey?: string; /** Mirror of Cursor instruction block from description. */ cursorInstruction?: string };
 }
 
 export interface Sprint {

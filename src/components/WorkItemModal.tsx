@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { WorkItem, WorkItemType, WorkItemStatus, EpicFeatureSize } from '../types';
 import { useStore } from '../store/useStore';
 import { SIZE_OPTIONS, STORY_POINT_OPTIONS, DAYS_OPTIONS } from '../utils/estimates';
+import { extractCursorInstruction } from '../lib/cursorInstruction';
 import { Plus, FileText, BookOpen } from 'lucide-react';
 import Modal from './Modal';
 import EpicHypothesisModal from './EpicHypothesisModal';
@@ -37,6 +38,20 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
   } = useWorkItemForm({ itemId, onClose, parentId, type, allowedTypes: allowedTypesProp, defaultStatus });
   const [showEpicHypothesis, setShowEpicHypothesis] = useState(false);
   const [showEpicHypothesisExample, setShowEpicHypothesisExample] = useState(false);
+  const [copiedHint, setCopiedHint] = useState<'cursor' | 'description' | null>(null);
+
+  const desc = formData.description ?? '';
+  const cursorBlock = extractCursorInstruction(desc);
+
+  const copyToClipboard = useCallback(async (text: string, hint: 'cursor' | 'description') => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedHint(hint);
+      setTimeout(() => setCopiedHint(null), 2000);
+    } catch {
+      setCopiedHint(null);
+    }
+  }, []);
 
   return (
     <Modal
@@ -210,6 +225,26 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
               Description
             </label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
+              {cursorBlock && (
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(cursorBlock, 'cursor')}
+                  style={{ padding: '6px 12px', fontSize: '13px', border: '1px solid #d1d5db', borderRadius: '6px', background: '#fff', cursor: 'pointer' }}
+                >
+                  {copiedHint === 'cursor' ? 'Copied!' : 'Copy Cursor Instruction'}
+                </button>
+              )}
+              {desc && (
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(desc, 'description')}
+                  style={{ padding: '6px 12px', fontSize: '13px', border: '1px solid #d1d5db', borderRadius: '6px', background: '#fff', cursor: 'pointer' }}
+                >
+                  {copiedHint === 'description' ? 'Copied!' : 'Copy Description'}
+                </button>
+              )}
+            </div>
             <textarea
               value={formData.description || ''}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}

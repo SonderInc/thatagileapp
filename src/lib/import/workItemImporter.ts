@@ -4,6 +4,7 @@
  */
 import type { WorkItem, WorkItemType, WorkItemStatus } from '../../types';
 import { canBeChildOf } from '../../utils/hierarchy';
+import { ensureCursorInstruction, extractCursorInstruction } from '../cursorInstruction';
 
 const VALID_STATUSES: WorkItemStatus[] = [
   'funnel', 'backlog', 'analysis', 'prioritization', 'implementation', 'done',
@@ -41,13 +42,16 @@ export interface ImportItemInput {
     color?: string;
     /** In add-to-company mode, root company item: existing WorkItem id (must equal targetCompanyId). Do not create; map importId -> this id. */
     existingWorkItemId?: string;
+    /** Cursor instruction block; merged into description with canonical markers. */
+    cursorInstruction?: string;
   };
 }
 
 export interface ImportPayload {
   version: string;
-  mode: 'create-company' | 'add-to-company';
+  mode: 'create-company' | 'add-to-company' | 'add-to-product';
   targetCompanyId?: string;
+  targetProductId?: string;
   items: ImportItemInput[];
 }
 
@@ -105,11 +109,14 @@ export function validateImportPayload(payload: unknown): ValidationResult {
   if (!p.version || typeof p.version !== 'string') {
     errors.push({ message: 'Missing or invalid "version"' });
   }
-  if (!p.mode || (p.mode !== 'create-company' && p.mode !== 'add-to-company')) {
-    errors.push({ message: 'Missing or invalid "mode" (must be create-company or add-to-company)' });
+  if (!p.mode || (p.mode !== 'create-company' && p.mode !== 'add-to-company' && p.mode !== 'add-to-product')) {
+    errors.push({ message: 'Missing or invalid "mode" (must be create-company, add-to-company, or add-to-product)' });
   }
   if (p.mode === 'add-to-company' && p.targetCompanyId !== undefined && typeof p.targetCompanyId !== 'string') {
     errors.push({ message: '"targetCompanyId" must be a string when provided' });
+  }
+  if (p.mode === 'add-to-product' && p.targetProductId !== undefined && typeof p.targetProductId !== 'string') {
+    errors.push({ message: '"targetProductId" must be a string when provided' });
   }
   if (!Array.isArray(p.items)) {
     errors.push({ message: 'Missing or invalid "items" (must be an array)' });
@@ -175,8 +182,14 @@ export function validateImportPayload(payload: unknown): ValidationResult {
     if (!item?.importId || !item.type || !isValidType(item.type)) continue;
     const parentImportId = item.parentImportId ?? null;
     if (parentImportId === null || parentImportId === '') {
-      if (item.type !== 'company') {
-        errors.push({ index: i, importId: item.importId, message: 'Top-level item must be type "company"' });
+      if (p.mode === 'add-to-product') {
+        if (item.type !== 'epic') {
+          errors.push({ index: i, importId: item.importId, message: 'Top-level item in add-to-product must be type "epic"' });
+        }
+      } else {
+        if (item.type !== 'company') {
+          errors.push({ index: i, importId: item.importId, message: 'Top-level item must be type "company"' });
+        }
       }
       continue;
     }
@@ -264,6 +277,11 @@ function buildWorkItem(
     metadata: { importId: input.importId, importKey },
   };
   if (fields.description !== undefined) item.description = String(fields.description);
+  if (fields.cursorInstruction !== undefined && typeof fields.cursorInstruction === 'string') {
+    item.description = ensureCursorInstruction(item.description, fields.cursorInstruction);
+  }
+  const cursorBlock = extractCursorInstruction(item.description);
+  if (cursorBlock) item.metadata = { ...item.metadata, cursorInstruction: cursorBlock };
   if (fields.size !== undefined) item.size = fields.size as WorkItem['size'];
   if (fields.storyPoints !== undefined) item.storyPoints = fields.storyPoints;
   if (fields.acceptanceCriteria !== undefined) item.acceptanceCriteria = fields.acceptanceCriteria;
@@ -295,7 +313,12 @@ export async function runImport(
     result.errors = validation.errors.map((e) => e.importId ? `${e.importId}: ${e.message}` : e.message);
     return result;
   }
+  if (payload.mode === 'add-to-product' && !payload.targetProductId) {
+    result.errors.push('add-to-product mode requires targetProductId');
+    return result;
+  }
 
+  const targetProductId = payload.mode === 'add-to-product' ? payload.targetProductId! : undefined;
   const existingImportKeys = new Set(
     existingWorkItems
       .filter((w) => w.metadata?.importKey)
@@ -342,6 +365,9 @@ export async function runImport(
       continue;
     }
     const item = buildWorkItem(input, companyId, importIdToWorkItemId, now);
+    if (targetProductId && (input.parentImportId == null || input.parentImportId === '') && input.type === 'epic') {
+      item.parentId = targetProductId;
+    }
     importIdToWorkItemId.set(input.importId, item.id);
     try {
       await addWorkItem(item);
@@ -355,7 +381,12 @@ export async function runImport(
 
   const childrenByParentId = new Map<string, string[]>();
   for (const input of ordered) {
-    const parentId = input.parentImportId ? importIdToWorkItemId.get(input.parentImportId) : null;
+    let parentId: string | null;
+    if (targetProductId && (input.parentImportId == null || input.parentImportId === '') && input.type === 'epic') {
+      parentId = targetProductId;
+    } else {
+      parentId = input.parentImportId ? importIdToWorkItemId.get(input.parentImportId) ?? null : null;
+    }
     if (!parentId) continue;
     const childId = importIdToWorkItemId.get(input.importId);
     if (!childId) continue;
@@ -365,11 +396,18 @@ export async function runImport(
   }
 
   const existingCompany = existingWorkItems.find((w) => w.id === companyId);
+  const existingProduct = targetProductId ? existingWorkItems.find((w) => w.id === targetProductId) : undefined;
 
   for (const [parentId, childIds] of childrenByParentId) {
     let childrenIds: string[];
     if (placeholder && parentId === companyId) {
       const existing = existingCompany?.childrenIds ?? [];
+      childrenIds = [...existing];
+      for (const id of childIds) {
+        if (!childrenIds.includes(id)) childrenIds.push(id);
+      }
+    } else if (targetProductId && parentId === targetProductId) {
+      const existing = existingProduct?.childrenIds ?? [];
       childrenIds = [...existing];
       for (const id of childIds) {
         if (!childrenIds.includes(id)) childrenIds.push(id);
