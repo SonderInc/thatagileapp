@@ -279,7 +279,28 @@ function App() {
             })
             .catch(() => applyTenant(first));
         } else {
-          if (isSeedEnabled()) {
+          const current = useStore.getState().currentTenantId;
+          if (current != null) {
+            if (import.meta.env.DEV) {
+              console.warn('[App] Companies list empty but profile has tenant; preserving tenant and attempting backfill', { uid, currentTenantId: current });
+            }
+            getDataStore()
+              .getUserProfile(uid)
+              .then((profile) => {
+                if (!profile) return;
+                const state = useStore.getState();
+                const roles = (state.currentUser?.roles?.length ? state.currentUser.roles : profile.companies?.find((c) => c.companyId === current)?.roles) ?? (isAdminForCompany(profile, current) ? (['admin'] as Role[]) : []);
+                const merged = mergeProfileForBackfill(profile, current, roles);
+                return getDataStore().setUserProfile(merged);
+              })
+              .then(() => getDataStore().getTenantCompanies())
+              .then((companies2) => {
+                setTenantCompanies(companies2);
+              })
+              .catch((backfillErr) => {
+                if (import.meta.env.DEV) console.error('[App] Backfill or retry getTenantCompanies failed:', backfillErr);
+              });
+          } else if (isSeedEnabled()) {
             setCurrentTenantId(SEED_TENANT_ID);
             setWorkItems(mockWorkItems);
             if (import.meta.env.DEV) console.warn('[App] Seed fallback active (no companies from Firestore)', { uid });
@@ -308,7 +329,27 @@ function App() {
         } else {
           setTenantCompanies([]);
           const hasTenant = useStore.getState().currentTenantId != null;
-          if (!hasTenant) {
+          if (hasTenant && import.meta.env.DEV) {
+            console.warn('[App] Load tenant companies failed but profile has tenant; preserving tenant and attempting backfill', { uid });
+            getDataStore()
+              .getUserProfile(uid)
+              .then((profile) => {
+                if (!profile) return;
+                const state = useStore.getState();
+                const current = state.currentTenantId;
+                if (!current) return;
+                const roles = (state.currentUser?.roles?.length ? state.currentUser.roles : profile.companies?.find((c) => c.companyId === current)?.roles) ?? (isAdminForCompany(profile, current) ? (['admin'] as Role[]) : []);
+                const merged = mergeProfileForBackfill(profile, current, roles);
+                return getDataStore().setUserProfile(merged);
+              })
+              .then(() => getDataStore().getTenantCompanies())
+              .then((companies2) => {
+                setTenantCompanies(companies2);
+              })
+              .catch((backfillErr) => {
+                if (import.meta.env.DEV) console.error('[App] Backfill or retry getTenantCompanies failed:', backfillErr);
+              });
+          } else if (!hasTenant) {
             setCurrentTenantId(null);
             setViewMode('register-company');
           }

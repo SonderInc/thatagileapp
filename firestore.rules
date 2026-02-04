@@ -2,7 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /companies/{companyId} {
-      allow read: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)) != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('companyIds', null) != null && companyId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyIds;
+      allow read: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)) != null && ((get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('companyIds', null) != null && companyId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyIds) || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('companyId', null) == companyId);
       allow create: if false;
       allow update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)) != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('adminCompanyIds', null) != null && companyId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.adminCompanyIds;
     }
