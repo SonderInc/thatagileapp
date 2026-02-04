@@ -48,6 +48,7 @@ const EpicBoard: React.FC = () => {
         workItems={epics}
         onAddItem={handleAddItem}
         addItemColumnId="funnel"
+        onCardClick={() => setShowModal(true)}
       />
 
       {showModal && (

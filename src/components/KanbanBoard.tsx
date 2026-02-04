@@ -15,9 +15,11 @@ interface KanbanBoardProps {
   addItemColumnId?: string;
   /** Label for the add button (e.g. "Add a Feature"). Defaults to "Add Item". */
   addItemLabel?: string;
+  /** Called when a card is clicked (after selectedWorkItem is set). Use to open the edit modal. */
+  onCardClick?: () => void;
 }
 
-const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId, columns, workItems, onAddItem, addItemColumnId, addItemLabel }) => {
+const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId, columns, workItems, onAddItem, addItemColumnId, addItemLabel, onCardClick }) => {
   const { moveWorkItem } = useStore();
 
   const boardKey = boardId;
@@ -94,7 +96,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ boardId, columns, workItems, 
                               marginBottom: '8px',
                             }}
                           >
-                            <WorkItemCard item={item} />
+                            <WorkItemCard item={item} onClick={onCardClick} />
                           </div>
                         )}
                       </Draggable>

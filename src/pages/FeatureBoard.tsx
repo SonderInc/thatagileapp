@@ -11,7 +11,7 @@ import { spacing } from '../styles/theme';
 
 const FeatureBoard: React.FC = () => {
   const { getWorkItemsByType, selectedWorkItem, getTypeLabel } = useStore();
-  const { showModal, modalColumnId, handleAddItem, handleCloseModal } = useBoardWorkItemModal();
+  const { showModal, setShowModal, modalColumnId, handleAddItem, handleCloseModal } = useBoardWorkItemModal();
   const [showColumnsExplained, setShowColumnsExplained] = useState(false);
   const features = getWorkItemsByType('feature');
   const epicLabel = getTypeLabel('epic');
@@ -32,6 +32,7 @@ const FeatureBoard: React.FC = () => {
         onAddItem={handleAddItem}
         addItemColumnId="funnel"
         addItemLabel={`Add a ${featureLabel}`}
+        onCardClick={() => setShowModal(true)}
       />
 
       {showModal && (
