@@ -79,9 +79,9 @@ const UserProfilePage: React.FC = () => {
     currentUser?.roles ??
     [];
   // Show admin when canonical check says so (e.g. adminCompanyIds), so registrars with missing doc data still display correctly
-  const rolesForCompany =
+  const rolesForCompany: Role[] =
     rolesFromProfile.length > 0
-      ? rolesFromProfile
+      ? (rolesFromProfile as Role[])
       : profile && currentTenantId && isAdminForCompany(profile, currentTenantId)
         ? ['admin']
         : [];
@@ -89,7 +89,7 @@ const UserProfilePage: React.FC = () => {
 
   useEffect(() => {
     if (!currentUser || rolesForCompany.length === 0) return;
-    let rolesToSet = rolesForCompany;
+    let rolesToSet: Role[] = rolesForCompany;
     if (profile && currentTenantId && isAdminForCompany(profile, currentTenantId) && !rolesToSet.includes('admin')) {
       rolesToSet = ['admin', ...rolesToSet];
     }
