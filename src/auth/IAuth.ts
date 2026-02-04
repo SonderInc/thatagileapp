@@ -16,6 +16,8 @@ export interface IAuth {
   isConfigured(): boolean;
   /** Current user's ID token for server auth (e.g. Bearer token). Returns null if not signed in. */
   getIdToken(): Promise<string | null>;
+  /** Sign in with a Firebase custom token (e.g. after server-side registration). */
+  signInWithCustomToken(customToken: string): Promise<AuthUser>;
 }
 
 export type { AuthUser };

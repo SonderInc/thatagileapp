@@ -5,6 +5,7 @@
 import {
   onAuthStateChanged as fbOnAuthStateChanged,
   signInWithEmailAndPassword as fbSignIn,
+  signInWithCustomToken as fbSignInWithCustomToken,
   createUserWithEmailAndPassword as fbCreateUser,
   updateProfile as fbUpdateProfile,
   updatePassword as fbUpdatePassword,
@@ -55,5 +56,10 @@ export const FirebaseAuthAdapter: IAuth = {
   async getIdToken() {
     if (!auth?.currentUser) return null;
     return auth.currentUser.getIdToken();
+  },
+  async signInWithCustomToken(customToken: string) {
+    if (!auth) throw new Error('Auth not configured');
+    const { user } = await fbSignInWithCustomToken(auth, customToken);
+    return toAuthUser(user);
   },
 };

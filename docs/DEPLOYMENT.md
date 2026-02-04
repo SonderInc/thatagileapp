@@ -96,7 +96,7 @@ No code or repo changes are required; configuration is in Netlify and at the dom
 
 ## Firestore rules
 
-Publish the project’s `firestore.rules` in Firebase Console → Firestore Database → Rules, then click **Publish**. After any change to `firestore.rules`, you must redeploy the rules for user directory (User Management) and company-scoped reads to work; the app relies on `companyIds`/`adminCompanyIds` and rules using `sameCompany`/`isAdminForTarget` for `users` read access.
+Publish the project’s `firestore.rules` in Firebase Console → Firestore Database → Rules, then click **Publish**. Or: `firebase deploy --only firestore:rules`. After any change, redeploy so User Management and company-scoped reads work; the app relies on `companyIds`/`adminCompanyIds` and rules using `sameCompany`/`isAdminForTarget` for `users` read access. Company creation is server-only (`allow create: if false`); the `register-tenant` and `provision-company` Netlify functions create companies via the Admin SDK. Use the repo `firestore.rules` file as the single source of truth; do not deploy hand-edited rules that differ from it.
 
 The rules cover:
 

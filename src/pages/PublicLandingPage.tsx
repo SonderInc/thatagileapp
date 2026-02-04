@@ -3,10 +3,9 @@ import { useStore } from '../store/useStore';
 import { getAuth, getDataStore } from '../lib/adapters';
 import { ensureCompanyWorkItem } from '../lib/workItems/resetBacklog';
 import Login from './Login';
-import type { TenantCompany, UserProfile, Role, CompanyType } from '../types';
+import type { CompanyType } from '../types';
 
-const TRIAL_DAYS = 30;
-const TRIAL_SEATS = 50;
+const REGISTER_TENANT_PATH = '/.netlify/functions/register-tenant';
 
 const PublicLandingPage: React.FC = () => {
   const {
@@ -14,7 +13,6 @@ const PublicLandingPage: React.FC = () => {
     setTenantCompanies,
     setCurrentTenantId,
     setCurrentUser,
-    setFirebaseUser,
   } = useStore();
   const [mode, setMode] = useState<'landing' | 'register' | 'login'>('landing');
   const [companyName, setCompanyName] = useState('');
@@ -30,56 +28,49 @@ const PublicLandingPage: React.FC = () => {
     setError(null);
     setSaving(true);
     const auth = getAuth();
-    const store = getDataStore();
     if (!auth.isConfigured()) {
       setError('Auth not configured');
       setSaving(false);
       return;
     }
-    const name = companyName.trim() || 'New Company';
-    const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'new-company';
-    const companyId = `company-${Date.now()}`;
-    const now = new Date();
-    const trialEndsAt = new Date(now.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
-    const company: TenantCompany = {
-      id: companyId,
-      name,
-      slug,
-      createdAt: now,
-      updatedAt: now,
-      trialEndsAt,
-      seats: TRIAL_SEATS,
+    const payload = {
+      displayName: adminName.trim() || email.trim().split('@')[0] || 'User',
+      email: email.trim().toLowerCase(),
+      password,
+      companyName: companyName.trim() || 'New Company',
       companyType,
     };
     try {
-      const user = await auth.createUserWithEmailAndPassword(email.trim(), password);
-      const displayName = adminName.trim() || email.trim().split('@')[0] || 'User';
-      await auth.updateDisplayName(user.uid, displayName);
-      await store.addTenantCompany(company);
-      await ensureCompanyWorkItem(company.id);
-      const profile: UserProfile = {
-        uid: user.uid,
-        email: user.email ?? email.trim(),
-        displayName,
-        companyId,
-        companyIds: [companyId],
-        adminCompanyIds: [companyId],
-        companies: [{ companyId, roles: ['admin' as Role] }],
-      };
-      await store.setUserProfile(profile);
-      const companies = await store.getTenantCompanies();
+      const res = await fetch(REGISTER_TENANT_PATH, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const rawData = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const errBody = rawData as { error?: string };
+        if (res.status === 409) setError(errBody.error ?? 'Account already exists. Please sign in.');
+        else setError(errBody.error ?? 'Registration failed.');
+        setSaving(false);
+        return;
+      }
+      const data = rawData as { customToken: string; slug: string; companyId: string; uid: string; email: string };
+      const { customToken, slug, companyId, uid, email: resEmail } = data;
+      const displayName = payload.displayName;
+      await auth.signInWithCustomToken(customToken);
+      const companies = await getDataStore().getTenantCompanies();
       setTenantCompanies(companies);
+      await ensureCompanyWorkItem(companyId);
       setCurrentTenantId(companyId);
       setCurrentUser({
-        id: user.uid,
+        id: uid,
         name: displayName,
-        email: profile.email,
+        email: resEmail,
         roles: ['admin'],
       });
-      setFirebaseUser(user);
       setViewMode('landing');
       if (typeof window !== 'undefined') {
-        window.history.replaceState(null, '', '/' + company.slug);
+        window.history.replaceState(null, '', '/' + slug);
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
