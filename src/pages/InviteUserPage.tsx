@@ -318,9 +318,14 @@ const InviteUserPage: React.FC = () => {
             c.companyId === currentTenantId ? { companyId: c.companyId, roles: editingRoles } : c
           )
         : [...companies, { companyId: currentTenantId, roles: editingRoles }];
+      const adminCompanyIds =
+        editingRoles.includes('admin')
+          ? [...new Set([...(editingUser.adminCompanyIds ?? []), currentTenantId])]
+          : undefined;
       await getDataStore().setUserProfile({
         ...editingUser,
         companies: updatedCompanies,
+        ...(adminCompanyIds !== undefined && { adminCompanyIds }),
       });
       setEditingUser(null);
       setEditingRoles([]);

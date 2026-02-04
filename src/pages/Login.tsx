@@ -141,11 +141,14 @@ const Login: React.FC = () => {
       const companyId = inviteRecord?.companyId ?? (isSeedEnabled() ? SEED_TENANT_ID : null);
       const roles = inviteRecord?.roles ?? [];
       const displayNameFromInvite = [inviteRecord?.firstName, inviteRecord?.lastName].filter(Boolean).join(' ').trim();
+      const hasAdmin = roles.includes('admin');
       const profile: UserProfile = {
         uid: user.uid,
         email: user.email ?? email,
         displayName: displayNameFromInvite || displayName.trim() || user.email?.split('@')[0] || 'User',
         companyId,
+        ...(companyId != null && { companyIds: [companyId] }),
+        ...(companyId != null && hasAdmin && { adminCompanyIds: [companyId] }),
         companies: companyId != null ? [{ companyId, roles: roles as Role[] }] : [],
         mustChangePassword: true,
         ...(inviteRecord?.employeeNumber && { employeeNumber: inviteRecord.employeeNumber }),
