@@ -13,10 +13,17 @@ const COMPANY_WORK_ITEM_ID_PREFIX = 'company-wi-';
 
 /**
  * Get the Company WorkItem for the tenant (type === 'company', companyId === tenantId).
- * Returns the first match; normally there is one per tenant.
+ * If multiple exist (e.g. one from Ensure, one from Add Company), prefer the one that has product children so Reset Backlog targets the real backlog root.
  */
 function findCompanyWorkItem(items: WorkItem[], tenantId: string): WorkItem | null {
-  return items.find((i) => i.type === 'company' && i.companyId === tenantId) ?? null;
+  const candidates = items.filter((i) => i.type === 'company' && i.companyId === tenantId);
+  if (candidates.length === 0) return null;
+  if (candidates.length === 1) return candidates[0];
+  const byId = new Map(items.map((i) => [i.id, i]));
+  const withProducts = candidates.filter((c) =>
+    (c.childrenIds ?? []).some((id) => byId.get(id)?.type === 'product')
+  );
+  return withProducts[0] ?? candidates[0];
 }
 
 /**
