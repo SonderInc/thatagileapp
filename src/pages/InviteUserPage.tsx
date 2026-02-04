@@ -151,9 +151,8 @@ const InviteUserPage: React.FC = () => {
         if (import.meta.env.DEV && profile) {
           const adminFromHelper = isAdminForCompany(profile, currentTenantId);
           console.log('[InviteUserPage] Profile loaded (admin check)', {
-            uid: profile.uid,
             currentTenantId,
-            profileAdminCompanyIds: profile.adminCompanyIds,
+            myProfileCompanyId: profile.companyId,
             isAdminForCompany: adminFromHelper,
           });
         }

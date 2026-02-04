@@ -58,22 +58,34 @@ function App() {
       .then(async (profile) => {
         if (cancelled) return;
         if (profile) {
-          const tenantId = profile.companyId ?? SEED_TENANT_ID;
+          const uid = firebaseUser.uid;
+          const tenantId =
+            profile.companyId ??
+            profile.companyIds?.[0] ??
+            profile.companies?.[0]?.companyId ??
+            SEED_TENANT_ID;
           let roles = profile.companies?.find((c) => c.companyId === tenantId)?.roles ?? [];
           if (isAdminForCompany(profile, tenantId) && !roles.includes('admin')) {
             roles = ['admin', ...roles];
           }
           if (import.meta.env.DEV) {
             const isAdmin = roles.includes('admin');
+            const isTenantCompanyId =
+              tenantId === SEED_TENANT_ID || tenantId.startsWith('company-');
+            if (!isTenantCompanyId) {
+              console.warn('[App] chosenTenantId should be a TenantCompany id (company-...) or SEED_TENANT_ID', {
+                chosenTenantId: tenantId,
+              });
+            }
             console.log('[App] Profile load (admin check)', {
-              uid: profile.uid,
+              uid,
               profileCompanyId: profile.companyId,
+              profileCompanyIds: profile.companyIds,
               profileAdminCompanyIds: profile.adminCompanyIds,
-              profileCompanies: profile.companies?.map((c) => ({ companyId: c.companyId, roles: c.roles })),
-              currentTenantIdUsed: tenantId,
-              roles,
+              chosenTenantId: tenantId,
+              isAdminForCompany: isAdminForCompany(profile, tenantId),
+              rolesDerivedForTenantId: roles,
               isAdmin,
-              isAdminFromHelper: isAdminForCompany(profile, tenantId),
             });
           }
           setCurrentTenantId(tenantId);

@@ -260,6 +260,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     displayName: data.displayName ?? '',
     companyId: resolvedCompanyId,
     companies,
+    companyIds: companyIds.length > 0 ? companyIds : undefined,
     adminCompanyIds: adminCompanyIds.length > 0 ? adminCompanyIds : undefined,
     mustChangePassword: data.mustChangePassword === true,
     employeeNumber: typeof data.employeeNumber === 'string' ? data.employeeNumber : undefined,

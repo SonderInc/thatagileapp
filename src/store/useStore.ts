@@ -24,7 +24,7 @@ interface AppState {
   currentUser: User | null;
   /** Tenant companies (from Firestore companies collection). */
   tenantCompanies: TenantCompany[];
-  /** Current tenant id (which registered company we're in). Used to scope work items. */
+  /** Current tenant company id (TenantCompany document id, e.g. company-123). Not slug or WorkItem id. Used for role checks and Firestore. */
   currentTenantId: string | null;
   /** Current auth user (null when signed out). Provider-agnostic. */
   firebaseUser: AuthUser | null;
