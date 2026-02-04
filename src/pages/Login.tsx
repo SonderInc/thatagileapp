@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getAuth, getDataStore } from '../lib/adapters';
 import { useStore } from '../store/useStore';
-import { SEED_TENANT_ID } from '../utils/mockData';
+import { SEED_TENANT_ID, isSeedEnabled } from '../utils/mockData';
 import type { UserProfile, Role } from '../types';
 
 function getInviteTokenFromUrl(): string | null {
@@ -58,16 +58,28 @@ const Login: React.FC = () => {
   const loadProfileAndSetApp = async (uid: string) => {
     try {
       const profile = await getDataStore().getUserProfile(uid);
+      const fallbackTenantId = isSeedEnabled() ? SEED_TENANT_ID : null;
       if (profile) {
-        setCurrentTenantId(profile.companyId ?? SEED_TENANT_ID);
+        const tenantId =
+          profile.companyId ??
+          profile.companyIds?.[0] ??
+          profile.companies?.[0]?.companyId ??
+          fallbackTenantId;
+        if (tenantId === SEED_TENANT_ID && import.meta.env.DEV) {
+          console.warn('[Login] Seed fallback active (no company in profile)', { uid });
+        }
+        setCurrentTenantId(tenantId);
         setCurrentUser({
           id: profile.uid,
           name: profile.displayName,
           email: profile.email,
-          roles: profile.companies?.find((c) => c.companyId === (profile.companyId ?? SEED_TENANT_ID))?.roles ?? [],
+          roles: tenantId != null ? (profile.companies?.find((c) => c.companyId === tenantId)?.roles ?? []) : [],
         });
       } else {
-        setCurrentTenantId(SEED_TENANT_ID);
+        if (fallbackTenantId === SEED_TENANT_ID && import.meta.env.DEV) {
+          console.warn('[Login] Seed fallback active (profile null)', { uid });
+        }
+        setCurrentTenantId(fallbackTenantId);
         setCurrentUser({
           id: uid,
           name: displayName || email.split('@')[0],
@@ -76,7 +88,11 @@ const Login: React.FC = () => {
         });
       }
     } catch {
-      setCurrentTenantId(SEED_TENANT_ID);
+      const fallbackTenantId = isSeedEnabled() ? SEED_TENANT_ID : null;
+      if (fallbackTenantId === SEED_TENANT_ID && import.meta.env.DEV) {
+        console.warn('[Login] Seed fallback active (profile load failed)', { uid });
+      }
+      setCurrentTenantId(fallbackTenantId);
       setCurrentUser({
         id: uid,
         name: displayName || email.split('@')[0],
@@ -122,7 +138,7 @@ const Login: React.FC = () => {
       if (displayName.trim()) {
         await auth.updateDisplayName(user.uid, displayName.trim());
       }
-      const companyId = inviteRecord?.companyId ?? SEED_TENANT_ID;
+      const companyId = inviteRecord?.companyId ?? (isSeedEnabled() ? SEED_TENANT_ID : null);
       const roles = inviteRecord?.roles ?? [];
       const displayNameFromInvite = [inviteRecord?.firstName, inviteRecord?.lastName].filter(Boolean).join(' ').trim();
       const profile: UserProfile = {
@@ -130,7 +146,7 @@ const Login: React.FC = () => {
         email: user.email ?? email,
         displayName: displayNameFromInvite || displayName.trim() || user.email?.split('@')[0] || 'User',
         companyId,
-        companies: [{ companyId, roles: roles as Role[] }],
+        companies: companyId != null ? [{ companyId, roles: roles as Role[] }] : [],
         mustChangePassword: true,
         ...(inviteRecord?.employeeNumber && { employeeNumber: inviteRecord.employeeNumber }),
         ...(inviteRecord?.phone && { phone: inviteRecord.phone }),

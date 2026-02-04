@@ -149,11 +149,11 @@ const InviteUserPage: React.FC = () => {
       .then((profile) => {
         setMyProfile(profile ?? null);
         if (import.meta.env.DEV && profile) {
-          const adminFromHelper = isAdminForCompany(profile, currentTenantId);
-          console.log('[InviteUserPage] Profile loaded (admin check)', {
+          console.log('[InviteUserPage] Admin/tenant diagnostics', {
             currentTenantId,
-            myProfileCompanyId: profile.companyId,
-            isAdminForCompany: adminFromHelper,
+            'myProfile.companyId': profile.companyId,
+            'myProfile.adminCompanyIds': profile.adminCompanyIds,
+            isAdminForCompany: isAdminForCompany(profile, currentTenantId),
           });
         }
       })

@@ -1,8 +1,12 @@
 import { WorkItem, Sprint, KanbanBoard, User, TenantCompany } from '../types';
 import { EPIC_COLUMNS, FEATURE_COLUMNS, PRODUCT_COLUMNS, TEAM_COLUMNS } from './boardConfig';
 
-/** Seed tenant id for dev when no Firestore companies exist. */
+/** Seed tenant id for dev when no Firestore companies exist. Not used in production. */
 export const SEED_TENANT_ID = 'seed-tenant-1';
+
+/** True only in dev or when VITE_ENABLE_SEED=true. Production must not use seed/Seed Company. */
+export const isSeedEnabled = (): boolean =>
+  import.meta.env.DEV || import.meta.env.VITE_ENABLE_SEED === 'true';
 
 /** Tenant companies (Firestore companies collection) for dev/mock. */
 export const mockTenantCompanies: TenantCompany[] = [

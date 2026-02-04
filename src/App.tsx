@@ -13,7 +13,7 @@ import { getAuth, getDataStore } from './lib/adapters';
 import { mergeProfileForBackfill } from './lib/firestore';
 import { isAdminForCompany } from './lib/roles';
 import { getFirebaseProjectId } from './lib/firebase';
-import { mockWorkItems, mockSprints, mockBoards, mockUsers, mockTenantCompanies, SEED_TENANT_ID } from './utils/mockData';
+import { mockWorkItems, mockSprints, mockBoards, mockUsers, mockTenantCompanies, SEED_TENANT_ID, isSeedEnabled } from './utils/mockData';
 import RegisterCompanyPage from './pages/RegisterCompanyPage';
 import PublicLandingPage from './pages/PublicLandingPage';
 import InviteUserPage from './pages/InviteUserPage';
@@ -35,6 +35,7 @@ function App() {
     setCurrentUser,
     setTenantCompanies,
     setCurrentTenantId,
+    setViewMode,
     setFirebaseUser,
     currentTenantId,
     firebaseUser,
@@ -63,48 +64,56 @@ function App() {
             profile.companyId ??
             profile.companyIds?.[0] ??
             profile.companies?.[0]?.companyId ??
-            SEED_TENANT_ID;
-          let roles = profile.companies?.find((c) => c.companyId === tenantId)?.roles ?? [];
-          if (isAdminForCompany(profile, tenantId) && !roles.includes('admin')) {
-            roles = ['admin', ...roles];
+            (isSeedEnabled() ? SEED_TENANT_ID : null);
+          if (tenantId === SEED_TENANT_ID && import.meta.env.DEV) {
+            console.warn('[App] Seed fallback active (no company in profile)', { uid, profileCompanyId: profile.companyId });
           }
-          if (import.meta.env.DEV) {
-            const isAdmin = roles.includes('admin');
-            const isTenantCompanyId =
-              tenantId === SEED_TENANT_ID || tenantId.startsWith('company-');
-            if (!isTenantCompanyId) {
-              console.warn('[App] chosenTenantId should be a TenantCompany id (company-...) or SEED_TENANT_ID', {
-                chosenTenantId: tenantId,
+          if (tenantId == null) {
+            setCurrentTenantId(null);
+            setCurrentUser({
+              id: profile.uid,
+              name: profile.displayName,
+              email: profile.email,
+              roles: [],
+            });
+            setMustChangePassword(profile.mustChangePassword === true);
+            setViewMode('register-company');
+          } else {
+            let roles = profile.companies?.find((c) => c.companyId === tenantId)?.roles ?? [];
+            if (isAdminForCompany(profile, tenantId) && !roles.includes('admin')) {
+              roles = ['admin', ...roles];
+            }
+            if (import.meta.env.DEV) {
+              console.log('[App] Profile load (admin/tenant diagnostics)', {
+                'Firebase auth uid': uid,
+                tenantId,
+                'profile.companyId': profile.companyId,
+                'profile.companyIds': profile.companyIds,
+                'profile.adminCompanyIds': profile.adminCompanyIds,
+                'profile.companies': profile.companies?.map((c) => ({ companyId: c.companyId, roles: c.roles })),
+                isAdminForCompany: isAdminForCompany(profile, tenantId),
+                derivedRolesForTenant: roles,
+                finalRolesWrittenToCurrentUser: roles,
               });
             }
-            console.log('[App] Profile load (admin check)', {
-              uid,
-              profileCompanyId: profile.companyId,
-              profileCompanyIds: profile.companyIds,
-              profileAdminCompanyIds: profile.adminCompanyIds,
-              chosenTenantId: tenantId,
-              isAdminForCompany: isAdminForCompany(profile, tenantId),
-              rolesDerivedForTenantId: roles,
-              isAdmin,
+            setCurrentTenantId(tenantId);
+            setCurrentUser({
+              id: profile.uid,
+              name: profile.displayName,
+              email: profile.email,
+              roles,
             });
-          }
-          setCurrentTenantId(tenantId);
-          setCurrentUser({
-            id: profile.uid,
-            name: profile.displayName,
-            email: profile.email,
-            roles,
-          });
-          setMustChangePassword(profile.mustChangePassword === true);
-          const merged = mergeProfileForBackfill(profile, tenantId, roles);
-          try {
-            await getDataStore().setUserProfile(merged);
-          } catch (err) {
-            console.error('[App] Backfill setUserProfile failed:', err);
+            setMustChangePassword(profile.mustChangePassword === true);
+            const merged = mergeProfileForBackfill(profile, tenantId, roles);
             try {
               await getDataStore().setUserProfile(merged);
-            } catch (retryErr) {
-              console.error('[App] Backfill setUserProfile retry failed:', retryErr);
+            } catch (err) {
+              console.error('[App] Backfill setUserProfile failed:', err);
+              try {
+                await getDataStore().setUserProfile(merged);
+              } catch (retryErr) {
+                console.error('[App] Backfill setUserProfile retry failed:', retryErr);
+              }
             }
           }
         } else {
@@ -115,6 +124,27 @@ function App() {
             });
           }
           setMustChangePassword(false);
+          if (isSeedEnabled()) {
+            setCurrentTenantId(SEED_TENANT_ID);
+            setCurrentUser({
+              id: firebaseUser.uid,
+              name: (firebaseUser.displayName ?? firebaseUser.email?.split('@')[0]) ?? 'User',
+              email: firebaseUser.email ?? '',
+              roles: [],
+            });
+            if (import.meta.env.DEV) {
+              console.warn('[App] Seed fallback active (profile null)', { uid: firebaseUser.uid });
+            }
+          } else {
+            setCurrentTenantId(null);
+            setCurrentUser({
+              id: firebaseUser.uid,
+              name: (firebaseUser.displayName ?? firebaseUser.email?.split('@')[0]) ?? 'User',
+              email: firebaseUser.email ?? '',
+              roles: [],
+            });
+            setViewMode('register-company');
+          }
         }
       })
       .catch(() => {
@@ -125,29 +155,49 @@ function App() {
             projectId: getFirebaseProjectId(),
           });
         }
-        setCurrentTenantId(SEED_TENANT_ID);
-        setCurrentUser({
-          id: firebaseUser.uid,
-          name: (firebaseUser.displayName ?? firebaseUser.email?.split('@')[0]) ?? 'User',
-          email: firebaseUser.email ?? '',
-          roles: [],
-        });
+        if (isSeedEnabled()) {
+          setCurrentTenantId(SEED_TENANT_ID);
+          setCurrentUser({
+            id: firebaseUser.uid,
+            name: (firebaseUser.displayName ?? firebaseUser.email?.split('@')[0]) ?? 'User',
+            email: firebaseUser.email ?? '',
+            roles: [],
+          });
+          if (import.meta.env.DEV) {
+            console.warn('[App] Seed fallback active (profile load failed)', { uid: firebaseUser.uid });
+          }
+        } else {
+          setCurrentTenantId(null);
+          setCurrentUser({
+            id: firebaseUser.uid,
+            name: (firebaseUser.displayName ?? firebaseUser.email?.split('@')[0]) ?? 'User',
+            email: firebaseUser.email ?? '',
+            roles: [],
+          });
+          setViewMode('register-company');
+        }
         setMustChangePassword(false);
       });
     return () => { cancelled = true; };
-  }, [firebaseUser?.uid, setCurrentTenantId, setCurrentUser, setMustChangePassword]);
+  }, [firebaseUser?.uid, setCurrentTenantId, setCurrentUser, setMustChangePassword, setViewMode]);
 
   // Load tenant companies only when auth is configured and user is signed in,
   // so incognito/fresh sessions load companies after login instead of before (when auth would fail).
   useEffect(() => {
     if (!getAuth().isConfigured()) {
-      setTenantCompanies(mockTenantCompanies);
-      setCurrentTenantId(SEED_TENANT_ID);
-      setWorkItems(mockWorkItems);
-      setSprints(mockSprints);
-      setBoards(mockBoards);
-      setUsers(mockUsers);
-      setCurrentUser(mockUsers[0]);
+      if (isSeedEnabled()) {
+        setTenantCompanies(mockTenantCompanies);
+        setCurrentTenantId(SEED_TENANT_ID);
+        setWorkItems(mockWorkItems);
+        setSprints(mockSprints);
+        setBoards(mockBoards);
+        setUsers(mockUsers);
+        setCurrentUser(mockUsers[0]);
+        if (import.meta.env.DEV) console.warn('[App] Seed fallback active (auth not configured)');
+      } else {
+        setTenantCompanies([]);
+        setCurrentTenantId(null);
+      }
       return;
     }
     if (!firebaseUser) {
@@ -179,21 +229,33 @@ function App() {
             })
             .catch(() => setCurrentTenantId(first));
         } else {
-          setCurrentTenantId(SEED_TENANT_ID);
-          setWorkItems(mockWorkItems);
+          if (isSeedEnabled()) {
+            setCurrentTenantId(SEED_TENANT_ID);
+            setWorkItems(mockWorkItems);
+            if (import.meta.env.DEV) console.warn('[App] Seed fallback active (no companies from Firestore)', { uid });
+          } else {
+            setCurrentTenantId(null);
+          }
         }
       })
       .catch((err) => {
-        console.error('[Firebase] Load tenant companies failed, using mock:', err?.message || err);
-        setTenantCompanies(mockTenantCompanies);
-        setCurrentTenantId(SEED_TENANT_ID);
-        setWorkItems(mockWorkItems);
-        setSprints(mockSprints);
-        setBoards(mockBoards);
-        setUsers(mockUsers);
-        setCurrentUser(mockUsers[0]);
+        console.error('[Firebase] Load tenant companies failed:', err?.message || err);
+        if (isSeedEnabled()) {
+          setTenantCompanies(mockTenantCompanies);
+          setCurrentTenantId(SEED_TENANT_ID);
+          setWorkItems(mockWorkItems);
+          setSprints(mockSprints);
+          setBoards(mockBoards);
+          setUsers(mockUsers);
+          setCurrentUser(mockUsers[0]);
+          if (import.meta.env.DEV) console.warn('[App] Seed fallback active (load tenant companies failed)', { uid });
+        } else {
+          setTenantCompanies([]);
+          setCurrentTenantId(null);
+          setViewMode('register-company');
+        }
       });
-  }, [firebaseUser?.uid, setTenantCompanies, setCurrentTenantId, setWorkItems, setSprints, setBoards, setUsers, setCurrentUser]);
+  }, [firebaseUser?.uid, setTenantCompanies, setCurrentTenantId, setWorkItems, setSprints, setBoards, setUsers, setCurrentUser, setViewMode]);
 
   useEffect(() => {
     if (!currentTenantId) return;
