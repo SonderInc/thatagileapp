@@ -145,11 +145,12 @@ function App() {
         console.error('[Firebase] Load tenant companies failed, using mock:', err?.message || err);
         setTenantCompanies(mockTenantCompanies);
         setCurrentTenantId(SEED_TENANT_ID);
+        setWorkItems(mockWorkItems);
+        setSprints(mockSprints);
+        setBoards(mockBoards);
+        setUsers(mockUsers);
+        setCurrentUser(mockUsers[0]);
       });
-    setSprints(mockSprints);
-    setBoards(mockBoards);
-    setUsers(mockUsers);
-    setCurrentUser(mockUsers[0]);
   }, [firebaseUser?.uid, setTenantCompanies, setCurrentTenantId, setWorkItems, setSprints, setBoards, setUsers, setCurrentUser]);
 
   useEffect(() => {
