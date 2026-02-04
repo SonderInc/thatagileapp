@@ -5,6 +5,9 @@
  * When no tenant config is found, returns default config from FIREBASE_* env vars (same shape as tenant response).
  */
 
+/** Deployment verification: if this header appears in responses, the new function is live. */
+const VERSION = 'firebase-config-v2-verify';
+
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const admin = require('firebase-admin');
 
@@ -63,6 +66,7 @@ function jsonResponse(
     statusCode,
     headers: {
       'Content-Type': 'application/json',
+      'x-firebase-config-version': VERSION,
       ...(statusCode === 200 && { 'Cache-Control': `public, max-age=${cacheMaxAge}` }),
     },
     body: JSON.stringify(body),
@@ -74,7 +78,11 @@ export const handler = async (event: {
   queryStringParameters?: Record<string, string>;
 }) => {
   if (event.httpMethod !== 'GET') {
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+    return {
+      statusCode: 405,
+      headers: { 'Content-Type': 'application/json', 'x-firebase-config-version': VERSION },
+      body: JSON.stringify({ error: 'Method not allowed' }),
+    };
   }
 
   const slug = (event.queryStringParameters?.slug ?? event.queryStringParameters?.companyId ?? '').trim();
