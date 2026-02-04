@@ -62,6 +62,8 @@ const PublicLandingPage: React.FC = () => {
         email: user.email ?? email.trim(),
         displayName,
         companyId,
+        companyIds: [companyId],
+        adminCompanyIds: [companyId],
         companies: [{ companyId, roles: ['admin' as Role] }],
       };
       await store.setUserProfile(profile);

@@ -254,6 +254,10 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   }
   const resolvedCompanyId =
     data.companyId ?? (companyIds.length > 0 ? companyIds[0] : null) ?? (companies?.[0]?.companyId ?? null);
+  // Reflect admin from companies into adminCompanyIds so in-memory profile is consistent and backfill can persist it
+  const adminFromCompanies = (companies ?? []).filter((c) => c.roles?.includes('admin')).map((c) => c.companyId);
+  const resolvedAdminCompanyIds =
+    adminFromCompanies.length > 0 ? [...new Set([...adminCompanyIds, ...adminFromCompanies])] : adminCompanyIds;
   return {
     uid: snap.id,
     email: data.email ?? '',
@@ -261,7 +265,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     companyId: resolvedCompanyId,
     companies,
     companyIds: companyIds.length > 0 ? companyIds : undefined,
-    adminCompanyIds: adminCompanyIds.length > 0 ? adminCompanyIds : undefined,
+    adminCompanyIds: resolvedAdminCompanyIds.length > 0 ? resolvedAdminCompanyIds : undefined,
     mustChangePassword: data.mustChangePassword === true,
     employeeNumber: typeof data.employeeNumber === 'string' ? data.employeeNumber : undefined,
     phone: typeof data.phone === 'string' ? data.phone : undefined,
@@ -285,10 +289,15 @@ export function mergeProfileForBackfill(
     currentTenantId == null
       ? baseCompanies
       : [...otherCompanies, { companyId: currentTenantId, roles: rolesForTenant }];
+  const adminCompanyIds =
+    currentTenantId != null && roles.includes('admin')
+      ? [...new Set([...(profile.adminCompanyIds ?? []), currentTenantId])]
+      : undefined;
   return {
     ...profile,
     companyId: profile.companyId ?? currentTenantId ?? null,
     companies,
+    ...(adminCompanyIds !== undefined && { adminCompanyIds }),
   };
 }
 
