@@ -70,6 +70,9 @@ function App() {
             console.warn('[App] Seed fallback active (no company in profile)', { uid, profileCompanyId: profile.companyId });
           }
           if (tenantId == null) {
+            if (useStore.getState().currentTenantId != null) {
+              return;
+            }
             setCurrentTenantId(null);
             setCurrentUser({
               id: profile.uid,
@@ -294,8 +297,10 @@ function App() {
           if (import.meta.env.DEV) console.warn('[App] Seed fallback active (load tenant companies failed)', { uid });
         } else {
           setTenantCompanies([]);
-          setCurrentTenantId(null);
-          setViewMode('register-company');
+          if (useStore.getState().currentTenantId == null) {
+            setCurrentTenantId(null);
+            setViewMode('register-company');
+          }
         }
       });
   }, [firebaseUser?.uid, setTenantCompanies, setCurrentTenantId, setWorkItems, setSprints, setBoards, setUsers, setCurrentUser, setViewMode]);
