@@ -1,42 +1,7 @@
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /companies/{companyId} {
-      let me = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      allow read: if request.auth != null && me != null && me.data.get('companyIds', null) != null && companyId in me.data.companyIds;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && me != null && me.data.get('adminCompanyIds', null) != null && companyId in me.data.adminCompanyIds;
-    }
-    match /workItems/{itemId} {
-      let me = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      allow read, update, delete: if request.auth != null && me != null && me.data.get('companyIds', null) != null && resource.data.companyId != null && resource.data.companyId in me.data.companyIds;
-      allow create: if request.auth != null && me != null && me.data.get('companyIds', null) != null && request.resource.data.companyId != null && request.resource.data.companyId in me.data.companyIds;
-    }
-    match /users/{userId} {
-      let me = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      let sameCompany = me != null && me.data.companyIds != null && resource.data.companyIds != null && resource.data.companyIds.hasAny(me.data.companyIds);
-      let isAdminForTarget = me != null && me.data.get('adminCompanyIds', null) != null && resource.data.companyIds != null && resource.data.companyIds.hasAny(me.data.adminCompanyIds);
-      allow read: if request.auth != null && (request.auth.uid == userId || sameCompany || isAdminForTarget);
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow update: if request.auth != null && (request.auth.uid == userId || isAdminForTarget);
-      allow delete: if request.auth != null && request.auth.uid == userId;
-    }
-    match /teams/{teamId} {
-      let me = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      allow read, update, delete: if request.auth != null && me != null && resource.data.companyId != null && ((me.data.get('companyIds', null) != null && resource.data.companyId in me.data.companyIds) || (me.data.get('adminCompanyIds', null) != null && resource.data.companyId in me.data.adminCompanyIds));
-      allow create: if request.auth != null && me != null && request.resource.data.companyId != null && ((me.data.get('companyIds', null) != null && request.resource.data.companyId in me.data.companyIds) || (me.data.get('adminCompanyIds', null) != null && request.resource.data.companyId in me.data.adminCompanyIds));
-    }
-    match /invites/{token} {
-      allow read: if true;
-      allow create: if request.auth != null && request.resource.data.invitedBy == request.auth.uid;
-      allow update, delete: if request.auth != null && (resource.data.invitedBy == request.auth.uid || resource.data.email == request.auth.token.email);
-    }
-    match /licences/{key} {
-      allow read, update: if request.auth != null;
-      allow create: if request.auth != null;
-    }
-    match /tenantFirebaseConfigs/{slug} {
-      allow read, write: if false;
-    }
-  }
-}
+Firestore rules are in firestore.rules and are deployed via CLI.
+
+  npx firebase deploy --only firestore:rules
+
+Do not paste into Realtime Database (that uses JSON). Use the command above.
+
+If you must use the Console: Build → Firestore Database → Rules tab, then paste the contents of firestore.rules. The first line must be rules_version = '2'; (single quotes).
