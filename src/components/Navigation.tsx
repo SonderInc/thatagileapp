@@ -64,6 +64,18 @@ const Navigation: React.FC = () => {
     setAdminMenuOpen(false);
   };
 
+  const avatarInitials = (): string => {
+    const name = currentUser?.name?.trim();
+    if (name) {
+      const parts = name.split(/\s+/);
+      if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase().slice(0, 2);
+      return name.slice(0, 2).toUpperCase();
+    }
+    const email = currentUser?.email ?? '';
+    if (email) return email[0].toUpperCase();
+    return '?';
+  };
+
   return (
     <nav style={{
       backgroundColor: '#ffffff',
@@ -176,26 +188,50 @@ const Navigation: React.FC = () => {
         </div>
       )}
       {firebaseUser && (
-        <button
-          type="button"
-          onClick={handleSignOut}
-          style={{
-            marginLeft: 'auto',
-            padding: '8px 12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            backgroundColor: 'transparent',
-            border: '1px solid #d1d5db',
-            borderRadius: '8px',
-            color: '#6b7280',
-            cursor: 'pointer',
-            fontSize: '14px',
-          }}
-        >
-          <LogOut size={18} />
-          Sign out
-        </button>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            type="button"
+            onClick={() => setViewMode('user-profile')}
+            title="My profile"
+            aria-label="Open profile"
+            style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              border: 'none',
+              backgroundColor: '#3b82f6',
+              color: '#ffffff',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            {avatarInitials()}
+          </button>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            style={{
+              padding: '8px 12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              backgroundColor: 'transparent',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              color: '#6b7280',
+              cursor: 'pointer',
+              fontSize: '14px',
+            }}
+          >
+            <LogOut size={18} />
+            Sign out
+          </button>
+        </div>
       )}
     </nav>
   );

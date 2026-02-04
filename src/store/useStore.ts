@@ -42,7 +42,7 @@ interface AppState {
   selectedWorkItem: string | null;
   selectedProductId: string | null;
   selectedCompanyId: string | null;
-  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing' | 'add-product' | 'add-company' | 'register-company' | 'invite-user' | 'licence' | 'company-profile' | 'settings' | 'import-backlog';
+  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing' | 'add-product' | 'add-company' | 'register-company' | 'invite-user' | 'licence' | 'company-profile' | 'settings' | 'import-backlog' | 'user-profile';
   
   // Actions
   setWorkItems: (items: WorkItem[]) => void;

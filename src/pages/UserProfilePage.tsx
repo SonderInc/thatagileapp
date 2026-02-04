@@ -1,0 +1,136 @@
+import React, { useState, useEffect } from 'react';
+import { useStore } from '../store/useStore';
+import { getDataStore } from '../lib/adapters';
+import type { UserProfile } from '../types';
+import type { Role } from '../types';
+
+const UserProfilePage: React.FC = () => {
+  const { currentUser, firebaseUser, setViewMode, getCurrentCompany, getRoleLabel } = useStore();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!currentUser?.id) {
+      setLoading(false);
+      return;
+    }
+    getDataStore()
+      .getUserProfile(currentUser.id)
+      .then((p) => {
+        setProfile(p ?? null);
+      })
+      .catch(() => setProfile(null))
+      .finally(() => setLoading(false));
+  }, [currentUser?.id]);
+
+  const company = getCurrentCompany();
+  const currentTenantId = company?.id ?? null;
+  const rolesForCompany = profile?.companies?.find((c) => c.companyId === currentTenantId)?.roles ?? currentUser?.roles ?? [];
+  const allCompaniesWithRoles = profile?.companies ?? [];
+
+  if (!firebaseUser || !currentUser) {
+    return (
+      <div className="page-container">
+        <p style={{ color: '#6b7280', marginBottom: '16px' }}>Sign in to view your profile.</p>
+        <button type="button" className="btn-secondary" onClick={() => setViewMode('landing')}>
+          Back
+        </button>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="page-container">
+        <p style={{ color: '#6b7280' }}>Loading profile…</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="page-container">
+      <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <button type="button" className="btn-secondary" onClick={() => setViewMode('landing')}>
+          Back
+        </button>
+        <h1 className="page-title" style={{ margin: 0 }}>
+          My profile
+        </h1>
+      </div>
+
+      <div
+        style={{
+          maxWidth: '480px',
+          border: '1px solid #e5e7eb',
+          borderRadius: '8px',
+          padding: '24px',
+          backgroundColor: '#fafafa',
+        }}
+      >
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '4px', textTransform: 'uppercase' }}>
+            Name
+          </label>
+          <div style={{ fontSize: '16px', color: '#111827' }}>{profile?.displayName || currentUser.name || '—'}</div>
+        </div>
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '4px', textTransform: 'uppercase' }}>
+            Email
+          </label>
+          <div style={{ fontSize: '16px', color: '#111827' }}>{profile?.email ?? currentUser.email ?? '—'}</div>
+        </div>
+        {company && (
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '4px', textTransform: 'uppercase' }}>
+              Current company
+            </label>
+            <div style={{ fontSize: '16px', color: '#111827' }}>{company.name}</div>
+          </div>
+        )}
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '4px', textTransform: 'uppercase' }}>
+            Roles (this company)
+          </label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            {rolesForCompany.length === 0 ? (
+              <span style={{ color: '#9ca3af' }}>—</span>
+            ) : (
+              rolesForCompany.map((r) => (
+                <span
+                  key={r}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    backgroundColor: '#e5e7eb',
+                    fontSize: '13px',
+                    color: '#374151',
+                  }}
+                >
+                  {getRoleLabel(r as Role)}
+                </span>
+              ))
+            )}
+          </div>
+        </div>
+        {allCompaniesWithRoles.length > 1 && (
+          <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>
+              Other companies
+            </label>
+            <ul style={{ margin: 0, paddingLeft: '20px', color: '#374151', fontSize: '14px' }}>
+              {allCompaniesWithRoles
+                .filter((c) => c.companyId !== currentTenantId)
+                .map((c) => (
+                  <li key={c.companyId} style={{ marginBottom: '4px' }}>
+                    Company {c.companyId}: {c.roles.map((r) => getRoleLabel(r as Role)).join(', ')}
+                  </li>
+                ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default UserProfilePage;
