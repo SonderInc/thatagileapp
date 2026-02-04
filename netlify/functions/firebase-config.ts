@@ -6,7 +6,7 @@
  */
 
 /** Deployment verification: if this header appears in responses, the new function is live. */
-const VERSION = 'firebase-config-v2-verify';
+const VERSION = 'firebase-config-v3-live';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const admin = require('firebase-admin');
@@ -57,18 +57,19 @@ function getDefaultConfigFromEnv(): { config: ConfigPayload } | { missing: strin
   return { config };
 }
 
+const COMMON_HEADERS = {
+  'content-type': 'application/json',
+  'cache-control': 'no-store',
+  'x-firebase-config-version': VERSION,
+} as const;
+
 function jsonResponse(
   statusCode: number,
   body: Record<string, unknown>,
-  cacheMaxAge = 60,
 ): { statusCode: number; headers: Record<string, string>; body: string } {
   return {
     statusCode,
-    headers: {
-      'Content-Type': 'application/json',
-      'x-firebase-config-version': VERSION,
-      ...(statusCode === 200 && { 'Cache-Control': `public, max-age=${cacheMaxAge}` }),
-    },
+    headers: { ...COMMON_HEADERS },
     body: JSON.stringify(body),
   };
 }
@@ -80,7 +81,7 @@ export const handler = async (event: {
   if (event.httpMethod !== 'GET') {
     return {
       statusCode: 405,
-      headers: { 'Content-Type': 'application/json', 'x-firebase-config-version': VERSION },
+      headers: { ...COMMON_HEADERS },
       body: JSON.stringify({ error: 'Method not allowed' }),
     };
   }
@@ -102,7 +103,7 @@ export const handler = async (event: {
     if (process.env.NODE_ENV !== 'production') {
       console.log('[firebase-config] source=default');
     }
-    return jsonResponse(200, result.config as unknown as Record<string, unknown>, 60);
+    return jsonResponse(200, result.config as unknown as Record<string, unknown>);
   }
 
   try {
@@ -131,7 +132,7 @@ export const handler = async (event: {
         if (process.env.NODE_ENV !== 'production') {
           console.log('[firebase-config] source=tenant slug=', slug);
         }
-        return jsonResponse(200, config as unknown as Record<string, unknown>, 300);
+        return jsonResponse(200, config as unknown as Record<string, unknown>);
       }
     }
 
@@ -149,7 +150,7 @@ export const handler = async (event: {
     if (process.env.NODE_ENV !== 'production') {
       console.log('[firebase-config] source=default (tenant not found) slug=', slug);
     }
-    return jsonResponse(200, result.config as unknown as Record<string, unknown>, 60);
+    return jsonResponse(200, result.config as unknown as Record<string, unknown>);
   } catch (err) {
     console.error('[firebase-config]', err);
     // On registry error, fall back to default config from env
@@ -163,6 +164,6 @@ export const handler = async (event: {
     if (process.env.NODE_ENV !== 'production') {
       console.log('[firebase-config] source=default (registry error)');
     }
-    return jsonResponse(200, result.config as unknown as Record<string, unknown>, 60);
+    return jsonResponse(200, result.config as unknown as Record<string, unknown>);
   }
 };

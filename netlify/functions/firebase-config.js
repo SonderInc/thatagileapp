@@ -4,9 +4,15 @@
  * When no tenant config is found, returns default config from FIREBASE_* env vars.
  */
 
-const VERSION = 'firebase-config-v2-verify';
+const VERSION = 'firebase-config-v3-live';
 
 const admin = require('firebase-admin');
+
+const COMMON_HEADERS = {
+  'content-type': 'application/json',
+  'cache-control': 'no-store',
+  'x-firebase-config-version': VERSION,
+};
 
 const REGISTRY_COLLECTION = 'tenantFirebaseConfigs';
 const REQUIRED_DEFAULT_KEYS = ['FIREBASE_PROJECT_ID', 'FIREBASE_API_KEY'];
@@ -43,14 +49,10 @@ function getDefaultConfigFromEnv() {
   return { config };
 }
 
-function jsonResponse(statusCode, body, cacheMaxAge = 60) {
+function jsonResponse(statusCode, body) {
   return {
     statusCode,
-    headers: {
-      'Content-Type': 'application/json',
-      'x-firebase-config-version': VERSION,
-      ...(statusCode === 200 && { 'Cache-Control': `public, max-age=${cacheMaxAge}` }),
-    },
+    headers: { ...COMMON_HEADERS },
     body: JSON.stringify(body),
   };
 }
@@ -59,7 +61,7 @@ exports.handler = async function (event) {
   if (event.httpMethod !== 'GET') {
     return {
       statusCode: 405,
-      headers: { 'Content-Type': 'application/json', 'x-firebase-config-version': VERSION },
+      headers: { ...COMMON_HEADERS },
       body: JSON.stringify({ error: 'Method not allowed' }),
     };
   }
@@ -74,7 +76,7 @@ exports.handler = async function (event) {
         missingKeys: result.missing,
       });
     }
-    return jsonResponse(200, result.config, 60);
+    return jsonResponse(200, result.config);
   }
 
   try {
@@ -100,7 +102,7 @@ exports.handler = async function (event) {
         if (typeof data.appId === 'string' && data.appId) config.appId = data.appId;
         if (typeof data.measurementId === 'string' && data.measurementId)
           config.measurementId = data.measurementId;
-        return jsonResponse(200, config, 300);
+        return jsonResponse(200, config);
       }
     }
 
@@ -111,7 +113,7 @@ exports.handler = async function (event) {
         missingKeys: result.missing,
       });
     }
-    return jsonResponse(200, result.config, 60);
+    return jsonResponse(200, result.config);
   } catch (err) {
     console.error('[firebase-config]', err);
     const result = getDefaultConfigFromEnv();
@@ -121,6 +123,6 @@ exports.handler = async function (event) {
         missingKeys: result.missing,
       });
     }
-    return jsonResponse(200, result.config, 60);
+    return jsonResponse(200, result.config);
   }
 };
