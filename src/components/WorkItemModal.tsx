@@ -289,6 +289,29 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
             </div>
           )}
 
+          {isEditing && formData.type === 'user-story' && (
+            <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="checkbox"
+                id="user-story-accepted"
+                checked={formData.status === 'done'}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    status: e.target.checked ? 'done' : 'to-do',
+                  })
+                }
+                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+              />
+              <label htmlFor="user-story-accepted" style={{ fontWeight: '500', fontSize: '14px', cursor: 'pointer' }}>
+                Accepted
+              </label>
+              <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                (moves story to Done)
+              </span>
+            </div>
+          )}
+
           {formData.type !== 'product' && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
               <div>

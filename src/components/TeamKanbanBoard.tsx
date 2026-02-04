@@ -51,6 +51,11 @@ const TeamKanbanBoard: React.FC<TeamKanbanBoardProps> = ({
     const columnId = result.destination.droppableId.split('::')[0];
     const newStatus = getStatusForTeamColumn(columnId);
     moveWorkItem(result.draggableId, newStatus, columnId);
+    // When a user story is dragged to Ready, move all its tasks to Ready as well
+    const item = workItems.find((i) => i.id === result.draggableId);
+    if (item?.type === 'user-story' && columnId === 'to-do' && newStatus === 'to-do') {
+      getTasksForStory(result.draggableId).forEach((task) => moveWorkItem(task.id, 'to-do'));
+    }
   };
 
   const handleMarkStoryDone = (storyId: string) => {
@@ -158,6 +163,27 @@ const TeamKanbanBoard: React.FC<TeamKanbanBoardProps> = ({
           const laneItems = getStoriesForLane(lane.id);
           const isEven = laneIndex % 2 === 0;
 
+          // Content-based min height for story lanes so swimlane grows with story + tasks
+          let laneMinHeight = 60;
+          if (!isBugLane && !isAdHocLane) {
+            let maxCardCount = 0;
+            for (const column of columns) {
+              const colId = column.id;
+              let count = 0;
+              for (const story of laneItems) {
+                const showFullStoryCard = isStoryCardInColumn(story, colId);
+                const tasksInColumn = getTasksForStory(story.id).filter((t) =>
+                  isStatusInTeamColumn(t.status, colId)
+                );
+                if (showFullStoryCard) count += 1;
+                count += tasksInColumn.length;
+                if (!showFullStoryCard && tasksInColumn.length > 0) count += 1;
+              }
+              maxCardCount = Math.max(maxCardCount, count);
+            }
+            laneMinHeight = Math.max(60, 24 + maxCardCount * 52);
+          }
+
           return (
             <div
               key={lane.id}
@@ -167,7 +193,7 @@ const TeamKanbanBoard: React.FC<TeamKanbanBoardProps> = ({
                 flexShrink: 0,
                 borderTop: '2px solid #e5e7eb',
                 borderBottom: '2px solid #e5e7eb',
-                minHeight: '60px',
+                minHeight: laneMinHeight,
                 backgroundColor: isEven ? '#fafafa' : '#ffffff',
               }}
             >
