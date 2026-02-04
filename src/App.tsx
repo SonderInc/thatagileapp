@@ -97,10 +97,14 @@ function App() {
                 });
               }
               console.log('[App] Profile load (admin/tenant diagnostics)', {
-                tenantCompanyId,
-                isAdmin,
-                finalRoles,
+                uid: firebaseUser.uid,
+                email: firebaseUser.email,
                 'profile.companyId': profile.companyId,
+                'profile.companyIds': profile.companyIds,
+                'profile.adminCompanyIds': profile.adminCompanyIds,
+                tenantId: tenantCompanyId,
+                isAdminForCompany: isAdmin,
+                finalRoles,
               });
             }
             setCurrentTenantId(tenantCompanyId);

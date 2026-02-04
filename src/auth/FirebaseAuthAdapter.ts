@@ -52,4 +52,8 @@ export const FirebaseAuthAdapter: IAuth = {
     if (auth) await fbSignOut(auth);
   },
   isConfigured: isFirebaseConfigured,
+  async getIdToken() {
+    if (!auth?.currentUser) return null;
+    return auth.currentUser.getIdToken();
+  },
 };

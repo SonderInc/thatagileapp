@@ -14,6 +14,8 @@ export interface IAuth {
   signOut(): Promise<void>;
   /** Whether the provider is configured (e.g. Firebase project set). */
   isConfigured(): boolean;
+  /** Current user's ID token for server auth (e.g. Bearer token). Returns null if not signed in. */
+  getIdToken(): Promise<string | null>;
 }
 
 export type { AuthUser };

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
-import { getDataStore } from '../lib/adapters';
+import { getAuth, getDataStore } from '../lib/adapters';
 import { ensureCompanyWorkItem } from '../lib/workItems/resetBacklog';
-import type { TenantCompany, UserProfile, Role, CompanyType } from '../types';
+import type { CompanyType } from '../types';
 
 function slugify(name: string): string {
   return name
@@ -17,8 +17,10 @@ function slugify(name: string): string {
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
+const PROVISION_FN_PATH = '/.netlify/functions/provision-company';
+
 const RegisterCompanyPage: React.FC = () => {
-  const { firebaseUser, setViewMode, setCurrentTenantId, setTenantCompanies, setCurrentUser, tenantCompanies } = useStore();
+  const { firebaseUser, setViewMode, setCurrentTenantId, setTenantCompanies, setCurrentUser } = useStore();
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
@@ -35,6 +37,12 @@ const RegisterCompanyPage: React.FC = () => {
       setLoading(false);
       return;
     }
+    const idToken = await getAuth().getIdToken();
+    if (!idToken) {
+      setError('You must be signed in to register a company.');
+      setLoading(false);
+      return;
+    }
     const normalizedSlug = slugify(slug.trim() || name);
     if (!normalizedSlug) {
       setError('Slug is required. Use only letters, numbers, and hyphens.');
@@ -46,55 +54,54 @@ const RegisterCompanyPage: React.FC = () => {
       setLoading(false);
       return;
     }
-    const companyId = `company-${Date.now()}`;
-    const now = new Date();
-    const trialEndsAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-    const company: TenantCompany = {
-      id: companyId,
+    const payload = {
       name: name.trim() || 'New Company',
       slug: normalizedSlug,
-      createdAt: now,
-      updatedAt: now,
-      trialEndsAt,
-      seats: 50,
       companyType,
     };
-    // Registering user is made admin for this company (unlimited rights: user management, backlog, settings, etc.)
-    const profile: UserProfile = {
-      uid: firebaseUser.uid,
-      email: firebaseUser.email ?? '',
-      displayName: (firebaseUser.displayName ?? firebaseUser.email?.split('@')[0]) ?? 'User',
-      companyId,
-      companyIds: [companyId],
-      adminCompanyIds: [companyId],
-      companies: [{ companyId, roles: ['admin' as Role] }],
-    };
-    const finalRoles: Role[] = ['admin'];
+    if (import.meta.env.DEV) {
+      console.log('[RegisterCompanyPage] provisioning request start', payload);
+    }
     try {
-      await getDataStore().addTenantCompany(company);
+      const res = await fetch(PROVISION_FN_PATH, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      const rawData = await res.json().catch(() => ({}));
       if (import.meta.env.DEV) {
-        console.log('[RegisterCompanyPage] Company created', { companyId });
+        console.log('[RegisterCompanyPage] provisioning result', { status: res.status, data: rawData });
       }
-      await getDataStore().setUserProfile(profile);
-      if (import.meta.env.DEV) {
-        console.log('[RegisterCompanyPage] User profile updated', {
-          companyId: profile.companyId,
-          companyIds: profile.companyIds,
-          adminCompanyIds: profile.adminCompanyIds,
-          companies: profile.companies,
-          finalRoles,
-        });
+      if (!res.ok) {
+        const errBody = rawData as { error?: string };
+        if (res.status === 401) setError('Please sign in again.');
+        else if (res.status === 409) setError('This user already belongs to a company.');
+        else if (res.status === 400) setError(errBody.error ?? 'Invalid request.');
+        else setError(errBody.error ?? 'Could not create company.');
+        setLoading(false);
+        return;
       }
-      await ensureCompanyWorkItem(company.id);
-      setTenantCompanies([...tenantCompanies, company]);
+      const data = rawData as { companyId: string; slug: string };
+      const { companyId, slug: returnedSlug } = data;
+      const companies = await getDataStore().getTenantCompanies();
+      setTenantCompanies(companies);
+      await ensureCompanyWorkItem(companyId);
+      const displayName = (firebaseUser.displayName ?? firebaseUser.email?.split('@')[0]) ?? 'User';
+      const email = firebaseUser.email ?? '';
       setCurrentTenantId(companyId);
       setCurrentUser({
         id: firebaseUser.uid,
-        name: profile.displayName,
-        email: profile.email,
-        roles: finalRoles,
+        name: displayName,
+        email,
+        roles: ['admin'],
       });
       setViewMode('landing');
+      if (typeof window !== 'undefined') {
+        window.history.replaceState(null, '', '/' + returnedSlug);
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);

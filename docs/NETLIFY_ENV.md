@@ -20,6 +20,19 @@ If `FIREBASE_PROJECT_ID` or `FIREBASE_API_KEY` are missing when the default path
 
 You also need `FIREBASE_SERVICE_ACCOUNT_JSON` (full JSON key for the **registry** Firebase project) if you use tenant-specific configs via the `tenantFirebaseConfigs` Firestore collection. See `docs/TENANT_FIREBASE_CONFIG_REGISTRY.md`.
 
+## Required for `provision-company` function (server-side company creation)
+
+The `/.netlify/functions/provision-company` function creates a company and sets the signed-in user as admin (Firebase Admin SDK). Set these **server-side** env vars for the function.
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | Yes (preferred) | Full JSON string of the Firebase service account key (same as upload-logo / firebase-config). |
+| `FIREBASE_PROJECT_ID` | If not using JSON | Firebase project ID (alternative to full JSON). |
+| `FIREBASE_CLIENT_EMAIL` | If not using JSON | Service account client email. |
+| `FIREBASE_PRIVATE_KEY` | If not using JSON | Service account private key; restore literal `\n` for newlines when pasting. |
+
+**Optional:** `FIREBASE_STORAGE_BUCKET`, `FIREBASE_DATABASE_URL` if needed by other functions or admin usage.
+
 ## Required for Firebase (auth + Firestore + Storage) — build-time / client
 
 | Variable | Description | Example |
@@ -45,3 +58,14 @@ Get the exact `storageBucket` from Firebase Console → **Project settings** →
 ## Scopes
 
 Apply variables to **Production** (and **Branch deploys** if you use them). Variables are available at build time; `VITE_*` are inlined into the client bundle.
+
+## Verification checklist (provision-company)
+
+After deploying server-side company provisioning:
+
+1. Log in as a brand-new user (no existing company).
+2. Click **Create company** and submit valid name, slug, and company type.
+3. Confirm in Firestore: `users/{uid}` has `companyId`, `companyIds`, `adminCompanyIds`, `companies` set to the new company only.
+4. Confirm: `companies/{companyId}` exists with the correct `slug`.
+5. Confirm the app redirects to `/{slug}` and the admin menu appears.
+6. Confirm no seed tenant (e.g. `seed-tenant-1`) appears anywhere for that user.
