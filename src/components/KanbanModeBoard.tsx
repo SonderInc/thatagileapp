@@ -123,7 +123,6 @@ const KanbanModeBoard: React.FC<KanbanModeBoardProps> = ({
         {/* One row per swimlane */}
         {lanes.map((lane, laneIndex) => {
           const isEven = laneIndex % 2 === 0;
-          const laneItems = getItemsForLane(lane.id);
           const maxCardCount = Math.max(
             0,
             ...columns.map((col) => getItemsInCell(lane.id, col.id).length)
