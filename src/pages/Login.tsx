@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { getAuth, getDataStore } from '../lib/adapters';
 import { useStore } from '../store/useStore';
+import { mergeProfileForBackfill } from '../lib/firestore';
+import { isAdminForCompany } from '../lib/roles';
 import { SEED_TENANT_ID, isSeedEnabled } from '../utils/mockData';
 import type { UserProfile, Role } from '../types';
 
@@ -68,13 +70,24 @@ const Login: React.FC = () => {
         if (tenantId === SEED_TENANT_ID && import.meta.env.DEV) {
           console.warn('[Login] Seed fallback active (no company in profile)', { uid });
         }
+        const derivedRoles =
+          tenantId != null ? (profile.companies?.find((c) => c.companyId === tenantId)?.roles ?? []) : [];
+        const isAdmin = tenantId != null ? isAdminForCompany(profile, tenantId) : false;
+        const finalRoles =
+          isAdmin && !derivedRoles.includes('admin') ? (['admin', ...derivedRoles] as Role[]) : (derivedRoles as Role[]);
         setCurrentTenantId(tenantId);
         setCurrentUser({
           id: profile.uid,
           name: profile.displayName,
           email: profile.email,
-          roles: tenantId != null ? (profile.companies?.find((c) => c.companyId === tenantId)?.roles ?? []) : [],
+          roles: finalRoles,
         });
+        if (tenantId != null && tenantId !== SEED_TENANT_ID) {
+          const merged = mergeProfileForBackfill(profile, tenantId, finalRoles);
+          await getDataStore().setUserProfile(merged).catch((err) => {
+            if (import.meta.env.DEV) console.warn('[Login] Backfill setUserProfile failed:', err);
+          });
+        }
       } else {
         if (fallbackTenantId === SEED_TENANT_ID && import.meta.env.DEV) {
           console.warn('[Login] Seed fallback active (profile null)', { uid });
