@@ -279,33 +279,56 @@ function App() {
             })
             .catch(() => applyTenant(first));
         } else {
-          const current = useStore.getState().currentTenantId;
-          if (current != null) {
-            if (import.meta.env.DEV) {
-              console.warn('[App] Companies list empty but profile has tenant; preserving tenant and attempting backfill', { uid, currentTenantId: current });
-            }
-            getDataStore()
-              .getUserProfile(uid)
-              .then((profile) => {
-                if (!profile) return;
-                const state = useStore.getState();
-                const roles = (state.currentUser?.roles?.length ? state.currentUser.roles : profile.companies?.find((c) => c.companyId === current)?.roles) ?? (isAdminForCompany(profile, current) ? (['admin'] as Role[]) : []);
-                const merged = mergeProfileForBackfill(profile, current, roles);
-                return getDataStore().setUserProfile(merged);
-              })
-              .then(() => getDataStore().getTenantCompanies())
-              .then((companies2) => {
-                setTenantCompanies(companies2);
-              })
-              .catch((backfillErr) => {
-                if (import.meta.env.DEV) console.error('[App] Backfill or retry getTenantCompanies failed:', backfillErr);
-              });
-          } else if (isSeedEnabled()) {
+          if (isSeedEnabled()) {
             setCurrentTenantId(SEED_TENANT_ID);
             setWorkItems(mockWorkItems);
             if (import.meta.env.DEV) console.warn('[App] Seed fallback active (no companies from Firestore)', { uid });
           } else {
-            setCurrentTenantId(null);
+            getDataStore()
+              .getUserProfile(uid)
+              .then((profile) => {
+                const tenantId =
+                  profile?.companyId ??
+                  profile?.companyIds?.[0] ??
+                  profile?.companies?.[0]?.companyId ??
+                  null;
+                if (tenantId != null) {
+                  if (import.meta.env.DEV) {
+                    console.warn('[App] Companies list empty but profile has tenant; setting from profile and backfilling', { uid, tenantId });
+                  }
+                  const derivedRoles =
+                    profile.companies?.find((c) => c.companyId === tenantId)?.roles ?? [];
+                  const isAdmin = profile ? isAdminForCompany(profile, tenantId) : false;
+                  const roles = (isAdmin && !derivedRoles.includes('admin') ? ['admin', ...derivedRoles] : derivedRoles) as Role[];
+                  setCurrentTenantId(tenantId);
+                  setCurrentUser({
+                    id: profile!.uid,
+                    name: profile!.displayName,
+                    email: profile!.email,
+                    roles,
+                  });
+                  if (useStore.getState().viewMode === 'register-company') {
+                    setViewMode('landing');
+                  }
+                  const merged = mergeProfileForBackfill(profile!, tenantId, roles);
+                  return getDataStore()
+                    .setUserProfile(merged)
+                    .then(() => getDataStore().getTenantCompanies())
+                    .then((companies2) => {
+                      setTenantCompanies(companies2);
+                    });
+                } else {
+                  setCurrentTenantId(null);
+                  setViewMode('register-company');
+                }
+              })
+              .catch((err) => {
+                if (import.meta.env.DEV) console.error('[App] Profile load when companies empty failed:', err);
+                if (useStore.getState().currentTenantId == null) {
+                  setCurrentTenantId(null);
+                  setViewMode('register-company');
+                }
+              });
           }
         }
       })
@@ -329,8 +352,10 @@ function App() {
         } else {
           setTenantCompanies([]);
           const hasTenant = useStore.getState().currentTenantId != null;
-          if (hasTenant && import.meta.env.DEV) {
-            console.warn('[App] Load tenant companies failed but profile has tenant; preserving tenant and attempting backfill', { uid });
+          if (hasTenant) {
+            if (import.meta.env.DEV) {
+              console.warn('[App] Load tenant companies failed but profile has tenant; preserving tenant and attempting backfill', { uid });
+            }
             getDataStore()
               .getUserProfile(uid)
               .then((profile) => {
@@ -349,9 +374,49 @@ function App() {
               .catch((backfillErr) => {
                 if (import.meta.env.DEV) console.error('[App] Backfill or retry getTenantCompanies failed:', backfillErr);
               });
-          } else if (!hasTenant) {
-            setCurrentTenantId(null);
-            setViewMode('register-company');
+          } else {
+            getDataStore()
+              .getUserProfile(uid)
+              .then((profile) => {
+                const tenantId =
+                  profile?.companyId ??
+                  profile?.companyIds?.[0] ??
+                  profile?.companies?.[0]?.companyId ??
+                  null;
+                if (tenantId != null) {
+                  if (import.meta.env.DEV) {
+                    console.warn('[App] getTenantCompanies failed but profile has tenant; setting from profile and backfilling', { uid, tenantId });
+                  }
+                  const derivedRoles =
+                    profile.companies?.find((c) => c.companyId === tenantId)?.roles ?? [];
+                  const isAdmin = profile ? isAdminForCompany(profile, tenantId) : false;
+                  const roles = (isAdmin && !derivedRoles.includes('admin') ? ['admin', ...derivedRoles] : derivedRoles) as Role[];
+                  setCurrentTenantId(tenantId);
+                  setCurrentUser({
+                    id: profile.uid,
+                    name: profile.displayName,
+                    email: profile.email,
+                    roles,
+                  });
+                  if (useStore.getState().viewMode === 'register-company') {
+                    setViewMode('landing');
+                  }
+                  const merged = mergeProfileForBackfill(profile, tenantId, roles);
+                  return getDataStore()
+                    .setUserProfile(merged)
+                    .then(() => getDataStore().getTenantCompanies())
+                    .then((companies2) => {
+                      setTenantCompanies(companies2);
+                    });
+                } else {
+                  setCurrentTenantId(null);
+                  setViewMode('register-company');
+                }
+              })
+              .catch(() => {
+                setCurrentTenantId(null);
+                setViewMode('register-company');
+              });
           }
         }
       });
