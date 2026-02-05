@@ -287,10 +287,15 @@ function App() {
             getDataStore()
               .getUserProfile(uid)
               .then((profile) => {
+                if (!profile) {
+                  setCurrentTenantId(null);
+                  setViewMode('register-company');
+                  return;
+                }
                 const tenantId =
-                  profile?.companyId ??
-                  profile?.companyIds?.[0] ??
-                  profile?.companies?.[0]?.companyId ??
+                  profile.companyId ??
+                  profile.companyIds?.[0] ??
+                  profile.companies?.[0]?.companyId ??
                   null;
                 if (tenantId != null) {
                   if (import.meta.env.DEV) {
@@ -298,19 +303,19 @@ function App() {
                   }
                   const derivedRoles =
                     profile.companies?.find((c) => c.companyId === tenantId)?.roles ?? [];
-                  const isAdmin = profile ? isAdminForCompany(profile, tenantId) : false;
+                  const isAdmin = isAdminForCompany(profile, tenantId);
                   const roles = (isAdmin && !derivedRoles.includes('admin') ? ['admin', ...derivedRoles] : derivedRoles) as Role[];
                   setCurrentTenantId(tenantId);
                   setCurrentUser({
-                    id: profile!.uid,
-                    name: profile!.displayName,
-                    email: profile!.email,
+                    id: profile.uid,
+                    name: profile.displayName,
+                    email: profile.email,
                     roles,
                   });
                   if (useStore.getState().viewMode === 'register-company') {
                     setViewMode('landing');
                   }
-                  const merged = mergeProfileForBackfill(profile!, tenantId, roles);
+                  const merged = mergeProfileForBackfill(profile, tenantId, roles);
                   return getDataStore()
                     .setUserProfile(merged)
                     .then(() => getDataStore().getTenantCompanies())
@@ -378,10 +383,15 @@ function App() {
             getDataStore()
               .getUserProfile(uid)
               .then((profile) => {
+                if (!profile) {
+                  setCurrentTenantId(null);
+                  setViewMode('register-company');
+                  return;
+                }
                 const tenantId =
-                  profile?.companyId ??
-                  profile?.companyIds?.[0] ??
-                  profile?.companies?.[0]?.companyId ??
+                  profile.companyId ??
+                  profile.companyIds?.[0] ??
+                  profile.companies?.[0]?.companyId ??
                   null;
                 if (tenantId != null) {
                   if (import.meta.env.DEV) {
@@ -389,7 +399,7 @@ function App() {
                   }
                   const derivedRoles =
                     profile.companies?.find((c) => c.companyId === tenantId)?.roles ?? [];
-                  const isAdmin = profile ? isAdminForCompany(profile, tenantId) : false;
+                  const isAdmin = isAdminForCompany(profile, tenantId);
                   const roles = (isAdmin && !derivedRoles.includes('admin') ? ['admin', ...derivedRoles] : derivedRoles) as Role[];
                   setCurrentTenantId(tenantId);
                   setCurrentUser({
