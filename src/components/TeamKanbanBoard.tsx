@@ -208,7 +208,7 @@ const TeamKanbanBoard: React.FC<TeamKanbanBoardProps> = ({
                   color: '#6b7280',
                   textTransform: 'uppercase',
                   display: 'flex',
-                  alignItems: 'center',
+                  alignItems: 'flex-start',
                 }}
               >
                 {featureItem ? (
