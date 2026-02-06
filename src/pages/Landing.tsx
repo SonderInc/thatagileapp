@@ -6,10 +6,6 @@ import { Package, Plus } from 'lucide-react';
 const Landing: React.FC = () => {
   const {
     getWorkItemsByType,
-    getCompanies,
-    getProductsByCompany,
-    selectedCompanyId,
-    setSelectedCompanyId,
     setSelectedProductId,
     setViewMode,
     canAddProduct,
@@ -17,14 +13,7 @@ const Landing: React.FC = () => {
     getTypeLabel,
   } = useStore();
   const tenant = getCurrentCompany();
-  const companies = getCompanies();
-  const products = selectedCompanyId
-    ? getProductsByCompany(selectedCompanyId)
-    : getWorkItemsByType('product');
-
-  const handleCompanyClick = (company: WorkItem) => {
-    setSelectedCompanyId(selectedCompanyId === company.id ? null : company.id);
-  };
+  const products = getWorkItemsByType('product');
 
   const handleProductClick = (product: WorkItem) => {
     setSelectedProductId(product.id);
@@ -90,52 +79,6 @@ const Landing: React.FC = () => {
             )}
           </div>
         </div>
-        {companies.length > 0 && (
-          <div style={{ marginTop: '16px' }}>
-            <p style={{ margin: '0 0 8px 0', color: '#6b7280', fontSize: '14px' }}>
-              Filter products by company:
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
-              <button
-                type="button"
-                onClick={() => setSelectedCompanyId(null)}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: selectedCompanyId ? '#f3f4f6' : '#3b82f6',
-                  color: selectedCompanyId ? '#374151' : '#ffffff',
-                  border: '1px solid',
-                  borderColor: selectedCompanyId ? '#d1d5db' : '#3b82f6',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                }}
-              >
-                All
-              </button>
-              {companies.map((company) => (
-                <button
-                  key={company.id}
-                  type="button"
-                  onClick={() => handleCompanyClick(company)}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: selectedCompanyId === company.id ? '#3b82f6' : '#f3f4f6',
-                    color: selectedCompanyId === company.id ? '#ffffff' : '#374151',
-                    border: '1px solid',
-                    borderColor: selectedCompanyId === company.id ? '#3b82f6' : '#d1d5db',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {company.title}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Products section */}
