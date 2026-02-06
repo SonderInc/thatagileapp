@@ -107,6 +107,8 @@ export interface WorkItem {
   teamId?: string;
   /** Feature only: team ids added to this feature; each team's board shows a swimlane for this feature. */
   teamIds?: string[];
+  /** Optional sort order among siblings (same parentId). Lower first; undefined sorts after. */
+  order?: number;
 }
 
 export interface Sprint {

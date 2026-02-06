@@ -336,7 +336,9 @@ export const useStore = create<AppState>((set, get) => ({
   },
   
   getWorkItemsByParent: (parentId) => {
-    return get().workItems.filter((item) => item.parentId === parentId);
+    return get()
+      .workItems.filter((item) => item.parentId === parentId)
+      .sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || a.title.localeCompare(b.title));
   },
   
   getWorkItemsBySprint: (sprintId) => {
@@ -476,32 +478,42 @@ export const useStore = create<AppState>((set, get) => ({
   getStoriesForLane: (laneId: string) => {
     const allItems = get().workItems;
     const tid = get().selectedTeamId;
+    const byOrder = (a: { order?: number; title: string }, b: { order?: number; title: string }) =>
+      (a.order ?? Infinity) - (b.order ?? Infinity) || a.title.localeCompare(b.title);
     if (tid != null) {
       if (laneId === '__ad_hoc__') {
-        return allItems.filter(
-          (i) =>
-            i.type === 'user-story' &&
-            i.teamId === tid &&
-            (i.parentId == null || allItems.find((p) => p.id === i.parentId)?.type !== 'feature')
-        );
+        return allItems
+          .filter(
+            (i) =>
+              i.type === 'user-story' &&
+              i.teamId === tid &&
+              (i.parentId == null || allItems.find((p) => p.id === i.parentId)?.type !== 'feature')
+          )
+          .sort(byOrder);
       }
       if (laneId === '__bug__') {
-        return allItems.filter((i) => i.type === 'bug' && i.parentId == null && (i.teamId === tid || i.teamId == null));
+        return allItems
+          .filter((i) => i.type === 'bug' && i.parentId == null && (i.teamId === tid || i.teamId == null))
+          .sort(byOrder);
       }
-      return allItems.filter((i) => i.parentId === laneId && i.type === 'user-story' && i.teamId === tid);
+      return allItems
+        .filter((i) => i.parentId === laneId && i.type === 'user-story' && i.teamId === tid)
+        .sort(byOrder);
     }
     const items = allItems;
     if (laneId === '__ad_hoc__') {
-      return items.filter(
-        (i) =>
-          i.type === 'user-story' &&
-          (i.parentId == null || items.find((p) => p.id === i.parentId)?.type !== 'feature')
-      );
+      return items
+        .filter(
+          (i) =>
+            i.type === 'user-story' &&
+            (i.parentId == null || items.find((p) => p.id === i.parentId)?.type !== 'feature')
+        )
+        .sort(byOrder);
     }
     if (laneId === '__bug__') {
-      return items.filter((i) => i.type === 'bug' && i.parentId == null);
+      return items.filter((i) => i.type === 'bug' && i.parentId == null).sort(byOrder);
     }
-    return items.filter((i) => i.parentId === laneId && i.type === 'user-story');
+    return items.filter((i) => i.parentId === laneId && i.type === 'user-story').sort(byOrder);
   },
 
   getKanbanLanes: () => [

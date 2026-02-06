@@ -36,9 +36,9 @@ const TeamKanbanBoard: React.FC<TeamKanbanBoardProps> = ({
   };
 
   const getTasksForStory = (storyId: string): WorkItem[] =>
-    workItems.filter(
-      (i) => i.parentId === storyId && (i.type === 'task' || i.type === 'bug')
-    );
+    workItems
+      .filter((i) => i.parentId === storyId && (i.type === 'task' || i.type === 'bug'))
+      .sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || a.title.localeCompare(b.title));
 
   const allTasksDoneForStory = (storyId: string): boolean => {
     const tasks = getTasksForStory(storyId);

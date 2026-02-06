@@ -4,7 +4,8 @@ import { useStore } from '../store/useStore';
 import { getAllowedParentTypes } from '../utils/hierarchy';
 import { SIZE_OPTIONS, STORY_POINT_OPTIONS, DAYS_OPTIONS } from '../utils/estimates';
 import { extractCursorInstruction } from '../lib/cursorInstruction';
-import { Plus, FileText, BookOpen } from 'lucide-react';
+import { apiRequest } from '../api/client';
+import { Plus, FileText, BookOpen, Sparkles } from 'lucide-react';
 import Modal from './Modal';
 import EpicHypothesisModal from './EpicHypothesisModal';
 import EpicHypothesisExampleModal from './EpicHypothesisExampleModal';
@@ -42,7 +43,7 @@ function getDescendantIds(workItems: WorkItem[], rootId: string): Set<string> {
 }
 
 const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId, type, allowedTypes: allowedTypesProp, defaultStatus, showLaneField }) => {
-  const { users, teams, loadTeams, currentTenantId, workItems, getAggregatedStoryPoints, setSelectedWorkItem, getTypeLabel, deleteWorkItem, canResetBacklog } = useStore();
+  const { users, teams, loadTeams, currentTenantId, workItems, getAggregatedStoryPoints, setSelectedWorkItem, getTypeLabel, deleteWorkItem, canResetBacklog, updateWorkItem } = useStore();
   const {
     formData,
     setFormData,
@@ -61,6 +62,11 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
   const [showEpicHypothesisExample, setShowEpicHypothesisExample] = useState(false);
   const [copiedHint, setCopiedHint] = useState<'cursor' | 'description' | null>(null);
   const [parentDropdownOpen, setParentDropdownOpen] = useState(false);
+  const [sequenceLoading, setSequenceLoading] = useState(false);
+  const [suggestedOrderIds, setSuggestedOrderIds] = useState<string[] | null>(null);
+  const [suggestedOrderContext, setSuggestedOrderContext] = useState<'tasks' | 'stories' | null>(null);
+  const [sequenceError, setSequenceError] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [parentFilter, setParentFilter] = useState('');
   const [parentHighlightIndex, setParentHighlightIndex] = useState(0);
   const parentInputRef = useRef<HTMLInputElement>(null);
@@ -83,6 +89,12 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
     return validParentOptions.filter((i) => i.title.toLowerCase().includes(q));
   }, [validParentOptions, parentFilter]);
   const selectedParent = formData.parentId ? workItems.find((i) => i.id === formData.parentId) : null;
+  const childStoriesForFeature =
+    item?.type === 'feature'
+      ? workItems
+          .filter((i) => i.parentId === item.id && i.type === 'user-story')
+          .sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || a.title.localeCompare(b.title))
+      : [];
 
   useEffect(() => {
     if (
@@ -816,8 +828,52 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
 
           {isEditing && item?.type === 'user-story' && (
             <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>Tasks & bugs</span>
+                {childTasksAndBugs.length >= 2 && (
+                  <button
+                    type="button"
+                    disabled={sequenceLoading}
+                    onClick={async () => {
+                      setSequenceError(null);
+                      setSuggestedOrderIds(null);
+                      setSuggestedOrderContext(null);
+                      setSequenceLoading(true);
+                      try {
+                        const res = await apiRequest<{ orderedIds: string[] }>('/.netlify/functions/sequence-tasks', {
+                          method: 'POST',
+                          body: JSON.stringify({
+                            storyDescription: formData.description ?? item?.description ?? '',
+                            tasks: childTasksAndBugs.map((t) => ({ id: t.id, title: t.title, description: t.description })),
+                          }),
+                        });
+                        setSuggestedOrderIds(res.orderedIds);
+                        setSuggestedOrderContext('tasks');
+                        setToastMessage('This is just a suggestion.');
+                        setTimeout(() => setToastMessage(null), 4000);
+                      } catch (e) {
+                        setSequenceError(e instanceof Error ? e.message : String(e));
+                      } finally {
+                        setSequenceLoading(false);
+                      }
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      border: '1px solid #a78bfa',
+                      borderRadius: '6px',
+                      backgroundColor: '#f5f3ff',
+                      color: '#6d28d9',
+                      cursor: sequenceLoading ? 'wait' : 'pointer',
+                      fontSize: '13px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <Sparkles size={14} />
+                    {sequenceLoading ? 'Suggesting…' : 'Suggest sequence'}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={handleAddTask}
@@ -857,9 +913,162 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
                   Add bug
                 </button>
               </div>
+              {sequenceError && (
+                <div style={{ marginBottom: '8px', padding: '8px 12px', backgroundColor: '#fef2f2', borderRadius: '6px', fontSize: '13px', color: '#b91c1c' }}>
+                  {sequenceError.includes('not configured') ? 'Configure API to enable.' : sequenceError}
+                </div>
+              )}
+              {suggestedOrderIds && suggestedOrderIds.length > 0 && suggestedOrderContext === 'tasks' && (
+                <div style={{ marginBottom: '12px', padding: '12px', backgroundColor: '#f5f3ff', borderRadius: '6px', border: '1px solid #c4b5fd' }}>
+                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#5b21b6', marginBottom: '8px' }}>Suggested order</div>
+                  <ol style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', color: '#374151' }}>
+                    {suggestedOrderIds.map((id) => {
+                      const child = childTasksAndBugs.find((c) => c.id === id);
+                      return child ? <li key={id}>{child.title}</li> : null;
+                    })}
+                  </ol>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      suggestedOrderIds.forEach((id, index) => updateWorkItem(id, { order: index }));
+                      setSuggestedOrderIds(null);
+                      setSuggestedOrderContext(null);
+                    }}
+                    style={{
+                      marginTop: '8px',
+                      padding: '6px 12px',
+                      border: 'none',
+                      borderRadius: '6px',
+                      backgroundColor: '#6d28d9',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                    }}
+                  >
+                    Apply
+                  </button>
+                </div>
+              )}
               {childTasksAndBugs.length > 0 && (
                 <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
                   {childTasksAndBugs.map((child) => (
+                    <li
+                      key={child.id}
+                      onClick={() => setSelectedWorkItem(child.id)}
+                      style={{
+                        padding: '8px 12px',
+                        marginBottom: '4px',
+                        backgroundColor: '#f9fafb',
+                        borderRadius: '6px',
+                        border: '1px solid #e5e7eb',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <span style={{ fontWeight: '500', color: '#111827' }}>{child.title}</span>
+                      <span style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', fontWeight: '600' }}>
+                        {getTypeLabel(child.type)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
+          {isEditing && item?.type === 'feature' && (
+            <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>User stories</span>
+                {childStoriesForFeature.length >= 2 && (
+                  <button
+                    type="button"
+                    disabled={sequenceLoading}
+                    onClick={async () => {
+                      setSequenceError(null);
+                      setSuggestedOrderIds(null);
+                      setSuggestedOrderContext(null);
+                      setSequenceLoading(true);
+                      try {
+                        const res = await apiRequest<{ orderedIds: string[] }>('/.netlify/functions/sequence-tasks', {
+                          method: 'POST',
+                          body: JSON.stringify({
+                            featureDescription: formData.description ?? item?.description ?? '',
+                            stories: childStoriesForFeature.map((s) => ({ id: s.id, title: s.title, description: s.description })),
+                          }),
+                        });
+                        setSuggestedOrderIds(res.orderedIds);
+                        setSuggestedOrderContext('stories');
+                        setToastMessage('This is just a suggestion.');
+                        setTimeout(() => setToastMessage(null), 4000);
+                      } catch (e) {
+                        setSequenceError(e instanceof Error ? e.message : String(e));
+                      } finally {
+                        setSequenceLoading(false);
+                      }
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      border: '1px solid #a78bfa',
+                      borderRadius: '6px',
+                      backgroundColor: '#f5f3ff',
+                      color: '#6d28d9',
+                      cursor: sequenceLoading ? 'wait' : 'pointer',
+                      fontSize: '13px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <Sparkles size={14} />
+                    {sequenceLoading ? 'Suggesting…' : 'Suggest sequence'}
+                  </button>
+                )}
+              </div>
+              {sequenceError && (
+                <div style={{ marginBottom: '8px', padding: '8px 12px', backgroundColor: '#fef2f2', borderRadius: '6px', fontSize: '13px', color: '#b91c1c' }}>
+                  {sequenceError.includes('not configured') ? 'Configure API to enable.' : sequenceError}
+                </div>
+              )}
+              {suggestedOrderIds && suggestedOrderIds.length > 0 && suggestedOrderContext === 'stories' && (
+                <div style={{ marginBottom: '12px', padding: '12px', backgroundColor: '#f5f3ff', borderRadius: '6px', border: '1px solid #c4b5fd' }}>
+                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#5b21b6', marginBottom: '8px' }}>Suggested order</div>
+                  <ol style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', color: '#374151' }}>
+                    {suggestedOrderIds.map((id) => {
+                      const child = childStoriesForFeature.find((c) => c.id === id);
+                      return child ? <li key={id}>{child.title}</li> : null;
+                    })}
+                  </ol>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      suggestedOrderIds.forEach((id, index) => updateWorkItem(id, { order: index }));
+                      setSuggestedOrderIds(null);
+                      setSuggestedOrderContext(null);
+                    }}
+                    style={{
+                      marginTop: '8px',
+                      padding: '6px 12px',
+                      border: 'none',
+                      borderRadius: '6px',
+                      backgroundColor: '#6d28d9',
+                      color: '#fff',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                    }}
+                  >
+                    Apply
+                  </button>
+                </div>
+              )}
+              {childStoriesForFeature.length > 0 && (
+                <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                  {childStoriesForFeature.map((child) => (
                     <li
                       key={child.id}
                       onClick={() => setSelectedWorkItem(child.id)}
@@ -944,6 +1153,26 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
             </div>
           </div>
         </form>
+
+      {toastMessage && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            padding: '10px 20px',
+            backgroundColor: '#1f2937',
+            color: '#fff',
+            borderRadius: '8px',
+            fontSize: '14px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            zIndex: 10000,
+          }}
+        >
+          {toastMessage}
+        </div>
+      )}
 
       {showEpicHypothesis && (
         <EpicHypothesisModal

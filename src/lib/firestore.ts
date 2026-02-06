@@ -55,6 +55,7 @@ function serializeWorkItem(item: WorkItem | Partial<WorkItem>): WorkItemData {
   if ((item as WorkItem).lane !== undefined) out.lane = (item as WorkItem).lane;
   if (item.teamId !== undefined) out.teamId = item.teamId;
   if (item.teamIds !== undefined) out.teamIds = item.teamIds;
+  if (item.order !== undefined) out.order = item.order;
   return out as WorkItemData;
 }
 
