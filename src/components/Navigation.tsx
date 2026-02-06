@@ -4,7 +4,8 @@ import { useStore } from '../store/useStore';
 import { LayoutDashboard, Layers, Package, Users, List, ListOrdered, Home, LogOut, Shield } from 'lucide-react';
 
 const Navigation: React.FC = () => {
-  const { viewMode, setViewMode, setSelectedProductId, setSelectedTeamId, selectedTeamId, teams, loadTeams, currentTenantId, firebaseUser, setFirebaseUser, setCurrentUser, setCurrentTenantId, currentUser, getTypeLabel } = useStore();
+  const { viewMode, setViewMode, setSelectedProductId, setSelectedTeamId, selectedTeamId, teams, loadTeams, currentTenantId, tenantCompanies, firebaseUser, setFirebaseUser, setCurrentUser, setCurrentTenantId, currentUser, getTypeLabel } = useStore();
+  const currentCompany = tenantCompanies.find((c) => c.id === currentTenantId) ?? null;
   const [adminMenuOpen, setAdminMenuOpen] = useState(false);
   const [teamBoardMenuOpen, setTeamBoardMenuOpen] = useState(false);
   const adminMenuRef = useRef<HTMLDivElement>(null);
@@ -105,17 +106,33 @@ const Navigation: React.FC = () => {
       alignItems: 'center',
       gap: '8px',
     }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        marginRight: '32px',
-      }}>
-        <LayoutDashboard size={24} color="#3b82f6" />
+      <button
+        type="button"
+        onClick={() => setViewMode('landing')}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          marginRight: '32px',
+          padding: '4px 0',
+          border: 'none',
+          background: 'transparent',
+          cursor: 'pointer',
+        }}
+      >
+        {currentCompany?.logoUrl ? (
+          <img
+            src={currentCompany.logoUrl}
+            alt={`${currentCompany.name} logo`}
+            style={{ maxHeight: '36px', width: 'auto', objectFit: 'contain' }}
+          />
+        ) : (
+          <LayoutDashboard size={24} color="#3b82f6" />
+        )}
         <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#111827' }}>
           thatagileapp.com
         </h2>
-      </div>
+      </button>
       
       {navItems.map((item) => {
         const Icon = item.icon;
