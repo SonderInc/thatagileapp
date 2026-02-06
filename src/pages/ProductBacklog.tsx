@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import WorkItemModal from '../components/WorkItemModal';
 import { getAllowedChildTypes } from '../utils/hierarchy';
@@ -48,6 +48,36 @@ function filterItemsByTeam(items: WorkItem[], teamFilterId: string): WorkItem[] 
   }
   return items.filter((i) => visibleIds.has(i.id));
 }
+
+/** When selectedTypes is non-empty, return only items of those types plus their ancestors and descendants. */
+function filterItemsByType(items: WorkItem[], selectedTypes: WorkItemType[]): WorkItem[] {
+  if (selectedTypes.length === 0) return items;
+  const byId = new Map(items.map((i) => [i.id, i]));
+  const visibleIds = new Set<string>();
+  const typeSet = new Set(selectedTypes);
+  const seeds = items.filter((i) => typeSet.has(i.type));
+  for (const item of seeds) {
+    visibleIds.add(item.id);
+    let current: WorkItem | undefined = item;
+    while (current?.parentId) {
+      visibleIds.add(current.parentId);
+      current = byId.get(current.parentId);
+    }
+    const stack = [item.id];
+    while (stack.length) {
+      const id = stack.pop()!;
+      for (const i of items) {
+        if (i.parentId === id && !visibleIds.has(i.id)) {
+          visibleIds.add(i.id);
+          stack.push(i.id);
+        }
+      }
+    }
+  }
+  return items.filter((i) => visibleIds.has(i.id));
+}
+
+const BACKLOG_TYPE_OPTIONS: WorkItemType[] = ['product', 'epic', 'feature', 'user-story', 'task', 'bug'];
 
 interface TreeRowProps {
   item: WorkItem;
@@ -185,6 +215,17 @@ const ProductBacklog: React.FC = () => {
   const [modalType, setModalType] = useState<WorkItemType | undefined>(undefined);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [teamFilterId, setTeamFilterId] = useState<string | null>(null);
+  const [typeFilter, setTypeFilter] = useState<WorkItemType[]>([]);
+  const [typeFilterOpen, setTypeFilterOpen] = useState(false);
+  const typeFilterRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (typeFilterOpen && typeFilterRef.current && !typeFilterRef.current.contains(e.target as Node)) setTypeFilterOpen(false);
+    };
+    document.addEventListener('click', onDocClick);
+    return () => document.removeEventListener('click', onDocClick);
+  }, [typeFilterOpen]);
 
   useEffect(() => {
     if (currentTenantId) loadTeams(currentTenantId);
@@ -196,9 +237,11 @@ const ProductBacklog: React.FC = () => {
     return workItems;
   }, [selectedProductId, product, workItems, getProductBacklogItems]);
   const filteredItems = useMemo(() => {
-    if (!teamFilterId) return allItems;
-    return filterItemsByTeam(allItems, teamFilterId);
-  }, [allItems, teamFilterId]);
+    let result = allItems;
+    if (teamFilterId) result = filterItemsByTeam(result, teamFilterId);
+    if (typeFilter.length) result = filterItemsByType(result, typeFilter);
+    return result;
+  }, [allItems, teamFilterId, typeFilter]);
   const roots = useMemo(() => {
     if (product && filteredItems.some((i) => i.id === product.id)) return [product];
     if (product) return [];
@@ -277,6 +320,89 @@ const ProductBacklog: React.FC = () => {
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <div ref={typeFilterRef} style={{ position: 'relative' }}>
+            <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+              Item types:
+            </label>
+            <button
+              type="button"
+              onClick={() => setTypeFilterOpen((o) => !o)}
+              style={{
+                padding: '8px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '14px',
+                minWidth: '160px',
+                backgroundColor: '#fff',
+                cursor: 'pointer',
+                textAlign: 'left',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '8px',
+              }}
+            >
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {typeFilter.length === 0
+                  ? 'All types'
+                  : typeFilter.length <= 2
+                    ? typeFilter.map((t) => getTypeLabel(t)).join(', ')
+                    : `${getTypeLabel(typeFilter[0])}, ${getTypeLabel(typeFilter[1])} +${typeFilter.length - 2}`}
+              </span>
+              <ChevronDown size={16} style={{ flexShrink: 0 }} />
+            </button>
+            {typeFilterOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  marginTop: '4px',
+                  backgroundColor: '#fff',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  padding: '8px',
+                  minWidth: '200px',
+                  zIndex: 1000,
+                }}
+              >
+                {BACKLOG_TYPE_OPTIONS.map((t) => (
+                  <label
+                    key={t}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', cursor: 'pointer', fontSize: '14px' }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={typeFilter.includes(t)}
+                      onChange={() => {
+                        setTypeFilter((prev) =>
+                          prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
+                        );
+                      }}
+                    />
+                    {getTypeLabel(t)}
+                  </label>
+                ))}
+                <div style={{ borderTop: '1px solid #e5e7eb', marginTop: '6px', paddingTop: '6px', display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setTypeFilter([])}
+                    style={{ padding: '4px 8px', fontSize: '12px', border: '1px solid #d1d5db', borderRadius: '4px', background: '#fff', cursor: 'pointer' }}
+                  >
+                    Clear
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTypeFilterOpen(false)}
+                    style={{ padding: '4px 8px', fontSize: '12px', border: '1px solid #3b82f6', borderRadius: '4px', background: '#3b82f6', color: '#fff', cursor: 'pointer' }}
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
           <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
             Team:
             <select
