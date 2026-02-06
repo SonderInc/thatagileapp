@@ -50,7 +50,11 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
   const [copiedHint, setCopiedHint] = useState<'cursor' | 'description' | null>(null);
 
   useEffect(() => {
-    if (currentTenantId && (formData.type === 'feature' || item?.type === 'feature')) loadTeams(currentTenantId);
+    if (
+      currentTenantId &&
+      (formData.type === 'feature' || formData.type === 'user-story' || item?.type === 'feature' || item?.type === 'user-story')
+    )
+      loadTeams(currentTenantId);
   }, [currentTenantId, formData.type, item?.type, loadTeams]);
 
   const desc = formData.description ?? '';
@@ -551,29 +555,54 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
             )}
 
             {formData.type === 'user-story' && (
-              <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
-                  Story Points
-                </label>
-                <select
-                  value={formData.storyPoints == null ? '?' : String(formData.storyPoints)}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setFormData({ ...formData, storyPoints: v === '?' ? null : parseInt(v, 10) });
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                  }}
-                >
-                  {STORY_POINT_OPTIONS.map((opt) => (
-                    <option key={opt.label} value={opt.value === null ? '?' : opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
+              <>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
+                    Team
+                  </label>
+                  <select
+                    value={formData.teamId ?? ''}
+                    onChange={(e) => setFormData({ ...formData, teamId: e.target.value || undefined })}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                    }}
+                  >
+                    <option value="">No team</option>
+                    {teams.map((team) => (
+                      <option key={team.id} value={team.id}>
+                        {team.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
+                    Story Points
+                  </label>
+                  <select
+                    value={formData.storyPoints == null ? '?' : String(formData.storyPoints)}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setFormData({ ...formData, storyPoints: v === '?' ? null : parseInt(v, 10) });
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                    }}
+                  >
+                    {STORY_POINT_OPTIONS.map((opt) => (
+                      <option key={opt.label} value={opt.value === null ? '?' : opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </>
             )}
 
             {(formData.type === 'task' || formData.type === 'bug') && (

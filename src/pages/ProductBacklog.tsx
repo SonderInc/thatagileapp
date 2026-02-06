@@ -23,6 +23,32 @@ function getChildren(items: WorkItem[], parentId: string): WorkItem[] {
   return items.filter((i) => i.parentId === parentId);
 }
 
+/** When teamFilterId is set, return only items that are in the hierarchy of user-stories assigned to that team. */
+function filterItemsByTeam(items: WorkItem[], teamFilterId: string): WorkItem[] {
+  const byId = new Map(items.map((i) => [i.id, i]));
+  const visibleIds = new Set<string>();
+  const userStoriesForTeam = items.filter((i) => i.type === 'user-story' && i.teamId === teamFilterId);
+  for (const us of userStoriesForTeam) {
+    visibleIds.add(us.id);
+    let current: WorkItem | undefined = us;
+    while (current?.parentId) {
+      visibleIds.add(current.parentId);
+      current = byId.get(current.parentId);
+    }
+    const stack = [us.id];
+    while (stack.length) {
+      const id = stack.pop()!;
+      for (const i of items) {
+        if (i.parentId === id && !visibleIds.has(i.id)) {
+          visibleIds.add(i.id);
+          stack.push(i.id);
+        }
+      }
+    }
+  }
+  return items.filter((i) => visibleIds.has(i.id));
+}
+
 interface TreeRowProps {
   item: WorkItem;
   allItems: WorkItem[];
@@ -128,7 +154,7 @@ const TreeRow: React.FC<TreeRowProps> = ({ item, allItems, depth, collapsed, onT
           <TreeRow
             key={child.id}
             item={child}
-            allItems={allItems}
+            allItems={filteredItems}
             depth={depth + 1}
             collapsed={collapsed}
             onToggle={onToggle}
@@ -142,23 +168,45 @@ const TreeRow: React.FC<TreeRowProps> = ({ item, allItems, depth, collapsed, onT
 };
 
 const ProductBacklog: React.FC = () => {
-  const { getProductBacklog, workItems, setSelectedWorkItem, selectedProductId, setSelectedProductId, getProductBacklogItems, getTypeLabel } = useStore();
+  const {
+    getProductBacklog,
+    workItems,
+    setSelectedWorkItem,
+    selectedProductId,
+    setSelectedProductId,
+    getProductBacklogItems,
+    getTypeLabel,
+    teams,
+    loadTeams,
+    currentTenantId,
+    setViewMode,
+  } = useStore();
   const [showModal, setShowModal] = useState(false);
   const [modalItemId, setModalItemId] = useState<string | null>(null);
   const [modalParentId, setModalParentId] = useState<string | undefined>(undefined);
   const [modalType, setModalType] = useState<WorkItemType | undefined>(undefined);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [teamFilterId, setTeamFilterId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (currentTenantId) loadTeams(currentTenantId);
+  }, [currentTenantId, loadTeams]);
 
   const product = selectedProductId ? workItems.find((i) => i.id === selectedProductId) : null;
   const backlog = getProductBacklog();
-  const roots = useMemo(() => {
-    if (product) return [product];
-    return buildTree(backlog);
-  }, [product, backlog]);
   const allItems = useMemo(() => {
     if (selectedProductId && product) return getProductBacklogItems(selectedProductId);
     return workItems;
   }, [selectedProductId, product, workItems, getProductBacklogItems]);
+  const filteredItems = useMemo(() => {
+    if (!teamFilterId) return allItems;
+    return filterItemsByTeam(allItems, teamFilterId);
+  }, [allItems, teamFilterId]);
+  const roots = useMemo(() => {
+    if (product && filteredItems.some((i) => i.id === product.id)) return [product];
+    if (product) return [];
+    return buildTree(filteredItems);
+  }, [product, filteredItems]);
 
   const handleToggle = (id: string) => {
     setCollapsed((prev) => {
@@ -238,7 +286,48 @@ const ProductBacklog: React.FC = () => {
               : `Single source of truth for all work items. Products contain ${getTypeLabel('epic')}s, ${getTypeLabel('epic')}s contain ${getTypeLabel('feature')}s, ${getTypeLabel('feature')}s contain User Stories, User Stories contain Tasks and Bugs.`}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+            Team:
+            <select
+              value={teamFilterId ?? ''}
+              onChange={(e) => setTeamFilterId(e.target.value || null)}
+              style={{
+                padding: '8px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                fontSize: '14px',
+                minWidth: '160px',
+              }}
+            >
+              <option value="">All teams</option>
+              {teams.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            onClick={() => setViewMode('teams-list')}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: product ? '#ffffff' : '#ffffff',
+              color: '#374151',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
+            <Plus size={20} />
+            Add Team
+          </button>
           {!product && (
             <button
               onClick={() => { setModalItemId(null); setModalParentId(undefined); setModalType('product'); setShowModal(true); }}
@@ -299,7 +388,7 @@ const ProductBacklog: React.FC = () => {
             <TreeRow
               key={item.id}
               item={item}
-              allItems={allItems}
+              allItems={filteredItems}
               depth={0}
               collapsed={collapsed}
               onToggle={handleToggle}
