@@ -30,4 +30,12 @@ export const FirestoreStore: IDataStore = {
   addTeam: firestore.addTeam,
   updateTeam: firestore.updateTeam,
   deleteTeam: firestore.deleteTeam,
+  getPlanningBoards: firestore.getPlanningBoards,
+  addPlanningBoard: firestore.addPlanningBoard,
+  updatePlanningBoard: firestore.updatePlanningBoard,
+  deletePlanningBoard: firestore.deletePlanningBoard,
+  getPlanningPlacements: firestore.getPlanningPlacements,
+  addPlanningPlacement: firestore.addPlanningPlacement,
+  updatePlanningPlacement: firestore.updatePlanningPlacement,
+  deletePlanningPlacement: firestore.deletePlanningPlacement,
 };

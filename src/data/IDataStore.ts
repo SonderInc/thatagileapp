@@ -1,4 +1,4 @@
-import type { WorkItem, TenantCompany, UserProfile, Role, Team } from '../types';
+import type { WorkItem, TenantCompany, UserProfile, Role, Team, PlanningBoard, PlanningBoardPlacement } from '../types';
 
 /**
  * Data store interface — Firestore, Postgres, etc.
@@ -32,6 +32,14 @@ export interface IDataStore {
   addTeam(team: Team): Promise<void>;
   updateTeam(id: string, updates: Partial<Team>): Promise<void>;
   deleteTeam(id: string): Promise<void>;
+  getPlanningBoards(companyId: string): Promise<PlanningBoard[]>;
+  addPlanningBoard(board: PlanningBoard): Promise<void>;
+  updatePlanningBoard(id: string, updates: Partial<Pick<PlanningBoard, 'name' | 'teamIds'>>): Promise<void>;
+  deletePlanningBoard(id: string): Promise<void>;
+  getPlanningPlacements(boardId: string): Promise<PlanningBoardPlacement[]>;
+  addPlanningPlacement(placement: PlanningBoardPlacement): Promise<void>;
+  updatePlanningPlacement(id: string, updates: Partial<Pick<PlanningBoardPlacement, 'teamId' | 'iterationColumn'>>): Promise<void>;
+  deletePlanningPlacement(id: string): Promise<void>;
 }
 
-export type { WorkItem, TenantCompany, UserProfile, Role, Team };
+export type { WorkItem, TenantCompany, UserProfile, Role, Team, PlanningBoard, PlanningBoardPlacement };

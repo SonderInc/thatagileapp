@@ -25,6 +25,11 @@ interface WorkItemModalProps {
   defaultStatus?: WorkItemStatus;
   /** When true, show Lane (swimlane) dropdown for task/bug (Kanban board). */
   showLaneField?: boolean;
+  /** When provided and not editing a user story, pre-fill team/sprint (e.g. from Planning Board). */
+  defaultTeamId?: string;
+  defaultSprintId?: string;
+  /** When editing a feature and user clicks "Add user story for [Team]", call this then close. Parent can open create-user-story modal. */
+  onAddUserStoryForTeam?: (params: { featureId: string; teamId: string; sprintId?: string }) => void;
 }
 
 const KANBAN_LANE_OPTIONS: { value: KanbanLane; label: string }[] = [
@@ -45,8 +50,8 @@ function getDescendantIds(workItems: WorkItem[], rootId: string): Set<string> {
   return set;
 }
 
-const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId, type, allowedTypes: allowedTypesProp, defaultStatus, showLaneField }) => {
-  const { users, teams, loadTeams, currentTenantId, workItems, getAggregatedStoryPoints, setSelectedWorkItem, getTypeLabel, deleteWorkItem, canResetBacklog, updateWorkItem } = useStore();
+const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId, type, allowedTypes: allowedTypesProp, defaultStatus, showLaneField, defaultTeamId, defaultSprintId, onAddUserStoryForTeam }) => {
+  const { users, teams, loadTeams, currentTenantId, workItems, getAggregatedStoryPoints, setSelectedWorkItem, getTypeLabel, deleteWorkItem, canResetBacklog, updateWorkItem, planningContext } = useStore();
   const {
     formData,
     setFormData,
@@ -60,7 +65,7 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
     handleAddBug,
     childTasksAndBugs,
     FEATURE_STATUSES,
-  } = useWorkItemForm({ itemId, onClose, parentId, type, allowedTypes: allowedTypesProp, defaultStatus, showLaneField });
+  } = useWorkItemForm({ itemId, onClose, parentId, type, allowedTypes: allowedTypesProp, defaultStatus, showLaneField, defaultTeamId, defaultSprintId });
   const [showEpicHypothesis, setShowEpicHypothesis] = useState(false);
   const [showEpicHypothesisExample, setShowEpicHypothesisExample] = useState(false);
   const [copiedHint, setCopiedHint] = useState<'cursor' | 'description' | null>(null);
@@ -981,6 +986,30 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
             <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>User stories</span>
+                {planningContext && item && onAddUserStoryForTeam && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onAddUserStoryForTeam({
+                        featureId: item.id,
+                        teamId: planningContext.teamId,
+                        sprintId: planningContext.sprintId,
+                      });
+                      onClose();
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      border: '1px solid #3b82f6',
+                      borderRadius: '6px',
+                      backgroundColor: '#eff6ff',
+                      color: '#1d4ed8',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                    }}
+                  >
+                    Add user story for {teams.find((t) => t.id === planningContext.teamId)?.name ?? 'team'}
+                  </button>
+                )}
                 {childStoriesForFeature.length >= 2 && (
                   <button
                     type="button"

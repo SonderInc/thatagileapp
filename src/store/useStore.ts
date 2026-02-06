@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { WorkItem, Sprint, KanbanBoard, User, WorkItemType, TenantCompany, AuthUser, Role, KanbanLane, Team } from '../types';
+import { WorkItem, Sprint, KanbanBoard, User, WorkItemType, TenantCompany, AuthUser, Role, KanbanLane, Team, PlanningBoard, PlanningBoardPlacement } from '../types';
 import { getAllowedChildTypes } from '../utils/hierarchy';
 import { getTypeLabel as getTypeLabelFromNomenclature, getRoleLabel as getRoleLabelFromNomenclature } from '../utils/nomenclature';
 import { getDataStore } from '../lib/adapters';
@@ -22,6 +22,8 @@ interface AppState {
   boards: KanbanBoard[];
   users: User[];
   teams: Team[];
+  planningBoards: PlanningBoard[];
+  planningPlacements: PlanningBoardPlacement[];
   currentUser: User | null;
   /** Tenant companies (from Firestore companies collection). */
   tenantCompanies: TenantCompany[];
@@ -44,7 +46,10 @@ interface AppState {
   selectedProductId: string | null;
   selectedCompanyId: string | null;
   selectedTeamId: string | null;
-  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing' | 'add-product' | 'add-company' | 'register-company' | 'invite-user' | 'licence' | 'company-profile' | 'settings' | 'import-backlog' | 'user-profile' | 'teams-list' | 'no-company' | 'account-load-failed';
+  selectedPlanningBoardId: string | null;
+  /** When opening a feature from Planning Board, set so "Add user story" uses this team/sprint. */
+  planningContext: { teamId: string; sprintId?: string } | null;
+  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing' | 'add-product' | 'add-company' | 'register-company' | 'invite-user' | 'licence' | 'company-profile' | 'settings' | 'import-backlog' | 'user-profile' | 'teams-list' | 'planning' | 'no-company' | 'account-load-failed';
   
   // Actions
   setWorkItems: (items: WorkItem[]) => void;
@@ -69,6 +74,18 @@ interface AppState {
   setSelectedProductId: (id: string | null) => void;
   setSelectedCompanyId: (id: string | null) => void;
   setSelectedTeamId: (id: string | null) => void;
+  setSelectedPlanningBoardId: (id: string | null) => void;
+  setPlanningContext: (ctx: { teamId: string; sprintId?: string } | null) => void;
+  setPlanningBoards: (boards: PlanningBoard[]) => void;
+  setPlanningPlacements: (placements: PlanningBoardPlacement[]) => void;
+  loadPlanningBoards: (companyId: string) => Promise<void>;
+  loadPlanningPlacements: (boardId: string) => Promise<void>;
+  addPlanningBoard: (board: PlanningBoard) => Promise<void>;
+  updatePlanningBoard: (id: string, updates: Partial<Pick<PlanningBoard, 'name' | 'teamIds'>>) => Promise<void>;
+  deletePlanningBoard: (id: string) => Promise<void>;
+  addPlanningPlacement: (placement: PlanningBoardPlacement) => Promise<void>;
+  updatePlanningPlacement: (id: string, updates: Partial<Pick<PlanningBoardPlacement, 'teamId' | 'iterationColumn'>>) => Promise<void>;
+  deletePlanningPlacement: (id: string) => Promise<void>;
   setViewMode: (mode: AppState['viewMode']) => void;
   setTenantCompanies: (companies: TenantCompany[]) => void;
   setCurrentTenantId: (id: string | null) => void;
@@ -119,6 +136,8 @@ export const useStore = create<AppState>((set, get) => ({
   boards: [],
   users: [],
   teams: [],
+  planningBoards: [],
+  planningPlacements: [],
   currentUser: null,
   tenantCompanies: [],
   currentTenantId: null,
@@ -132,6 +151,8 @@ export const useStore = create<AppState>((set, get) => ({
   selectedProductId: null,
   selectedCompanyId: null,
   selectedTeamId: null,
+  selectedPlanningBoardId: null,
+  planningContext: null,
   viewMode: 'landing',
   
   // Actions
@@ -262,6 +283,50 @@ export const useStore = create<AppState>((set, get) => ({
   setSelectedProductId: (id) => set({ selectedProductId: id }),
   setSelectedCompanyId: (id) => set({ selectedCompanyId: id }),
   setSelectedTeamId: (id) => set({ selectedTeamId: id }),
+  setSelectedPlanningBoardId: (id) => set({ selectedPlanningBoardId: id }),
+  setPlanningContext: (ctx) => set({ planningContext: ctx }),
+  setPlanningBoards: (boards) => set({ planningBoards: boards }),
+  setPlanningPlacements: (placements) => set({ planningPlacements: placements }),
+  loadPlanningBoards: async (companyId) => {
+    const boards = await getDataStore().getPlanningBoards(companyId);
+    set({ planningBoards: boards });
+  },
+  loadPlanningPlacements: async (boardId) => {
+    const placements = await getDataStore().getPlanningPlacements(boardId);
+    set({ planningPlacements: placements });
+  },
+  addPlanningBoard: async (board) => {
+    await getDataStore().addPlanningBoard(board);
+    set((state) => ({ planningBoards: [...state.planningBoards, board] }));
+  },
+  updatePlanningBoard: async (id, updates) => {
+    await getDataStore().updatePlanningBoard(id, updates);
+    set((state) => ({
+      planningBoards: state.planningBoards.map((b) => (b.id === id ? { ...b, ...updates } : b)),
+    }));
+  },
+  deletePlanningBoard: async (id) => {
+    await getDataStore().deletePlanningBoard(id);
+    set((state) => ({
+      planningBoards: state.planningBoards.filter((b) => b.id !== id),
+      planningPlacements: state.planningPlacements.filter((p) => p.boardId !== id),
+      ...(state.selectedPlanningBoardId === id ? { selectedPlanningBoardId: null } : {}),
+    }));
+  },
+  addPlanningPlacement: async (placement) => {
+    await getDataStore().addPlanningPlacement(placement);
+    set((state) => ({ planningPlacements: [...state.planningPlacements, placement] }));
+  },
+  updatePlanningPlacement: async (id, updates) => {
+    await getDataStore().updatePlanningPlacement(id, updates);
+    set((state) => ({
+      planningPlacements: state.planningPlacements.map((p) => (p.id === id ? { ...p, ...updates } : p)),
+    }));
+  },
+  deletePlanningPlacement: async (id) => {
+    await getDataStore().deletePlanningPlacement(id);
+    set((state) => ({ planningPlacements: state.planningPlacements.filter((p) => p.id !== id) }));
+  },
   setViewMode: (mode) => set({ viewMode: mode }),
   setTenantCompanies: (companies) => set({ tenantCompanies: companies }),
   setCurrentTenantId: (id) => set({ currentTenantId: id }),

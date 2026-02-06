@@ -24,6 +24,7 @@ import SettingsPage from './pages/SettingsPage';
 import ImportBacklogPage from './pages/ImportBacklogPage';
 import UserProfilePage from './pages/UserProfilePage';
 import NoCompanyPage from './pages/NoCompanyPage';
+import PlanningBoardPage from './pages/PlanningBoardPage';
 import ChangePasswordRequired from './components/ChangePasswordRequired';
 import type { Role } from './types';
 import './App.css';
@@ -95,6 +96,7 @@ function App() {
     tenantCompanies,
     mustChangePassword,
     setMustChangePassword,
+    loadPlanningBoards,
   } = useStore();
 
   useEffect(() => {
@@ -505,6 +507,13 @@ function App() {
   }, [currentTenantId, setWorkItems]);
 
   useEffect(() => {
+    if (!currentTenantId || !getAuth().isConfigured()) return;
+    loadPlanningBoards(currentTenantId).catch((err) =>
+      console.error('[App] Load planning boards failed:', err?.message || err)
+    );
+  }, [currentTenantId, loadPlanningBoards]);
+
+  useEffect(() => {
     if (!firebaseUser || !tenantCompanies.length) return;
     const pathSlug = typeof window !== 'undefined' ? window.location.pathname.slice(1).split('/')[0] : '';
     if (pathSlug) {
@@ -549,6 +558,8 @@ function App() {
         return <EpicBoard />;
       case 'feature':
         return <FeatureBoard />;
+      case 'planning':
+        return <PlanningBoardPage />;
       case 'teams-list':
         return <TeamsListPage />;
       case 'team':

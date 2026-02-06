@@ -14,6 +14,9 @@ export interface UseWorkItemFormProps {
   allowedTypes?: WorkItemType[];
   defaultStatus?: WorkItemStatus;
   showLaneField?: boolean;
+  /** When creating a user story (e.g. from Planning Board), pre-fill team and sprint. */
+  defaultTeamId?: string;
+  defaultSprintId?: string;
 }
 
 export function useWorkItemForm({
@@ -24,6 +27,8 @@ export function useWorkItemForm({
   allowedTypes: allowedTypesProp,
   defaultStatus,
   showLaneField,
+  defaultTeamId,
+  defaultSprintId,
 }: UseWorkItemFormProps) {
   const { workItems, addWorkItem, updateWorkItem, getWorkItemsByParent, currentTenantId } = useStore();
   const [formData, setFormData] = useState<Partial<WorkItem>>({
@@ -83,9 +88,11 @@ export function useWorkItemForm({
         ...(defaultType === 'product' && { status: 'backlog', priority: undefined }),
         ...(showLaneField && (defaultType === 'task' || defaultType === 'bug') && { lane: (prev.lane ?? 'standard') as KanbanLane }),
         ...(defaultType === 'feature' && { teamIds: prev.teamIds ?? [] }),
+        ...(defaultType === 'user-story' && defaultTeamId != null && { teamId: defaultTeamId }),
+        ...(defaultType === 'user-story' && defaultSprintId != null && { sprintId: defaultSprintId }),
       }));
     }
-  }, [item, parentId, type, allowedTypes, defaultStatus, showLaneField]);
+  }, [item, parentId, type, allowedTypes, defaultStatus, showLaneField, defaultTeamId, defaultSprintId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -130,6 +137,7 @@ export function useWorkItemForm({
       color: formData.color,
       companyId: currentTenantId ?? undefined,
       teamId: formData.teamId,
+      sprintId: formData.sprintId,
       teamIds: formData.type === 'feature' ? (formData.teamIds ?? []) : undefined,
       ...(isFeature && {
         wsjfBusinessValue: formData.wsjfBusinessValue ?? null,

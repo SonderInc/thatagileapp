@@ -178,6 +178,23 @@ export interface Team {
   createdBy?: string;
 }
 
+/** Planning board: name, tenant, ordered team ids (swimlanes). Columns fixed: Teams, Iteration 1–5. */
+export interface PlanningBoard {
+  id: string;
+  name: string;
+  companyId: string;
+  teamIds: string[];
+}
+
+/** Placement of a feature on a planning board cell (team row + iteration column). */
+export interface PlanningBoardPlacement {
+  id: string;
+  boardId: string;
+  workItemId: string;
+  teamId: string;
+  iterationColumn: 1 | 2 | 3 | 4 | 5;
+}
+
 /** Auth user (provider-agnostic). Use this in UI/store; do not import firebase/auth types. */
 export interface AuthUser {
   uid: string;
