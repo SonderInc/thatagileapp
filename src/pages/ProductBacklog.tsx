@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import WorkItemModal from '../components/WorkItemModal';
 import { getAllowedChildTypes } from '../utils/hierarchy';
@@ -154,7 +154,7 @@ const TreeRow: React.FC<TreeRowProps> = ({ item, allItems, depth, collapsed, onT
           <TreeRow
             key={child.id}
             item={child}
-            allItems={filteredItems}
+            allItems={allItems}
             depth={depth + 1}
             collapsed={collapsed}
             onToggle={onToggle}
@@ -169,7 +169,6 @@ const TreeRow: React.FC<TreeRowProps> = ({ item, allItems, depth, collapsed, onT
 
 const ProductBacklog: React.FC = () => {
   const {
-    getProductBacklog,
     workItems,
     setSelectedWorkItem,
     selectedProductId,
@@ -193,7 +192,6 @@ const ProductBacklog: React.FC = () => {
   }, [currentTenantId, loadTeams]);
 
   const product = selectedProductId ? workItems.find((i) => i.id === selectedProductId) : null;
-  const backlog = getProductBacklog();
   const allItems = useMemo(() => {
     if (selectedProductId && product) return getProductBacklogItems(selectedProductId);
     return workItems;
