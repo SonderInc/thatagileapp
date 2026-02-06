@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   getFirebaseConfig,
   hasFirebaseConfigOverride,
@@ -32,6 +32,8 @@ const SettingsPage: React.FC = () => {
   const [override, setOverride] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [teamBoardSaveMessage, setTeamBoardSaveMessage] = useState<string | null>(null);
+  const teamBoardSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [projectId, setProjectId] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [authDomain, setAuthDomain] = useState('');
@@ -83,6 +85,24 @@ const SettingsPage: React.FC = () => {
     setFirebaseConfigOverride(null);
     window.location.reload();
   };
+
+  const handleSaveTeamBoardSettings = () => {
+    if (teamBoardSaveTimeoutRef.current) window.clearTimeout(teamBoardSaveTimeoutRef.current);
+    setTeamBoardMode(teamBoardMode);
+    setSprintLengthWeeks(sprintLengthWeeks);
+    setSprintStartDay(sprintStartDay);
+    setTeamBoardSaveMessage('Saved!');
+    teamBoardSaveTimeoutRef.current = window.setTimeout(() => {
+      setTeamBoardSaveMessage(null);
+      teamBoardSaveTimeoutRef.current = null;
+    }, 2500);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (teamBoardSaveTimeoutRef.current) window.clearTimeout(teamBoardSaveTimeoutRef.current);
+    };
+  }, []);
 
   return (
     <div className="page-container">
@@ -188,6 +208,27 @@ const SettingsPage: React.FC = () => {
             </div>
           </div>
         )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '16px' }}>
+          <button
+            type="button"
+            onClick={handleSaveTeamBoardSettings}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '6px',
+              border: 'none',
+              backgroundColor: '#3b82f6',
+              color: '#ffffff',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer',
+            }}
+          >
+            Save
+          </button>
+          {teamBoardSaveMessage && (
+            <span style={{ fontSize: '14px', color: '#059669', fontWeight: '500' }}>{teamBoardSaveMessage}</span>
+          )}
+        </div>
       </section>
 
       <section style={{ marginBottom: '24px' }}>
