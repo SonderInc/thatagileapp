@@ -8,7 +8,7 @@ import Modal from '../components/Modal';
 const CONFIRM_RESET_TEXT = 'RESET';
 
 const CompanyProfilePage: React.FC = () => {
-  const { getCurrentCompany, setViewMode, setTenantCompanies, currentTenantId, setWorkItems, canResetBacklog } = useStore();
+  const { getCurrentCompany, setViewMode, setTenantCompanies, tenantCompanies, currentTenantId, setWorkItems, canResetBacklog } = useStore();
   const company = getCurrentCompany();
   const [name, setName] = useState(company?.name ?? '');
   const [companyType, setCompanyType] = useState<CompanyType>(company?.companyType ?? 'software');
@@ -114,9 +114,26 @@ const CompanyProfilePage: React.FC = () => {
         vision: vision.trim() || undefined,
         logoUrl: logoUrl.trim() || undefined,
       });
-      const companies = await getDataStore().getTenantCompanies();
-      setTenantCompanies(companies);
+      // Update store optimistically so UI reflects changes even if refetch fails (e.g. list permission)
+      const updated = {
+        name: name.trim() || company?.name ?? '',
+        companyType,
+        vision: vision.trim() || undefined,
+        logoUrl: logoUrl.trim() || undefined,
+      };
+      let nextCompanies = tenantCompanies.map((c) =>
+        c.id === currentTenantId ? { ...c, ...updated } : c
+      );
+      if (!nextCompanies.some((c) => c.id === currentTenantId) && company) {
+        nextCompanies = [...nextCompanies, { ...company, ...updated }];
+      }
+      setTenantCompanies(nextCompanies);
       setSuccess('Company profile saved.');
+      // Optionally refetch in background to stay in sync; don't overwrite success on failure
+      getDataStore()
+        .getTenantCompanies()
+        .then(setTenantCompanies)
+        .catch(() => {});
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
