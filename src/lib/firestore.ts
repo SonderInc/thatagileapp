@@ -130,6 +130,20 @@ export async function getTenantCompanies(): Promise<TenantCompany[]> {
   return snapshot.docs.map((d) => docToTenantCompany(d.id, d.data()));
 }
 
+/** Fetch companies by ids (avoids full collection read; use when user profile has companyIds). */
+export async function getTenantCompaniesByIds(companyIds: string[]): Promise<TenantCompany[]> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  if (companyIds.length === 0) return [];
+  const results = await Promise.all(
+    companyIds.map(async (id) => {
+      const snap = await getDoc(doc(db, COMPANIES_COLLECTION, id));
+      if (!snap.exists()) return null;
+      return docToTenantCompany(snap.id, snap.data());
+    })
+  );
+  return results.filter((c): c is TenantCompany => c != null);
+}
+
 /** Get a single company by id (for resilient Company Profile when list is empty). */
 export async function getCompany(companyId: string): Promise<TenantCompany | null> {
   if (!db) return Promise.reject(new Error('Firebase not configured'));

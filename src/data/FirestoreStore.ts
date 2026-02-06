@@ -8,6 +8,7 @@ import * as firestore from '../lib/firestore';
 export const FirestoreStore: IDataStore = {
   getWorkItems: firestore.getWorkItems,
   getTenantCompanies: firestore.getTenantCompanies,
+  getTenantCompaniesByIds: firestore.getTenantCompaniesByIds,
   getCompany: firestore.getCompany,
   addTenantCompany: firestore.addTenantCompany,
   updateCompany: firestore.updateCompany,

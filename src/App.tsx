@@ -225,8 +225,14 @@ function App() {
       return;
     }
     const uid = firebaseUser.uid;
-    getDataStore()
-      .getTenantCompanies()
+    const store = getDataStore();
+    store
+      .getUserProfile(uid)
+      .then((profile) => {
+        const ids = profile?.companyIds ?? (profile?.companyId ? [profile.companyId] : []);
+        if (ids.length > 0) return store.getTenantCompaniesByIds(ids);
+        return store.getTenantCompanies();
+      })
       .then((companies) => {
         setTenantCompanies(companies);
         if (companies.length > 0) {
