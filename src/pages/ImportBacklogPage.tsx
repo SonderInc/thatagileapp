@@ -17,7 +17,7 @@ import type { WorkItemType, WorkItem } from '../types';
 
 type Step = 'paste' | 'preview' | 'summary';
 
-type ImportModeUI = 'add-to-company' | 'add-to-product';
+type ImportModeUI = 'add-to-company' | 'add-to-product' | 'add-to-epic';
 
 const ImportBacklogPage: React.FC = () => {
   const { currentTenantId, firebaseUser, setViewMode, setWorkItems, setTenantCompanies, setCurrentTenantId, setCurrentUser, getTypeLabel: getStoreTypeLabel, workItems } = useStore();
@@ -30,9 +30,11 @@ const ImportBacklogPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [importModeUI, setImportModeUI] = useState<ImportModeUI>('add-to-company');
   const [targetProductIdUI, setTargetProductIdUI] = useState('');
+  const [targetEpicIdUI, setTargetEpicIdUI] = useState('');
 
   const companyId = currentTenantId;
   const products = workItems.filter((w) => w.type === 'product');
+  const epics = workItems.filter((w) => w.type === 'epic');
   const getTypeLabelForCompany = useCallback(
     (type: WorkItemType) => getStoreTypeLabel(type),
     [getStoreTypeLabel]
@@ -118,6 +120,40 @@ const ImportBacklogPage: React.FC = () => {
         setLoading(false);
         return;
       }
+      if (payload.mode === 'add-to-epic') {
+        const targetEpicId = payload.targetEpicId ?? targetEpicIdUI.trim();
+        if (!targetEpicId) {
+          setError('Set targetEpicId in JSON or select an Epic above.');
+          setLoading(false);
+          return;
+        }
+        if (!companyId) {
+          setError('No company selected.');
+          setLoading(false);
+          return;
+        }
+        resolvedPayload = { ...payload, targetEpicId };
+        const existingForTenant = await store.getWorkItems(companyId);
+        const epic = existingForTenant.find((w) => w.id === targetEpicId);
+        if (!epic || epic.type !== 'epic') {
+          setError(`Epic "${targetEpicId}" not found. Load the backlog or check the ID.`);
+          setLoading(false);
+          return;
+        }
+        const result = await runImport(
+          resolvedPayload,
+          companyId,
+          existingForTenant,
+          (item) => store.addWorkItem(item),
+          (id, updates) => store.updateWorkItem(id, updates)
+        );
+        setImportResult(result);
+        setStep('summary');
+        const updated = await store.getWorkItems(companyId);
+        setWorkItems(updated);
+        setLoading(false);
+        return;
+      }
       if (payload.mode === 'add-to-company') {
         targetId = payload.targetCompanyId ?? companyId ?? '';
         if (!targetId) {
@@ -181,7 +217,7 @@ const ImportBacklogPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [payload, companyId, targetProductIdUI, firebaseUser, setWorkItems, setTenantCompanies, setCurrentTenantId, setCurrentUser]);
+  }, [payload, companyId, targetProductIdUI, targetEpicIdUI, firebaseUser, setWorkItems, setTenantCompanies, setCurrentTenantId, setCurrentUser]);
 
   const handleBack = () => {
     setStep('paste');
@@ -262,7 +298,7 @@ const ImportBacklogPage: React.FC = () => {
               />
               {' '}Company
             </label>
-            <label>
+            <label style={{ marginRight: '16px' }}>
               <input
                 type="radio"
                 name="importMode"
@@ -270,6 +306,15 @@ const ImportBacklogPage: React.FC = () => {
                 onChange={() => setImportModeUI('add-to-product')}
               />
               {' '}Product
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="importMode"
+                checked={importModeUI === 'add-to-epic'}
+                onChange={() => setImportModeUI('add-to-epic')}
+              />
+              {' '}Epic (import feature(s))
             </label>
           </div>
           {importModeUI === 'add-to-product' && (
@@ -295,6 +340,31 @@ const ImportBacklogPage: React.FC = () => {
                 style={{ marginTop: '6px', padding: '8px 12px', width: '100%', maxWidth: '400px', border: '1px solid #d1d5db', borderRadius: '6px', display: 'block' }}
               />
               <p style={{ marginTop: '4px', fontSize: '12px', color: '#6b7280' }}>Use for add-to-product when not set in JSON.</p>
+            </div>
+          )}
+          {importModeUI === 'add-to-epic' && (
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>Epic (to add feature(s) under)</label>
+              {epics.length > 0 ? (
+                <select
+                  value={targetEpicIdUI}
+                  onChange={(e) => setTargetEpicIdUI(e.target.value)}
+                  style={{ padding: '8px 12px', minWidth: '280px', border: '1px solid #d1d5db', borderRadius: '6px' }}
+                >
+                  <option value="">Select or type below</option>
+                  {epics.map((e) => (
+                    <option key={e.id} value={e.id}>{e.title} ({e.id})</option>
+                  ))}
+                </select>
+              ) : null}
+              <input
+                type="text"
+                value={targetEpicIdUI}
+                onChange={(e) => setTargetEpicIdUI(e.target.value)}
+                placeholder="e.g. item-1770201001767"
+                style={{ marginTop: '6px', padding: '8px 12px', width: '100%', maxWidth: '400px', border: '1px solid #d1d5db', borderRadius: '6px', display: 'block' }}
+              />
+              <p style={{ marginTop: '4px', fontSize: '12px', color: '#6b7280' }}>Use for add-to-epic when not set in JSON. Paste JSON with mode &quot;add-to-epic&quot; and one or more feature items.</p>
             </div>
           )}
           <div style={{ marginBottom: '16px' }}>

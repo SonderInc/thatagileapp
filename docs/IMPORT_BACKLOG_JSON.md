@@ -7,9 +7,10 @@ Import a backlog from a JSON file or pasted JSON. The importer validates the **s
 ```json
 {
   "version": "1.0",
-  "mode": "create-company" | "add-to-company" | "add-to-product",
+  "mode": "create-company" | "add-to-company" | "add-to-product" | "add-to-epic",
   "targetCompanyId": "company-xxx",
   "targetProductId": "item-xxx",
+  "targetEpicId": "item-xxx",
   "items": [
     {
       "importId": "string unique within file",
@@ -41,9 +42,10 @@ Import a backlog from a JSON file or pasted JSON. The importer validates the **s
 | Field | Required | Description |
 |-------|----------|-------------|
 | `version` | Yes | Must be `"1.0"`. |
-| `mode` | Yes | `"create-company"` — create a new company from the first `company`-type item and import into it; `"add-to-company"` — import into an existing company; `"add-to-product"` — import epics (and children) under an existing Product work item. |
+| `mode` | Yes | `"create-company"` — create a new company from the first `company`-type item and import into it; `"add-to-company"` — import into an existing company; `"add-to-product"` — import epics (and children) under an existing Product; `"add-to-epic"` — import feature(s) (and their user stories, tasks, bugs) under an existing Epic. |
 | `targetCompanyId` | For add-to-company | Company id (e.g. `company-123`) to import into. If omitted when `mode=add-to-company`, the **current** tenant is used. |
 | `targetProductId` | For add-to-product | Product WorkItem id (e.g. `item-1770201001767`) to attach root epics to. Can be set in JSON or in the UI. |
+| `targetEpicId` | For add-to-epic | Epic WorkItem id to attach root feature(s) to. Can be set in JSON or in the UI (Admin → Import Backlog → Epic). |
 | `items` | Yes | Array of backlog items. |
 
 ### Item fields
@@ -54,7 +56,7 @@ Import a backlog from a JSON file or pasted JSON. The importer validates the **s
 | `type` | Yes | One of: `company`, `product`, `epic`, `feature`, `user-story`, `task`, `bug`. |
 | `title` | Yes | Display title. |
 | `status` | No | Default `backlog`. Any valid `WorkItemStatus` (e.g. `funnel`, `backlog`, `to-do`, `in-progress`, `done`). |
-| `parentImportId` | No | `importId` of the parent item. Omit or `null` for root. In create-company/add-to-company, root must be `type: "company"`. In add-to-product, root must be `type: "epic"`. |
+| `parentImportId` | No | `importId` of the parent item. Omit or `null` for root. In create-company/add-to-company, root must be `type: "company"`. In add-to-product, root must be `type: "epic"`. In add-to-epic, root must be `type: "feature"`. |
 | `fields` | No | Optional fields (see below). |
 
 ### Optional `fields` (by type)
@@ -153,6 +155,31 @@ Example (add-to-product):
 }
 ```
 
+## add-to-epic mode (import a feature)
+
+Import one or more **features** (and their user stories, tasks, bugs) under an **existing Epic** work item:
+
+- **mode:** `"add-to-epic"`.
+- **targetEpicId:** The Epic WorkItem id. Can be set in JSON or in the UI (Admin → Import Backlog → Epic (import feature(s))).
+- **Root items:** Items with `parentImportId` null must be `type: "feature"`. They are attached to the target epic.
+- The target epic's `childrenIds` is updated to include the new feature ids (merged with existing).
+- Hierarchy is enforced: feature → user-story → task/bug.
+
+Example (import a single feature with JSON):
+
+```json
+{
+  "version": "1.0",
+  "mode": "add-to-epic",
+  "targetEpicId": "item-1770201001767",
+  "items": [
+    { "importId": "f1", "type": "feature", "title": "User settings", "parentImportId": null, "fields": { "description": "Allow users to edit profile and preferences.", "size": "medium" } },
+    { "importId": "s1", "type": "user-story", "title": "As a user I can change my display name", "parentImportId": "f1", "fields": { "storyPoints": 2 } },
+    { "importId": "t1", "type": "task", "title": "Add name field to profile form", "parentImportId": "s1" }
+  ]
+}
+```
+
 ## Idempotency
 
 Each imported item gets:
@@ -184,7 +211,7 @@ If an item with the same `metadata.importKey` already exists for that company, i
 ## UI
 
 - **Admin → Import Backlog** opens the import page.
-- **Import under:** Choose "Company" (add-to-company / create-company) or "Product" (add-to-product). When "Product" is selected, enter or select a Product ID (used when not set in JSON).
+- **Import under:** Choose "Company" (add-to-company / create-company), "Product" (add-to-product), or "Epic (import feature(s))" (add-to-epic). When "Product" is selected, enter or select a Product ID; when "Epic" is selected, enter or select an Epic ID (used when not set in JSON).
 - **Step 1:** Paste JSON or upload a `.json` file.
 - **Step 2:** Click **Validate & preview** — see counts by type and first 10 titles; fix any validation errors.
 - **Step 3:** Click **Confirm import** — items are created; parents get `childrenIds` updated.
