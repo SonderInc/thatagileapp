@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { WorkItem, WorkItemType, WorkItemStatus, KanbanLane } from '../types';
 import { useStore } from '../store/useStore';
 import { getAllowedChildTypes } from '../utils/hierarchy';
+import { computeWsjfScore } from '../components/WsjfCalculator';
 
 const FEATURE_STATUSES: WorkItemStatus[] = ['funnel', 'analysis', 'program-backlog', 'implementation', 'validating', 'deploying', 'releasing'];
 
@@ -65,6 +66,11 @@ export function useWorkItemForm({
         lane: item.lane,
         teamId: item.teamId,
         teamIds: item.teamIds,
+        wsjfBusinessValue: item.wsjfBusinessValue ?? undefined,
+        wsjfTimeCriticality: item.wsjfTimeCriticality ?? undefined,
+        wsjfRiskReduction: item.wsjfRiskReduction ?? undefined,
+        wsjfJobSize: item.wsjfJobSize ?? undefined,
+        wsjfScore: item.wsjfScore ?? undefined,
       });
     } else {
       const defaultType = (type && (allowedTypes.includes(type) || type === 'user-story')) ? type : allowedTypes[0];
@@ -85,9 +91,21 @@ export function useWorkItemForm({
     e.preventDefault();
     setSubmitError(null);
     const isProduct = formData.type === 'product';
+    const isFeature = formData.type === 'feature';
+    const wsjfScore = isFeature
+      ? computeWsjfScore(
+          formData.wsjfBusinessValue,
+          formData.wsjfTimeCriticality,
+          formData.wsjfRiskReduction,
+          formData.wsjfJobSize
+        )
+      : undefined;
     if (isEditing && itemId) {
       const payload = isProduct ? { ...formData, status: 'backlog' as const, priority: undefined } : formData;
-      updateWorkItem(itemId, payload);
+      const payloadWithWsjf = isFeature
+        ? { ...payload, wsjfBusinessValue: formData.wsjfBusinessValue, wsjfTimeCriticality: formData.wsjfTimeCriticality, wsjfRiskReduction: formData.wsjfRiskReduction, wsjfJobSize: formData.wsjfJobSize, wsjfScore: wsjfScore ?? null }
+        : payload;
+      updateWorkItem(itemId, payloadWithWsjf);
       onClose();
       return;
     }
@@ -113,6 +131,13 @@ export function useWorkItemForm({
       companyId: currentTenantId ?? undefined,
       teamId: formData.teamId,
       teamIds: formData.type === 'feature' ? (formData.teamIds ?? []) : undefined,
+      ...(isFeature && {
+        wsjfBusinessValue: formData.wsjfBusinessValue ?? null,
+        wsjfTimeCriticality: formData.wsjfTimeCriticality ?? null,
+        wsjfRiskReduction: formData.wsjfRiskReduction ?? null,
+        wsjfJobSize: formData.wsjfJobSize ?? null,
+        wsjfScore: wsjfScore ?? null,
+      }),
     };
     setSaving(true);
     try {

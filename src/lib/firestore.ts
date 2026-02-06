@@ -56,6 +56,11 @@ function serializeWorkItem(item: WorkItem | Partial<WorkItem>): WorkItemData {
   if (item.teamId !== undefined) out.teamId = item.teamId;
   if (item.teamIds !== undefined) out.teamIds = item.teamIds;
   if (item.order !== undefined) out.order = item.order;
+  if (item.wsjfBusinessValue !== undefined) out.wsjfBusinessValue = item.wsjfBusinessValue;
+  if (item.wsjfTimeCriticality !== undefined) out.wsjfTimeCriticality = item.wsjfTimeCriticality;
+  if (item.wsjfRiskReduction !== undefined) out.wsjfRiskReduction = item.wsjfRiskReduction;
+  if (item.wsjfJobSize !== undefined) out.wsjfJobSize = item.wsjfJobSize;
+  if (item.wsjfScore !== undefined) out.wsjfScore = item.wsjfScore;
   return out as WorkItemData;
 }
 

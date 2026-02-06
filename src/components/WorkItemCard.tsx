@@ -134,6 +134,9 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({ item, onClick, compact, bor
           {item.type === 'feature' && (
             <span>{getAggregatedStoryPoints(item.id)} pts</span>
           )}
+          {item.type === 'feature' && item.wsjfScore != null && (
+            <span>WSJF: {item.wsjfScore.toFixed(2)}</span>
+          )}
           {item.type === 'user-story' && (
             <span>{formatStoryPoints(item.storyPoints)} pts</span>
           )}

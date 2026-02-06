@@ -169,6 +169,9 @@ const BacklogTreeRow: React.FC<BacklogTreeRowProps> = ({
       }}
     >
       {item.title}
+      {item.type === 'feature' && item.wsjfScore != null && (
+        <span style={{ marginLeft: '8px', fontSize: '12px', color: '#6b7280', fontWeight: '400' }}>WSJF: {item.wsjfScore.toFixed(2)}</span>
+      )}
     </button>
     {allowedChildTypes.length > 0 && (
       <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>

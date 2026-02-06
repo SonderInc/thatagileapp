@@ -109,6 +109,12 @@ export interface WorkItem {
   teamIds?: string[];
   /** Optional sort order among siblings (same parentId). Lower first; undefined sorts after. */
   order?: number;
+  /** Feature only: WSJF (Weighted Shortest Job First) inputs and persisted score. */
+  wsjfBusinessValue?: number | null;
+  wsjfTimeCriticality?: number | null;
+  wsjfRiskReduction?: number | null;
+  wsjfJobSize?: number | null;
+  wsjfScore?: number | null;
 }
 
 export interface Sprint {

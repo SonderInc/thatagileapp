@@ -12,6 +12,7 @@ import EpicHypothesisModal from './EpicHypothesisModal';
 import EpicHypothesisExampleModal from './EpicHypothesisExampleModal';
 import { useWorkItemForm } from '../hooks/useWorkItemForm';
 import { compareWorkItemOrder } from '../utils/order';
+import WsjfCalculator from './WsjfCalculator';
 
 interface WorkItemModalProps {
   itemId: string | null;
@@ -65,6 +66,7 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
   const [copiedHint, setCopiedHint] = useState<'cursor' | 'description' | null>(null);
   const [parentDropdownOpen, setParentDropdownOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [wsjfValid, setWsjfValid] = useState(true);
   const { loading: sequenceLoading, error: sequenceError, suggestion, requestSequence, applyOrder, clear: clearSuggestion } = useSequenceSuggestion();
   const [parentFilter, setParentFilter] = useState('');
   const [parentHighlightIndex, setParentHighlightIndex] = useState(0);
@@ -834,6 +836,28 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
             )}
           </div>
 
+          {formData.type === 'feature' && (
+            <WsjfCalculator
+              value={{
+                wsjfBusinessValue: formData.wsjfBusinessValue,
+                wsjfTimeCriticality: formData.wsjfTimeCriticality,
+                wsjfRiskReduction: formData.wsjfRiskReduction,
+                wsjfJobSize: formData.wsjfJobSize,
+              }}
+              onChange={(next) =>
+                setFormData({
+                  ...formData,
+                  wsjfBusinessValue: next.wsjfBusinessValue,
+                  wsjfTimeCriticality: next.wsjfTimeCriticality,
+                  wsjfRiskReduction: next.wsjfRiskReduction,
+                  wsjfJobSize: next.wsjfJobSize,
+                })
+              }
+              readOnly={false}
+              onValidityChange={setWsjfValid}
+            />
+          )}
+
           {isEditing && item?.type === 'user-story' && (
             <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
@@ -1074,7 +1098,7 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
               </button>
               <button
                 type="submit"
-                disabled={saving}
+                disabled={saving || (formData.type === 'feature' && !wsjfValid)}
                 style={{
                   padding: '10px 20px',
                   border: 'none',
