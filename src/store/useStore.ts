@@ -43,7 +43,7 @@ interface AppState {
   selectedProductId: string | null;
   selectedCompanyId: string | null;
   selectedTeamId: string | null;
-  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing' | 'add-product' | 'add-company' | 'register-company' | 'invite-user' | 'licence' | 'company-profile' | 'settings' | 'import-backlog' | 'user-profile' | 'teams-list';
+  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing' | 'add-product' | 'add-company' | 'register-company' | 'invite-user' | 'licence' | 'company-profile' | 'settings' | 'import-backlog' | 'user-profile' | 'teams-list' | 'no-company' | 'account-load-failed';
   
   // Actions
   setWorkItems: (items: WorkItem[]) => void;

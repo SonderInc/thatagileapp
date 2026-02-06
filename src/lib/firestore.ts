@@ -315,6 +315,13 @@ export function mergeProfileForBackfill(
 
 export async function setUserProfile(profile: UserProfile): Promise<void> {
   if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const hasCompany =
+    profile.companyId != null ||
+    (profile.companyIds != null && profile.companyIds.length > 0) ||
+    (profile.companies != null && profile.companies.length > 0);
+  if (!hasCompany) {
+    return Promise.reject(new Error('User profile must have a company association (companyId or companyIds)'));
+  }
   const ref = doc(db, USERS_COLLECTION, profile.uid);
   let companyIds = profile.companies?.map((c) => c.companyId) ?? (profile.companyId ? [profile.companyId] : []);
   if (companyIds.length === 0 && profile.companyId) companyIds = [profile.companyId];

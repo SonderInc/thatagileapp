@@ -23,6 +23,7 @@ import CompanyProfilePage from './pages/CompanyProfilePage';
 import SettingsPage from './pages/SettingsPage';
 import ImportBacklogPage from './pages/ImportBacklogPage';
 import UserProfilePage from './pages/UserProfilePage';
+import NoCompanyPage from './pages/NoCompanyPage';
 import ChangePasswordRequired from './components/ChangePasswordRequired';
 import type { Role } from './types';
 import './App.css';
@@ -82,7 +83,7 @@ function App() {
               roles: [],
             });
             setMustChangePassword(profile.mustChangePassword === true);
-            setViewMode('register-company');
+            setViewMode('no-company');
           } else {
             const tenantCompanyId = tenantId;
             const derivedRolesForTenant =
@@ -119,7 +120,7 @@ function App() {
               roles: finalRoles as Role[],
             });
             setMustChangePassword(profile.mustChangePassword === true);
-            if (useStore.getState().viewMode === 'register-company') {
+            if (useStore.getState().viewMode === 'no-company') {
               setViewMode('landing');
             }
             const merged = mergeProfileForBackfill(profile, tenantCompanyId, finalRoles);
@@ -161,7 +162,7 @@ function App() {
               email: firebaseUser.email ?? '',
               roles: [],
             });
-            setViewMode('register-company');
+            setViewMode('no-company');
           }
         }
       })
@@ -192,7 +193,7 @@ function App() {
             email: firebaseUser.email ?? '',
             roles: [],
           });
-          setViewMode('register-company');
+          setViewMode('account-load-failed');
         }
         setMustChangePassword(false);
       });
@@ -234,7 +235,7 @@ function App() {
           const currentInList = current && companies.some((c) => c.id === current);
           const applyTenant = (tenantId: string) => {
             setCurrentTenantId(tenantId);
-            if (useStore.getState().viewMode === 'register-company') {
+            if (useStore.getState().viewMode === 'no-company') {
               setViewMode('landing');
             }
           };
@@ -289,7 +290,7 @@ function App() {
               .then((profile) => {
                 if (!profile) {
                   setCurrentTenantId(null);
-                  setViewMode('register-company');
+                  setViewMode('no-company');
                   return;
                 }
                 const tenantId =
@@ -312,7 +313,7 @@ function App() {
                     email: profile.email,
                     roles,
                   });
-                  if (useStore.getState().viewMode === 'register-company') {
+                  if (useStore.getState().viewMode === 'no-company') {
                     setViewMode('landing');
                   }
                   const merged = mergeProfileForBackfill(profile, tenantId, roles);
@@ -324,14 +325,14 @@ function App() {
                     });
                 } else {
                   setCurrentTenantId(null);
-                  setViewMode('register-company');
+                  setViewMode('no-company');
                 }
               })
               .catch((err) => {
                 if (import.meta.env.DEV) console.error('[App] Profile load when companies empty failed:', err);
                 if (useStore.getState().currentTenantId == null) {
                   setCurrentTenantId(null);
-                  setViewMode('register-company');
+                  setViewMode('account-load-failed');
                 }
               });
           }
@@ -385,7 +386,7 @@ function App() {
               .then((profile) => {
                 if (!profile) {
                   setCurrentTenantId(null);
-                  setViewMode('register-company');
+                  setViewMode('no-company');
                   return;
                 }
                 const tenantId =
@@ -408,7 +409,7 @@ function App() {
                     email: profile.email,
                     roles,
                   });
-                  if (useStore.getState().viewMode === 'register-company') {
+                  if (useStore.getState().viewMode === 'no-company') {
                     setViewMode('landing');
                   }
                   const merged = mergeProfileForBackfill(profile, tenantId, roles);
@@ -420,12 +421,12 @@ function App() {
                     });
                 } else {
                   setCurrentTenantId(null);
-                  setViewMode('register-company');
+                  setViewMode('no-company');
                 }
               })
               .catch(() => {
                 setCurrentTenantId(null);
-                setViewMode('register-company');
+                setViewMode('account-load-failed');
               });
           }
         }
@@ -481,6 +482,9 @@ function App() {
         return <AddCompanyPage />;
       case 'register-company':
         return <RegisterCompanyPage />;
+      case 'no-company':
+      case 'account-load-failed':
+        return <NoCompanyPage />;
       case 'backlog':
         return <ProductBacklog />;
       case 'list':
@@ -530,6 +534,14 @@ function App() {
 
   const showProductionPersistenceNotice =
     !import.meta.env.DEV && !firebaseReady;
+
+  if (viewMode === 'no-company' || viewMode === 'account-load-failed') {
+    return (
+      <div className="app" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f9fafb' }}>
+        <NoCompanyPage />
+      </div>
+    );
+  }
 
   return (
     <div className="app">
