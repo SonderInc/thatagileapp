@@ -33,7 +33,7 @@ const SettingsPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [teamBoardSaveMessage, setTeamBoardSaveMessage] = useState<string | null>(null);
-  const teamBoardSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const teamBoardSaveTimeoutRef = useRef<number | null>(null);
   const [projectId, setProjectId] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [authDomain, setAuthDomain] = useState('');
