@@ -178,7 +178,6 @@ const ProductBacklog: React.FC = () => {
     teams,
     loadTeams,
     currentTenantId,
-    setViewMode,
   } = useStore();
   const [showModal, setShowModal] = useState(false);
   const [modalItemId, setModalItemId] = useState<string | null>(null);
@@ -213,13 +212,6 @@ const ProductBacklog: React.FC = () => {
       else next.add(id);
       return next;
     });
-  };
-
-  const handleAddEpic = () => {
-    setModalItemId(null);
-    setModalParentId(selectedProductId ?? undefined);
-    setModalType('epic');
-    setShowModal(true);
   };
 
   const handleBackToAll = () => {
@@ -306,66 +298,6 @@ const ProductBacklog: React.FC = () => {
               ))}
             </select>
           </label>
-          <button
-            type="button"
-            onClick={() => setViewMode('teams-list')}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: product ? '#ffffff' : '#ffffff',
-              color: '#374151',
-              border: '1px solid #d1d5db',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            <Plus size={20} />
-            Add Team
-          </button>
-          {!product && (
-            <button
-              onClick={() => { setModalItemId(null); setModalParentId(undefined); setModalType('product'); setShowModal(true); }}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: '#3b82f6',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}
-            >
-              <Plus size={20} />
-              Add Product
-            </button>
-          )}
-          <button
-            onClick={handleAddEpic}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: product ? '#3b82f6' : '#ffffff',
-              color: product ? '#ffffff' : '#374151',
-              border: product ? 'none' : '1px solid #d1d5db',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            <Plus size={20} />
-            Add Epic
-          </button>
         </div>
       </div>
 
@@ -379,7 +311,7 @@ const ProductBacklog: React.FC = () => {
       >
         {roots.length === 0 ? (
           <div style={{ padding: '32px', textAlign: 'center', color: '#6b7280' }}>
-            No items in the backlog. Add a {getTypeLabel('product')} or {getTypeLabel('epic')} to get started.
+            No items in the backlog. Select a product from the home page to view its backlog, or add a product from the home page if you have permission.
           </div>
         ) : (
           roots.map((item) => (

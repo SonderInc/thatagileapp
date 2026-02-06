@@ -371,7 +371,7 @@ export const useStore = create<AppState>((set, get) => ({
   canAddProduct: () => {
     const user = get().currentUser;
     if (!user?.roles?.length) return true;
-    const allowed: (string | undefined)[] = ['admin', 'product-owner', 'portfolio-leader'];
+    const allowed: (string | undefined)[] = ['admin', 'product-manager', 'portfolio-leader'];
     return user.roles.some((r) => allowed.includes(r));
   },
 
