@@ -28,6 +28,56 @@ import ChangePasswordRequired from './components/ChangePasswordRequired';
 import type { Role } from './types';
 import './App.css';
 
+/** Compact bar shown when app is embedded via ?embed=1: logo + "Open in new tab". */
+function EmbedStrip() {
+  const { tenantCompanies, currentTenantId } = useStore();
+  const currentCompany = tenantCompanies.find((c) => c.id === currentTenantId) ?? null;
+  const openUrl =
+    typeof window !== 'undefined'
+      ? (() => {
+          const u = new URL(window.location.href);
+          u.searchParams.delete('embed');
+          return u.toString();
+        })()
+      : '#';
+  return (
+    <div
+      style={{
+        backgroundColor: '#ffffff',
+        borderBottom: '1px solid #e5e7eb',
+        padding: '8px 24px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+      }}
+    >
+      {currentCompany?.logoUrl && (
+        <img
+          src={currentCompany.logoUrl}
+          alt=""
+          style={{ maxHeight: '32px', width: 'auto', objectFit: 'contain' }}
+        />
+      )}
+      <span style={{ fontSize: '16px', fontWeight: '600', color: '#111827', flex: 1 }}>
+        {currentCompany?.name ?? 'Backlog'}
+      </span>
+      <a
+        href={openUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          fontSize: '14px',
+          color: '#3b82f6',
+          fontWeight: '500',
+          textDecoration: 'none',
+        }}
+      >
+        Open in new tab
+      </a>
+    </div>
+  );
+}
+
 function App() {
   const {
     viewMode,
@@ -541,6 +591,10 @@ function App() {
   const showProductionPersistenceNotice =
     !import.meta.env.DEV && !firebaseReady;
 
+  const isEmbed =
+    typeof window !== 'undefined' &&
+    /^(true|1)$/i.test(new URLSearchParams(window.location.search).get('embed') ?? '');
+
   if (viewMode === 'no-company' || viewMode === 'account-load-failed') {
     return (
       <div className="app" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f9fafb' }}>
@@ -551,7 +605,7 @@ function App() {
 
   return (
     <div className="app">
-      <Navigation />
+      {isEmbed ? <EmbedStrip /> : <Navigation />}
       {showProductionPersistenceNotice && (
         <div
           style={{

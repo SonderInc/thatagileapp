@@ -1,0 +1,6 @@
+# Allow this app to be embedded in iframes on other websites.
+# Restrict later by replacing * with specific origins, e.g.:
+#   Content-Security-Policy: frame-ancestors 'self' https://thatagileapp.com https://example.com
+/*
+  Content-Security-Policy: frame-ancestors *
+
