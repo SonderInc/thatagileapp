@@ -7,6 +7,8 @@ import type { WorkItem, TenantCompany, UserProfile, Role, Team } from '../types'
 export interface IDataStore {
   getWorkItems(companyId: string): Promise<WorkItem[]>;
   getTenantCompanies(): Promise<TenantCompany[]>;
+  /** Fetch a single company by id (for resilient Company Profile when list is empty). */
+  getCompany(companyId: string): Promise<TenantCompany | null>;
   addTenantCompany(company: TenantCompany): Promise<void>;
   updateCompany(companyId: string, updates: Partial<Pick<TenantCompany, 'name' | 'vision' | 'logoUrl' | 'seats' | 'licenseKey' | 'updatedAt' | 'companyType'>>): Promise<void>;
   addWorkItem(item: WorkItem): Promise<void>;

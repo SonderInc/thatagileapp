@@ -89,44 +89,54 @@ export async function getWorkItems(companyId: string): Promise<WorkItem[]> {
   return snapshot.docs.map((d) => deserializeWorkItem(d.data() as WorkItemData));
 }
 
+function docToTenantCompany(docId: string, data: Record<string, unknown>): TenantCompany {
+  const createdAt = data.createdAt;
+  const updatedAt = data.updatedAt;
+  const trialEndsAt = data.trialEndsAt;
+  return {
+    id: docId,
+    name: (data.name as string) ?? '',
+    slug: (data.slug as string) ?? '',
+    createdAt:
+      createdAt && typeof (createdAt as Timestamp).toDate === 'function'
+        ? (createdAt as Timestamp).toDate()
+        : createdAt instanceof Date
+          ? createdAt
+          : new Date(createdAt as string),
+    updatedAt:
+      updatedAt && typeof (updatedAt as Timestamp).toDate === 'function'
+        ? (updatedAt as Timestamp).toDate()
+        : updatedAt instanceof Date
+          ? updatedAt
+          : new Date(updatedAt as string),
+    trialEndsAt:
+      trialEndsAt && typeof (trialEndsAt as Timestamp).toDate === 'function'
+        ? (trialEndsAt as Timestamp).toDate()
+        : trialEndsAt instanceof Date
+          ? trialEndsAt
+          : undefined,
+    seats: typeof data.seats === 'number' ? data.seats : 50,
+    licenseKey: typeof data.licenseKey === 'string' ? data.licenseKey : undefined,
+    vision: typeof data.vision === 'string' ? data.vision : undefined,
+    logoUrl: typeof data.logoUrl === 'string' ? data.logoUrl : undefined,
+    companyType: data.companyType === 'training' ? 'training' : 'software',
+  } as TenantCompany;
+}
+
 /** Get all tenant companies (for dev or admin). */
 export async function getTenantCompanies(): Promise<TenantCompany[]> {
   if (!db) return Promise.reject(new Error('Firebase not configured'));
   const snapshot = await getDocs(collection(db, COMPANIES_COLLECTION));
-  return snapshot.docs.map((d) => {
-    const data = d.data();
-    const createdAt = data.createdAt;
-    const updatedAt = data.updatedAt;
-    const trialEndsAt = data.trialEndsAt;
-    return {
-      id: d.id,
-      name: data.name ?? '',
-      slug: data.slug ?? '',
-      createdAt:
-        createdAt && typeof (createdAt as Timestamp).toDate === 'function'
-          ? (createdAt as Timestamp).toDate()
-          : createdAt instanceof Date
-            ? createdAt
-            : new Date(createdAt as string),
-      updatedAt:
-        updatedAt && typeof (updatedAt as Timestamp).toDate === 'function'
-          ? (updatedAt as Timestamp).toDate()
-          : updatedAt instanceof Date
-            ? updatedAt
-            : new Date(updatedAt as string),
-      trialEndsAt:
-        trialEndsAt && typeof (trialEndsAt as Timestamp).toDate === 'function'
-          ? (trialEndsAt as Timestamp).toDate()
-          : trialEndsAt instanceof Date
-            ? trialEndsAt
-            : undefined,
-      seats: typeof data.seats === 'number' ? data.seats : 50,
-      licenseKey: typeof data.licenseKey === 'string' ? data.licenseKey : undefined,
-      vision: typeof data.vision === 'string' ? data.vision : undefined,
-      logoUrl: typeof data.logoUrl === 'string' ? data.logoUrl : undefined,
-      companyType: data.companyType === 'training' ? 'training' : 'software',
-    } as TenantCompany;
-  });
+  return snapshot.docs.map((d) => docToTenantCompany(d.id, d.data()));
+}
+
+/** Get a single company by id (for resilient Company Profile when list is empty). */
+export async function getCompany(companyId: string): Promise<TenantCompany | null> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = doc(db, COMPANIES_COLLECTION, companyId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  return docToTenantCompany(snap.id, snap.data());
 }
 
 /** Create a tenant company. */

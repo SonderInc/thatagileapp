@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import { getDataStore, getObjectStore } from '../lib/adapters';
 import { getResetBacklogPreview, resetBacklog, type ResetBacklogPreview } from '../lib/workItems/resetBacklog';
@@ -23,7 +23,34 @@ const CompanyProfilePage: React.FC = () => {
   const [resetConfirmText, setResetConfirmText] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
+  const [loadingCompany, setLoadingCompany] = useState(false);
+  const [loadCompanyFailed, setLoadCompanyFailed] = useState(false);
+  const loadAttemptedForTenant = useRef<string | null>(null);
   const storageConfigured = getObjectStore().isConfigured();
+
+  /** Reload companies list and, if still missing, fetch single company by id so Company Profile can show. */
+  const loadCompanyIntoStore = useCallback(async () => {
+    if (!currentTenantId) return;
+    setLoadingCompany(true);
+    setLoadCompanyFailed(false);
+    try {
+      const companies = await getDataStore().getTenantCompanies();
+      setTenantCompanies(companies);
+      const hasCurrent = companies.some((c) => c.id === currentTenantId);
+      if (!hasCurrent) {
+        const single = await getDataStore().getCompany(currentTenantId);
+        if (single) {
+          setTenantCompanies([...companies, single]);
+        } else {
+          setLoadCompanyFailed(true);
+        }
+      }
+    } catch {
+      setLoadCompanyFailed(true);
+    } finally {
+      setLoadingCompany(false);
+    }
+  }, [currentTenantId, setTenantCompanies]);
 
   useEffect(() => {
     if (company) {
@@ -33,6 +60,19 @@ const CompanyProfilePage: React.FC = () => {
       setLogoUrl(company.logoUrl ?? '');
     }
   }, [company?.id, company?.name, company?.companyType, company?.vision, company?.logoUrl]);
+
+  // Reset load attempt when tenant changes so we can retry for the new tenant.
+  useEffect(() => {
+    loadAttemptedForTenant.current = null;
+  }, [currentTenantId]);
+
+  // When we have a tenant id but company not in store (e.g. getTenantCompanies failed), try to load it once.
+  useEffect(() => {
+    if (!currentTenantId || company || loadingCompany) return;
+    if (loadAttemptedForTenant.current === currentTenantId) return;
+    loadAttemptedForTenant.current = currentTenantId;
+    loadCompanyIntoStore();
+  }, [currentTenantId, company, loadingCompany, loadCompanyIntoStore]);
 
   const handleLogoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -113,12 +153,35 @@ const CompanyProfilePage: React.FC = () => {
   };
 
   if (!company) {
+    const hasTenant = Boolean(currentTenantId);
     return (
       <div className="page-container">
-        <p className="page-description">No company loaded.</p>
-        <button type="button" className="btn-secondary" onClick={() => setViewMode('landing')} style={{ marginTop: '16px' }}>
-          Back to Home
-        </button>
+        {hasTenant ? (
+          <>
+            {loadingCompany && <p className="page-description">Loading…</p>}
+            {!loadingCompany && loadCompanyFailed && (
+              <p className="page-description">No company loaded. You may not have access to this company, or the list could not be loaded.</p>
+            )}
+            {!loadingCompany && !loadCompanyFailed && <p className="page-description">Loading…</p>}
+            <div style={{ display: 'flex', gap: '12px', marginTop: '16px', flexWrap: 'wrap' }}>
+              {loadCompanyFailed && (
+                <button type="button" className="btn-primary" onClick={loadCompanyIntoStore} disabled={loadingCompany}>
+                  Retry
+                </button>
+              )}
+              <button type="button" className="btn-secondary" onClick={() => setViewMode('landing')}>
+                Back to Home
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="page-description">No company loaded.</p>
+            <button type="button" className="btn-secondary" onClick={() => setViewMode('landing')} style={{ marginTop: '16px' }}>
+              Back to Home
+            </button>
+          </>
+        )}
       </div>
     );
   }
