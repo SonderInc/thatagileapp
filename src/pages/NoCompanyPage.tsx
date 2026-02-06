@@ -24,10 +24,13 @@ const NoCompanyPage: React.FC = () => {
       <h1 className="page-title" style={{ marginBottom: '16px' }}>
         {isLoadFailed ? 'Account load failed' : 'No company associated'}
       </h1>
-      <p className="page-description" style={{ marginBottom: '24px', color: '#374151' }}>
+      <p className="page-description" style={{ marginBottom: '8px', color: '#374151' }}>
         {isLoadFailed
           ? "We couldn't load your account. Please try again or contact support."
           : 'Your account is not associated with a company. If you were invited, use the link from your invitation email. Otherwise contact your administrator.'}
+      </p>
+      <p className="form-hint" style={{ marginBottom: '24px', fontSize: '12px', color: '#6b7280' }}>
+        If you were added by an admin, ensure your user document in Firestore has companyIds and that rules are deployed.
       </p>
       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
         {isLoadFailed && (

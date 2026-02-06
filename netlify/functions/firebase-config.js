@@ -71,10 +71,7 @@ exports.handler = async function (event) {
   if (!slug) {
     const result = getDefaultConfigFromEnv();
     if (result.missing) {
-      return jsonResponse(500, {
-        error: 'Default Firebase config incomplete',
-        missingKeys: result.missing,
-      });
+      return jsonResponse(200, { useDefault: true, missingKeys: result.missing });
     }
     return jsonResponse(200, result.config);
   }
@@ -108,20 +105,14 @@ exports.handler = async function (event) {
 
     const result = getDefaultConfigFromEnv();
     if (result.missing) {
-      return jsonResponse(500, {
-        error: 'Default Firebase config incomplete',
-        missingKeys: result.missing,
-      });
+      return jsonResponse(200, { useDefault: true, missingKeys: result.missing });
     }
     return jsonResponse(200, result.config);
   } catch (err) {
     console.error('[firebase-config]', err);
     const result = getDefaultConfigFromEnv();
     if (result.missing) {
-      return jsonResponse(500, {
-        error: 'Default Firebase config incomplete after registry error',
-        missingKeys: result.missing,
-      });
+      return jsonResponse(200, { useDefault: true, missingKeys: result.missing });
     }
     return jsonResponse(200, result.config);
   }

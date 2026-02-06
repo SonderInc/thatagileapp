@@ -95,10 +95,7 @@ export const handler = async (event: {
       if (process.env.NODE_ENV !== 'production') {
         console.log('[firebase-config] source=default env missing:', result.missing.join(', '));
       }
-      return jsonResponse(500, {
-        error: 'Default Firebase config incomplete',
-        missingKeys: result.missing,
-      });
+      return jsonResponse(200, { useDefault: true, missingKeys: result.missing });
     }
     if (process.env.NODE_ENV !== 'production') {
       console.log('[firebase-config] source=default');
@@ -142,10 +139,7 @@ export const handler = async (event: {
       if (process.env.NODE_ENV !== 'production') {
         console.log('[firebase-config] source=default (tenant not found) env missing:', result.missing.join(', '));
       }
-      return jsonResponse(500, {
-        error: 'Default Firebase config incomplete',
-        missingKeys: result.missing,
-      });
+      return jsonResponse(200, { useDefault: true, missingKeys: result.missing });
     }
     if (process.env.NODE_ENV !== 'production') {
       console.log('[firebase-config] source=default (tenant not found) slug=', slug);
@@ -156,10 +150,7 @@ export const handler = async (event: {
     // On registry error, fall back to default config from env
     const result = getDefaultConfigFromEnv();
     if ('missing' in result) {
-      return jsonResponse(500, {
-        error: 'Default Firebase config incomplete after registry error',
-        missingKeys: result.missing,
-      });
+      return jsonResponse(200, { useDefault: true, missingKeys: result.missing });
     }
     if (process.env.NODE_ENV !== 'production') {
       console.log('[firebase-config] source=default (registry error)');
