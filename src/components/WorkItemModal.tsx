@@ -1,6 +1,7 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { WorkItem, WorkItemType, WorkItemStatus, EpicFeatureSize, KanbanLane } from '../types';
 import { useStore } from '../store/useStore';
+import { getAllowedParentTypes } from '../utils/hierarchy';
 import { SIZE_OPTIONS, STORY_POINT_OPTIONS, DAYS_OPTIONS } from '../utils/estimates';
 import { extractCursorInstruction } from '../lib/cursorInstruction';
 import { Plus, FileText, BookOpen } from 'lucide-react';
@@ -29,8 +30,19 @@ const KANBAN_LANE_OPTIONS: { value: KanbanLane; label: string }[] = [
   { value: 'intangible', label: 'Intangible' },
 ];
 
+function getDescendantIds(workItems: WorkItem[], rootId: string): Set<string> {
+  const set = new Set<string>();
+  let stack = workItems.filter((i) => i.parentId === rootId).map((i) => i.id);
+  while (stack.length) {
+    const id = stack.pop()!;
+    set.add(id);
+    stack = stack.concat(workItems.filter((i) => i.parentId === id).map((i) => i.id));
+  }
+  return set;
+}
+
 const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId, type, allowedTypes: allowedTypesProp, defaultStatus, showLaneField }) => {
-  const { users, teams, loadTeams, currentTenantId, getAggregatedStoryPoints, getFeaturesInDevelopState, setSelectedWorkItem, getTypeLabel, deleteWorkItem, canResetBacklog } = useStore();
+  const { users, teams, loadTeams, currentTenantId, workItems, getAggregatedStoryPoints, setSelectedWorkItem, getTypeLabel, deleteWorkItem, canResetBacklog } = useStore();
   const {
     formData,
     setFormData,
@@ -48,6 +60,29 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
   const [showEpicHypothesis, setShowEpicHypothesis] = useState(false);
   const [showEpicHypothesisExample, setShowEpicHypothesisExample] = useState(false);
   const [copiedHint, setCopiedHint] = useState<'cursor' | 'description' | null>(null);
+  const [parentDropdownOpen, setParentDropdownOpen] = useState(false);
+  const [parentFilter, setParentFilter] = useState('');
+  const [parentHighlightIndex, setParentHighlightIndex] = useState(0);
+  const parentInputRef = useRef<HTMLInputElement>(null);
+
+  const allowedParentTypes = useMemo(() => getAllowedParentTypes(formData.type!), [formData.type]);
+  const descendantIds = useMemo(() => (item?.id ? getDescendantIds(workItems, item.id) : new Set<string>()), [item?.id, workItems]);
+  const validParentOptions = useMemo(() => {
+    return workItems
+      .filter(
+        (i) =>
+          allowedParentTypes.includes(i.type) &&
+          i.id !== item?.id &&
+          !descendantIds.has(i.id)
+      )
+      .sort((a, b) => a.title.localeCompare(b.title));
+  }, [workItems, allowedParentTypes, item?.id, descendantIds]);
+  const filteredParentOptions = useMemo(() => {
+    if (!parentFilter.trim()) return validParentOptions;
+    const q = parentFilter.trim().toLowerCase();
+    return validParentOptions.filter((i) => i.title.toLowerCase().includes(q));
+  }, [validParentOptions, parentFilter]);
+  const selectedParent = formData.parentId ? workItems.find((i) => i.id === formData.parentId) : null;
 
   useEffect(() => {
     if (
@@ -56,6 +91,22 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
     )
       loadTeams(currentTenantId);
   }, [currentTenantId, formData.type, item?.type, loadTeams]);
+
+  useEffect(() => {
+    if (!parentDropdownOpen) setParentHighlightIndex(0);
+  }, [parentDropdownOpen]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey && e.shiftKey && e.key === 'P') || (e.altKey && e.key === 'p')) {
+        e.preventDefault();
+        parentInputRef.current?.focus();
+        setParentDropdownOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const desc = formData.description ?? '';
   const cursorBlock = extractCursorInstruction(desc);
@@ -129,7 +180,13 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
             </label>
             <select
               value={allowedTypes.includes(formData.type!) ? formData.type : allowedTypes[0]}
-              onChange={(e) => setFormData({ ...formData, type: e.target.value as WorkItemType })}
+              onChange={(e) => {
+                const newType = e.target.value as WorkItemType;
+                const newAllowedParents = getAllowedParentTypes(newType);
+                const currentParent = formData.parentId ? workItems.find((i) => i.id === formData.parentId) : null;
+                const keepParent = currentParent && newAllowedParents.includes(currentParent.type);
+                setFormData({ ...formData, type: newType, parentId: keepParent ? formData.parentId : undefined });
+              }}
               style={{
                 width: '100%',
                 padding: '8px 12px',
@@ -200,29 +257,154 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
             </div>
           )}
 
-          {!isEditing && formData.type === 'user-story' && (
+          {allowedParentTypes.length > 0 && (
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
-                Parent feature
+                Parent
               </label>
-              <select
-                value={formData.parentId ?? ''}
-                onChange={(e) => setFormData({ ...formData, parentId: e.target.value || undefined })}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                }}
-              >
-                <option value="">None (Ad hoc)</option>
-                {getFeaturesInDevelopState().map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.title}
-                  </option>
-                ))}
-              </select>
+              <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#6b7280' }}>
+                Ctrl+Shift+P or Alt+P to focus
+              </p>
+              <div style={{ position: 'relative' }}>
+                <input
+                  ref={parentInputRef}
+                  type="text"
+                  readOnly
+                  value={parentDropdownOpen ? '' : (selectedParent ? `${getTypeLabel(selectedParent.type)}: ${selectedParent.title}` : 'None')}
+                  placeholder="Select parent"
+                  onFocus={() => setParentDropdownOpen(true)}
+                  onClick={() => setParentDropdownOpen(true)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    backgroundColor: '#fff',
+                    cursor: 'pointer',
+                  }}
+                />
+                {parentDropdownOpen && (
+                  <div
+                    role="listbox"
+                    aria-expanded={parentDropdownOpen}
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      marginTop: '4px',
+                      backgroundColor: '#fff',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                      maxHeight: '280px',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      zIndex: 1000,
+                    }}
+                  >
+                    <input
+                      type="text"
+                      value={parentFilter}
+                      onChange={(e) => {
+                        setParentFilter(e.target.value);
+                        setParentHighlightIndex(0);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'ArrowDown') {
+                          e.preventDefault();
+                          setParentHighlightIndex((i) => Math.min(i + 1, (parentFilter.trim() ? filteredParentOptions : validParentOptions).length));
+                        } else if (e.key === 'ArrowUp') {
+                          e.preventDefault();
+                          setParentHighlightIndex((i) => Math.max(i - 1, 0));
+                        } else if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const opts = parentFilter.trim() ? filteredParentOptions : validParentOptions;
+                          const withNone = [{ id: '', title: 'None' } as WorkItem & { id: string }].concat(opts);
+                          const chosen = withNone[parentHighlightIndex];
+                          if (chosen) {
+                            setFormData({ ...formData, parentId: chosen.id || undefined });
+                            setParentDropdownOpen(false);
+                            setParentFilter('');
+                          }
+                        } else if (e.key === 'Escape') {
+                          setParentDropdownOpen(false);
+                          setParentFilter('');
+                        }
+                      }}
+                      placeholder="Type to search..."
+                      autoFocus
+                      style={{
+                        padding: '8px 12px',
+                        border: 'none',
+                        borderBottom: '1px solid #e5e7eb',
+                        borderRadius: '6px 6px 0 0',
+                        fontSize: '14px',
+                        outline: 'none',
+                      }}
+                    />
+                    <div style={{ overflowY: 'auto', maxHeight: '220px' }}>
+                      <div
+                        role="option"
+                        aria-selected={!formData.parentId}
+                        style={{
+                          padding: '8px 12px',
+                          cursor: 'pointer',
+                          backgroundColor: parentHighlightIndex === 0 ? '#eff6ff' : 'transparent',
+                          fontSize: '14px',
+                          color: '#6b7280',
+                        }}
+                        onClick={() => {
+                          setFormData({ ...formData, parentId: undefined });
+                          setParentDropdownOpen(false);
+                          setParentFilter('');
+                        }}
+                        onMouseEnter={() => setParentHighlightIndex(0)}
+                      >
+                        None
+                      </div>
+                      {(parentFilter.trim() ? filteredParentOptions : validParentOptions).map((p, idx) => (
+                        <div
+                          key={p.id}
+                          role="option"
+                          aria-selected={formData.parentId === p.id}
+                          style={{
+                            padding: '8px 12px',
+                            cursor: 'pointer',
+                            backgroundColor: parentHighlightIndex === idx + 1 ? '#eff6ff' : 'transparent',
+                            fontSize: '14px',
+                          }}
+                          onClick={() => {
+                            setFormData({ ...formData, parentId: p.id });
+                            setParentDropdownOpen(false);
+                            setParentFilter('');
+                          }}
+                          onMouseEnter={() => setParentHighlightIndex(idx + 1)}
+                        >
+                          {getTypeLabel(p.type)}: {p.title}
+                        </div>
+                      ))}
+                      {validParentOptions.length === 0 && (
+                        <div style={{ padding: '12px', fontSize: '14px', color: '#6b7280' }}>
+                          Create a {allowedParentTypes.map((t) => getTypeLabel(t)).join(' or ')} first.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+              {parentDropdownOpen && (
+                <div
+                  style={{ position: 'fixed', inset: 0, zIndex: 999 }}
+                  aria-hidden
+                  onClick={() => {
+                    setParentDropdownOpen(false);
+                    setParentFilter('');
+                  }}
+                />
+              )}
             </div>
           )}
 
