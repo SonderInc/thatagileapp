@@ -1,7 +1,17 @@
-Firestore rules are in firestore.rules and are deployed via CLI.
+Firestore rules are in firestore.rules and are deployed via CLI:
 
   npx firebase deploy --only firestore:rules
 
-Do not paste into Realtime Database (that uses JSON). Use the command above.
+Storage rules (required for company logo uploads) are in storage.rules. Deploy them with:
 
-If you must use the Console: Build → Firestore Database → Rules tab, then paste the contents of firestore.rules. The first line must be rules_version = '2'; (single quotes).
+  npx firebase deploy --only storage
+
+To deploy both in one go:
+
+  npx firebase deploy --only firestore:rules,storage
+
+Do not paste into Realtime Database (that uses JSON). Use the commands above.
+
+If you must use the Console:
+- Firestore: Build → Firestore Database → Rules tab, paste firestore.rules (first line: rules_version = '2';).
+- Storage: Build → Storage → Rules tab, paste storage.rules. Without these, logo upload will fail with "insufficient permissions".

@@ -86,7 +86,12 @@ const CompanyProfilePage: React.FC = () => {
       setLogoUrl(url);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      setError('Logo upload failed: ' + msg);
+      const isPermissionError = /insufficient permissions|403|forbidden|unauthorized/i.test(msg);
+      setError(
+        isPermissionError
+          ? `Logo upload failed: ${msg}. Deploy Storage rules (see storage.rules; run: npx firebase deploy --only storage).`
+          : 'Logo upload failed: ' + msg
+      );
     } finally {
       setUploadingLogo(false);
       e.target.value = '';
