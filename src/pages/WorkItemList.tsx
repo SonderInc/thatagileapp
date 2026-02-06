@@ -224,7 +224,7 @@ const WorkItemList: React.FC = () => {
       </div>
 
       {showModal && (
-        <WorkItemModal itemId={modalItemId} onClose={handleCloseModal} />
+        <WorkItemModal itemId={modalItemId} onClose={handleCloseModal} onSelectWorkItem={(id) => setModalItemId(id)} />
       )}
     </div>
   );

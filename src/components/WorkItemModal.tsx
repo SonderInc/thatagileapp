@@ -30,6 +30,8 @@ interface WorkItemModalProps {
   defaultSprintId?: string;
   /** When editing a feature and user clicks "Add user story for [Team]", call this then close. Parent can open create-user-story modal. */
   onAddUserStoryForTeam?: (params: { featureId: string; teamId: string; sprintId?: string }) => void;
+  /** When editing a feature and user clicks a child user story, call this so parent can switch modal to that item (e.g. setModalItemId). */
+  onSelectWorkItem?: (workItemId: string) => void;
 }
 
 const KANBAN_LANE_OPTIONS: { value: KanbanLane; label: string }[] = [
@@ -50,7 +52,7 @@ function getDescendantIds(workItems: WorkItem[], rootId: string): Set<string> {
   return set;
 }
 
-const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId, type, allowedTypes: allowedTypesProp, defaultStatus, showLaneField, defaultTeamId, defaultSprintId, onAddUserStoryForTeam }) => {
+const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId, type, allowedTypes: allowedTypesProp, defaultStatus, showLaneField, defaultTeamId, defaultSprintId, onAddUserStoryForTeam, onSelectWorkItem }) => {
   const { users, teams, loadTeams, currentTenantId, workItems, getAggregatedStoryPoints, setSelectedWorkItem, getTypeLabel, deleteWorkItem, canResetBacklog, updateWorkItem, planningContext } = useStore();
   const {
     formData,
@@ -1062,7 +1064,7 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
                   {childStoriesForFeature.map((child) => (
                     <li
                       key={child.id}
-                      onClick={() => setSelectedWorkItem(child.id)}
+                      onClick={() => (onSelectWorkItem ? onSelectWorkItem(child.id) : setSelectedWorkItem(child.id))}
                       style={{
                         padding: '8px 12px',
                         marginBottom: '4px',

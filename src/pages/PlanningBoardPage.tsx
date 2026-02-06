@@ -29,7 +29,10 @@ const PlanningBoardPage: React.FC = () => {
     setSelectedWorkItem,
     setPlanningContext,
     selectedWorkItem,
+    canEditPlanningBoard,
   } = useStore();
+
+  const canEdit = canEditPlanningBoard();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createName, setCreateName] = useState('');
@@ -137,26 +140,28 @@ const PlanningBoardPage: React.FC = () => {
         <p style={{ margin: '0 0 24px 0', color: '#6b7280', fontSize: '14px' }}>
           Create a board with a name and teams (swimlanes). Then add features to iteration columns.
         </p>
-        <button
-          type="button"
-          onClick={() => setShowCreateModal(true)}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '10px 16px',
-            backgroundColor: '#3b82f6',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '6px',
-            fontSize: '14px',
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          <Plus size={18} />
-          Create board
-        </button>
+        {canEdit && (
+          <button
+            type="button"
+            onClick={() => setShowCreateModal(true)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 16px',
+              backgroundColor: '#3b82f6',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            <Plus size={18} />
+            Create board
+          </button>
+        )}
         <ul style={{ marginTop: '24px', padding: 0, listStyle: 'none' }}>
           {planningBoards.map((b) => (
             <li
@@ -373,53 +378,57 @@ const PlanningBoardPage: React.FC = () => {
                         >
                           <WorkItemCard item={feature} compact />
                         </div>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deletePlanningPlacement(p.id);
-                          }}
-                          title="Remove from cell"
-                          style={{
-                            position: 'absolute',
-                            top: 4,
-                            right: 4,
-                            width: 20,
-                            height: 20,
-                            padding: 0,
-                            border: 'none',
-                            borderRadius: 4,
-                            background: '#fef2f2',
-                            color: '#b91c1c',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: 12,
-                          }}
-                        >
-                          <X size={12} />
-                        </button>
+                        {canEdit && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deletePlanningPlacement(p.id);
+                            }}
+                            title="Remove from cell"
+                            style={{
+                              position: 'absolute',
+                              top: 4,
+                              right: 4,
+                              width: 20,
+                              height: 20,
+                              padding: 0,
+                              border: 'none',
+                              borderRadius: 4,
+                              background: '#fef2f2',
+                              color: '#b91c1c',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: 12,
+                            }}
+                          >
+                            <X size={12} />
+                          </button>
+                        )}
                       </div>
                     );
                   })}
-                  <button
-                    type="button"
-                    onClick={() => setShowFeaturePicker(isPickerOpen ? null : { teamId: team.id, iterationColumn: iter })}
-                    style={{
-                      padding: '6px',
-                      border: '1px dashed #d1d5db',
-                      borderRadius: 6,
-                      background: 'transparent',
-                      color: '#6b7280',
-                      cursor: 'pointer',
-                      fontSize: 12,
-                      marginTop: 'auto',
-                    }}
-                  >
-                    + Add feature
-                  </button>
-                  {isPickerOpen && (
+                  {canEdit && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setShowFeaturePicker(isPickerOpen ? null : { teamId: team.id, iterationColumn: iter })}
+                        style={{
+                          padding: '6px',
+                          border: '1px dashed #d1d5db',
+                          borderRadius: 6,
+                          background: 'transparent',
+                          color: '#6b7280',
+                          cursor: 'pointer',
+                          fontSize: 12,
+                          marginTop: 'auto',
+                        }}
+                      >
+                        + Add feature
+                      </button>
+                      {isPickerOpen && (
                     <div
                       style={{
                         marginTop: 8,
@@ -456,6 +465,8 @@ const PlanningBoardPage: React.FC = () => {
                         ))
                       )}
                     </div>
+                      )}
+                    </>
                   )}
                 </div>
               );

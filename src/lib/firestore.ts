@@ -352,12 +352,14 @@ export async function setUserProfile(profile: UserProfile): Promise<void> {
   const adminCompanyIds =
     (profile.adminCompanyIds?.length ? profile.adminCompanyIds : undefined) ??
     (profile.companies?.filter((c) => c.roles?.includes('admin')).map((c) => c.companyId) ?? []);
+  const rteCompanyIds = profile.companies?.filter((c) => c.roles?.includes('rte-team-of-teams-coach')).map((c) => c.companyId) ?? [];
   await setDoc(ref, {
     email: profile.email,
     displayName: profile.displayName,
     companyId: profile.companyId,
     companyIds,
     adminCompanyIds,
+    rteCompanyIds,
     ...(profile.companies && { companies: profile.companies }),
     ...(profile.mustChangePassword !== undefined && { mustChangePassword: profile.mustChangePassword }),
     ...(profile.employeeNumber !== undefined && { employeeNumber: profile.employeeNumber }),

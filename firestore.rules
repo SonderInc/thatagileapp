@@ -32,5 +32,19 @@ service cloud.firestore {
     match /tenantFirebaseConfigs/{slug} {
       allow read, write: if false;
     }
+    function isPlanningEditor(companyId) {
+      let u = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return companyId in u.get('adminCompanyIds', []) || companyId in u.get('rteCompanyIds', []);
+    }
+    match /planningBoards/{boardId} {
+      allow read: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)) != null && resource.data.get('companyId', null) != null && resource.data.companyId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('companyIds', []);
+      allow create: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)) != null && request.resource.data.get('companyId', null) != null && isPlanningEditor(request.resource.data.companyId);
+      allow update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)) != null && resource.data.get('companyId', null) != null && isPlanningEditor(resource.data.companyId);
+    }
+    match /planningPlacements/{placementId} {
+      allow read: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)) != null && exists(/databases/$(database)/documents/planningBoards/$(resource.data.boardId)) && get(/databases/$(database)/documents/planningBoards/$(resource.data.boardId)).data.get('companyId', null) in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('companyIds', []);
+      allow create: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)) != null && request.resource.data.get('boardId', null) != null && exists(/databases/$(database)/documents/planningBoards/$(request.resource.data.boardId)) && isPlanningEditor(get(/databases/$(database)/documents/planningBoards/$(request.resource.data.boardId)).data.get('companyId', ''));
+      allow update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)) != null && resource.data.get('boardId', null) != null && exists(/databases/$(database)/documents/planningBoards/$(resource.data.boardId)) && isPlanningEditor(get(/databases/$(database)/documents/planningBoards/$(resource.data.boardId)).data.get('companyId', ''));
+    }
   }
 }

@@ -114,6 +114,8 @@ interface AppState {
   canAddUser: () => boolean;
   /** True if current user is admin for the current tenant (e.g. can reset backlog). */
   canResetBacklog: () => boolean;
+  /** True if current user can edit Planning Board (admin or rte-team-of-teams-coach). */
+  canEditPlanningBoard: () => boolean;
   getFeaturesWithUserStories: () => WorkItem[];
   getFeaturesInDevelopState: () => WorkItem[];
   getTeamBoardLanes: () => { id: string; title: string }[];
@@ -473,6 +475,10 @@ export const useStore = create<AppState>((set, get) => ({
     const user = get().currentUser;
     if (!user?.roles?.length) return false;
     return user.roles.includes('admin') || user.roles.includes('rte-team-of-teams-coach');
+  },
+  canEditPlanningBoard: () => {
+    const user = get().currentUser;
+    return (user?.roles?.includes('admin') ?? false) || (user?.roles?.includes('rte-team-of-teams-coach') ?? false);
   },
 
   getFeaturesWithUserStories: () => {

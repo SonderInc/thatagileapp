@@ -554,6 +554,7 @@ const ProductBacklog: React.FC = () => {
           onClose={handleCloseModal}
           parentId={modalParentId}
           type={modalType}
+          onSelectWorkItem={(id) => setModalItemId(id)}
         />
       )}
     </div>
