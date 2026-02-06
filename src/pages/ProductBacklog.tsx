@@ -4,6 +4,7 @@ import { useStore } from '../store/useStore';
 import WorkItemModal from '../components/WorkItemModal';
 import { getAllowedChildTypes } from '../utils/hierarchy';
 import { WorkItem, WorkItemType } from '../types';
+import { compareWorkItemOrder } from '../utils/order';
 import { Plus, ChevronDown, ChevronRight, ArrowLeft, GripVertical } from 'lucide-react';
 
 function buildTree(items: WorkItem[]): WorkItem[] {
@@ -13,22 +14,14 @@ function buildTree(items: WorkItem[]): WorkItem[] {
     if (!byParent.has(key)) byParent.set(key, []);
     byParent.get(key)!.push(item);
   }
-  const typeOrder: WorkItemType[] = ['company', 'product', 'epic', 'feature', 'user-story', 'task', 'bug'];
-  const sortSiblings = (a: WorkItem, b: WorkItem) =>
-    (a.order ?? Infinity) - (b.order ?? Infinity) ||
-    typeOrder.indexOf(a.type) - typeOrder.indexOf(b.type) ||
-    a.title.localeCompare(b.title);
   for (const arr of byParent.values()) {
-    arr.sort(sortSiblings);
+    arr.sort(compareWorkItemOrder);
   }
   return byParent.get('__root') ?? [];
 }
 
 function getChildren(items: WorkItem[], parentId: string): WorkItem[] {
-  const typeOrder: WorkItemType[] = ['company', 'product', 'epic', 'feature', 'user-story', 'task', 'bug'];
-  return items
-    .filter((i) => i.parentId === parentId)
-    .sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || typeOrder.indexOf(a.type) - typeOrder.indexOf(b.type) || a.title.localeCompare(b.title));
+  return items.filter((i) => i.parentId === parentId).sort(compareWorkItemOrder);
 }
 
 /** When teamFilterId is set, return only items that are in the hierarchy of user-stories assigned to that team. */
@@ -89,6 +82,123 @@ const BACKLOG_TYPE_OPTIONS: WorkItemType[] = ['product', 'epic', 'feature', 'use
 
 const DROPPABLE_TYPES: WorkItemType[] = ['product', 'epic', 'feature', 'user-story', 'task', 'bug'];
 
+interface BacklogTreeRowProps {
+  item: WorkItem;
+  depth: number;
+  hasChildren: boolean;
+  isCollapsed: boolean;
+  allowedChildTypes: WorkItemType[];
+  getTypeLabel: (type: WorkItemType) => string;
+  onToggle: (id: string) => void;
+  onEdit: (itemId: string) => void;
+  onAddChild: (parentId: string, type: WorkItemType) => void;
+  showGrip: boolean;
+  dragHandleProps?: object | null;
+}
+
+const BacklogTreeRow: React.FC<BacklogTreeRowProps> = ({
+  item,
+  depth,
+  hasChildren,
+  isCollapsed,
+  allowedChildTypes,
+  getTypeLabel,
+  onToggle,
+  onEdit,
+  onAddChild,
+  showGrip,
+  dragHandleProps,
+}) => (
+  <div
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      padding: '8px 12px',
+      paddingLeft: `${12 + depth * 24}px`,
+      borderBottom: '1px solid #e5e7eb',
+      backgroundColor: '#ffffff',
+      gap: '8px',
+    }}
+  >
+    {showGrip ? (
+      <span style={{ display: 'flex', alignItems: 'center', cursor: 'grab' }} title="Drag to reorder" {...(dragHandleProps ?? {})}>
+        <GripVertical size={16} color="#9ca3af" />
+      </span>
+    ) : (
+      <span style={{ width: 24, display: 'inline-block' }} />
+    )}
+    <button
+      type="button"
+      onClick={() => hasChildren && onToggle(item.id)}
+      style={{
+        background: 'none',
+        border: 'none',
+        padding: 0,
+        cursor: hasChildren ? 'pointer' : 'default',
+        display: 'flex',
+        alignItems: 'center',
+        width: '24px',
+      }}
+    >
+      {hasChildren ? isCollapsed ? <ChevronRight size={18} /> : <ChevronDown size={18} /> : <span style={{ width: 18 }} />}
+    </button>
+    <span
+      style={{
+        fontSize: '12px',
+        color: '#6b7280',
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        minWidth: '80px',
+      }}
+    >
+      {getTypeLabel(item.type)}
+    </span>
+    <button
+      type="button"
+      onClick={() => onEdit(item.id)}
+      style={{
+        flex: 1,
+        textAlign: 'left',
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        padding: '4px 0',
+        fontSize: '14px',
+        color: '#111827',
+        fontWeight: '500',
+      }}
+    >
+      {item.title}
+    </button>
+    {allowedChildTypes.length > 0 && (
+      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+        {allowedChildTypes.map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => onAddChild(item.id, t)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '4px 8px',
+              fontSize: '12px',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              backgroundColor: '#f9fafb',
+              color: '#374151',
+              cursor: 'pointer',
+            }}
+          >
+            <Plus size={14} />
+            Add {getTypeLabel(t)}
+          </button>
+        ))}
+      </div>
+    )}
+  </div>
+);
+
 interface DroppableTreeBlockProps {
   droppableId: string;
   items: WorkItem[];
@@ -123,101 +233,23 @@ const DroppableTreeBlock: React.FC<DroppableTreeBlockProps> = ({
             const isCollapsed = collapsed.has(item.id);
             const allowedChildTypes = getAllowedChildTypes(item.type);
             const isDraggable = canDrag && DROPPABLE_TYPES.includes(item.type);
-            const rowContent = (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '8px 12px',
-                  paddingLeft: `${12 + depth * 24}px`,
-                  borderBottom: '1px solid #e5e7eb',
-                  backgroundColor: '#ffffff',
-                  gap: '8px',
-                }}
-              >
-                {isDraggable ? (
-                  <span style={{ display: 'flex', alignItems: 'center', cursor: 'grab' }} title="Drag to reorder">
-                    <GripVertical size={16} color="#9ca3af" />
-                  </span>
-                ) : (
-                  <span style={{ width: 24, display: 'inline-block' }} />
-                )}
-                <button
-                  type="button"
-                  onClick={() => hasChildren && onToggle(item.id)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    padding: 0,
-                    cursor: hasChildren ? 'pointer' : 'default',
-                    display: 'flex',
-                    alignItems: 'center',
-                    width: '24px',
-                  }}
-                >
-                  {hasChildren ? isCollapsed ? <ChevronRight size={18} /> : <ChevronDown size={18} /> : <span style={{ width: 18 }} />}
-                </button>
-                <span
-                  style={{
-                    fontSize: '12px',
-                    color: '#6b7280',
-                    fontWeight: '600',
-                    textTransform: 'uppercase',
-                    minWidth: '80px',
-                  }}
-                >
-                  {getTypeLabel(item.type)}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => onEdit(item.id)}
-                  style={{
-                    flex: 1,
-                    textAlign: 'left',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: '4px 0',
-                    fontSize: '14px',
-                    color: '#111827',
-                    fontWeight: '500',
-                  }}
-                >
-                  {item.title}
-                </button>
-                {allowedChildTypes.length > 0 && (
-                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                    {allowedChildTypes.map((t) => (
-                      <button
-                        key={t}
-                        type="button"
-                        onClick={() => onAddChild(item.id, t)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          padding: '4px 8px',
-                          fontSize: '12px',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '6px',
-                          backgroundColor: '#f9fafb',
-                          color: '#374151',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <Plus size={14} />
-                        Add {getTypeLabel(t)}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
             return (
               <Draggable key={item.id} draggableId={item.id} index={index} isDragDisabled={!isDraggable}>
                 {(draggableProvided) => (
-                  <div ref={draggableProvided.innerRef} {...draggableProvided.draggableProps} {...(isDraggable ? draggableProvided.dragHandleProps : {})}>
-                    {rowContent}
+                  <div ref={draggableProvided.innerRef} {...draggableProvided.draggableProps}>
+                    <BacklogTreeRow
+                      item={item}
+                      depth={depth}
+                      hasChildren={hasChildren}
+                      isCollapsed={isCollapsed}
+                      allowedChildTypes={allowedChildTypes}
+                      getTypeLabel={getTypeLabel}
+                      onToggle={onToggle}
+                      onEdit={onEdit}
+                      onAddChild={onAddChild}
+                      showGrip={isDraggable}
+                      dragHandleProps={isDraggable ? draggableProvided.dragHandleProps : undefined}
+                    />
                     {hasChildren && !isCollapsed && (
                       <DroppableTreeBlock
                         droppableId={item.id}

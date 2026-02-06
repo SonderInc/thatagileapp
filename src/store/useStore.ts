@@ -3,6 +3,7 @@ import { WorkItem, Sprint, KanbanBoard, User, WorkItemType, TenantCompany, AuthU
 import { getAllowedChildTypes } from '../utils/hierarchy';
 import { getTypeLabel as getTypeLabelFromNomenclature, getRoleLabel as getRoleLabelFromNomenclature } from '../utils/nomenclature';
 import { getDataStore } from '../lib/adapters';
+import { compareWorkItemOrder } from '../utils/order';
 
 const TYPE_ORDER: Record<WorkItemType, number> = {
   company: 0,
@@ -338,7 +339,7 @@ export const useStore = create<AppState>((set, get) => ({
   getWorkItemsByParent: (parentId) => {
     return get()
       .workItems.filter((item) => item.parentId === parentId)
-      .sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || a.title.localeCompare(b.title));
+      .sort(compareWorkItemOrder);
   },
   
   getWorkItemsBySprint: (sprintId) => {
@@ -478,8 +479,6 @@ export const useStore = create<AppState>((set, get) => ({
   getStoriesForLane: (laneId: string) => {
     const allItems = get().workItems;
     const tid = get().selectedTeamId;
-    const byOrder = (a: { order?: number; title: string }, b: { order?: number; title: string }) =>
-      (a.order ?? Infinity) - (b.order ?? Infinity) || a.title.localeCompare(b.title);
     if (tid != null) {
       if (laneId === '__ad_hoc__') {
         return allItems
@@ -489,16 +488,16 @@ export const useStore = create<AppState>((set, get) => ({
               i.teamId === tid &&
               (i.parentId == null || allItems.find((p) => p.id === i.parentId)?.type !== 'feature')
           )
-          .sort(byOrder);
+          .sort(compareWorkItemOrder);
       }
       if (laneId === '__bug__') {
         return allItems
           .filter((i) => i.type === 'bug' && i.parentId == null && (i.teamId === tid || i.teamId == null))
-          .sort(byOrder);
+          .sort(compareWorkItemOrder);
       }
       return allItems
         .filter((i) => i.parentId === laneId && i.type === 'user-story' && i.teamId === tid)
-        .sort(byOrder);
+        .sort(compareWorkItemOrder);
     }
     const items = allItems;
     if (laneId === '__ad_hoc__') {
@@ -508,12 +507,12 @@ export const useStore = create<AppState>((set, get) => ({
             i.type === 'user-story' &&
             (i.parentId == null || items.find((p) => p.id === i.parentId)?.type !== 'feature')
         )
-        .sort(byOrder);
+        .sort(compareWorkItemOrder);
     }
     if (laneId === '__bug__') {
-      return items.filter((i) => i.type === 'bug' && i.parentId == null).sort(byOrder);
+      return items.filter((i) => i.type === 'bug' && i.parentId == null).sort(compareWorkItemOrder);
     }
-    return items.filter((i) => i.parentId === laneId && i.type === 'user-story').sort(byOrder);
+    return items.filter((i) => i.parentId === laneId && i.type === 'user-story').sort(compareWorkItemOrder);
   },
 
   getKanbanLanes: () => [

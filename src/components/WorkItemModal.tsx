@@ -4,12 +4,14 @@ import { useStore } from '../store/useStore';
 import { getAllowedParentTypes } from '../utils/hierarchy';
 import { SIZE_OPTIONS, STORY_POINT_OPTIONS, DAYS_OPTIONS } from '../utils/estimates';
 import { extractCursorInstruction } from '../lib/cursorInstruction';
-import { apiRequest } from '../api/client';
 import { Plus, FileText, BookOpen, Sparkles } from 'lucide-react';
+import { useSequenceSuggestion } from '../hooks/useSequenceSuggestion';
+import SuggestedOrderBox from './SuggestedOrderBox';
 import Modal from './Modal';
 import EpicHypothesisModal from './EpicHypothesisModal';
 import EpicHypothesisExampleModal from './EpicHypothesisExampleModal';
 import { useWorkItemForm } from '../hooks/useWorkItemForm';
+import { compareWorkItemOrder } from '../utils/order';
 
 interface WorkItemModalProps {
   itemId: string | null;
@@ -62,11 +64,8 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
   const [showEpicHypothesisExample, setShowEpicHypothesisExample] = useState(false);
   const [copiedHint, setCopiedHint] = useState<'cursor' | 'description' | null>(null);
   const [parentDropdownOpen, setParentDropdownOpen] = useState(false);
-  const [sequenceLoading, setSequenceLoading] = useState(false);
-  const [suggestedOrderIds, setSuggestedOrderIds] = useState<string[] | null>(null);
-  const [suggestedOrderContext, setSuggestedOrderContext] = useState<'tasks' | 'stories' | null>(null);
-  const [sequenceError, setSequenceError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const { loading: sequenceLoading, error: sequenceError, suggestion, requestSequence, applyOrder, clear: clearSuggestion } = useSequenceSuggestion();
   const [parentFilter, setParentFilter] = useState('');
   const [parentHighlightIndex, setParentHighlightIndex] = useState(0);
   const parentInputRef = useRef<HTMLInputElement>(null);
@@ -93,7 +92,7 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
     item?.type === 'feature'
       ? workItems
           .filter((i) => i.parentId === item.id && i.type === 'user-story')
-          .sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || a.title.localeCompare(b.title))
+          .sort(compareWorkItemOrder)
       : [];
 
   useEffect(() => {
@@ -107,6 +106,15 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
   useEffect(() => {
     if (!parentDropdownOpen) setParentHighlightIndex(0);
   }, [parentDropdownOpen]);
+
+  useEffect(() => {
+    clearSuggestion();
+  }, [itemId, clearSuggestion]);
+
+  const onSuggestToast = useCallback(() => {
+    setToastMessage('This is just a suggestion.');
+    setTimeout(() => setToastMessage(null), 4000);
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -834,29 +842,16 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
                   <button
                     type="button"
                     disabled={sequenceLoading}
-                    onClick={async () => {
-                      setSequenceError(null);
-                      setSuggestedOrderIds(null);
-                      setSuggestedOrderContext(null);
-                      setSequenceLoading(true);
-                      try {
-                        const res = await apiRequest<{ orderedIds: string[] }>('/.netlify/functions/sequence-tasks', {
-                          method: 'POST',
-                          body: JSON.stringify({
-                            storyDescription: formData.description ?? item?.description ?? '',
-                            tasks: childTasksAndBugs.map((t) => ({ id: t.id, title: t.title, description: t.description })),
-                          }),
-                        });
-                        setSuggestedOrderIds(res.orderedIds);
-                        setSuggestedOrderContext('tasks');
-                        setToastMessage('This is just a suggestion.');
-                        setTimeout(() => setToastMessage(null), 4000);
-                      } catch (e) {
-                        setSequenceError(e instanceof Error ? e.message : String(e));
-                      } finally {
-                        setSequenceLoading(false);
-                      }
-                    }}
+                    onClick={() =>
+                      requestSequence(
+                        {
+                          storyDescription: formData.description ?? item?.description ?? '',
+                          tasks: childTasksAndBugs.map((t) => ({ id: t.id, title: t.title, description: t.description })),
+                        },
+                        'tasks',
+                        { onSuggestToast }
+                      )
+                    }
                     style={{
                       padding: '6px 12px',
                       border: '1px solid #a78bfa',
@@ -918,37 +913,15 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
                   {sequenceError.includes('not configured') ? 'Configure API to enable.' : sequenceError}
                 </div>
               )}
-              {suggestedOrderIds && suggestedOrderIds.length > 0 && suggestedOrderContext === 'tasks' && (
-                <div style={{ marginBottom: '12px', padding: '12px', backgroundColor: '#f5f3ff', borderRadius: '6px', border: '1px solid #c4b5fd' }}>
-                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#5b21b6', marginBottom: '8px' }}>Suggested order</div>
-                  <ol style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', color: '#374151' }}>
-                    {suggestedOrderIds.map((id) => {
-                      const child = childTasksAndBugs.find((c) => c.id === id);
-                      return child ? <li key={id}>{child.title}</li> : null;
-                    })}
-                  </ol>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      suggestedOrderIds.forEach((id, index) => updateWorkItem(id, { order: index }));
-                      setSuggestedOrderIds(null);
-                      setSuggestedOrderContext(null);
-                    }}
-                    style={{
-                      marginTop: '8px',
-                      padding: '6px 12px',
-                      border: 'none',
-                      borderRadius: '6px',
-                      backgroundColor: '#6d28d9',
-                      color: '#fff',
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                      fontWeight: '500',
-                    }}
-                  >
-                    Apply
-                  </button>
-                </div>
+              {suggestion?.context === 'tasks' && (
+                <SuggestedOrderBox
+                  orderedIds={suggestion.ids}
+                  items={childTasksAndBugs.map((t) => ({ id: t.id, title: t.title }))}
+                  onApply={async () => {
+                    await applyOrder({ orderedIds: suggestion.ids, updateWorkItem });
+                    clearSuggestion();
+                  }}
+                />
               )}
               {childTasksAndBugs.length > 0 && (
                 <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
@@ -988,29 +961,16 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
                   <button
                     type="button"
                     disabled={sequenceLoading}
-                    onClick={async () => {
-                      setSequenceError(null);
-                      setSuggestedOrderIds(null);
-                      setSuggestedOrderContext(null);
-                      setSequenceLoading(true);
-                      try {
-                        const res = await apiRequest<{ orderedIds: string[] }>('/.netlify/functions/sequence-tasks', {
-                          method: 'POST',
-                          body: JSON.stringify({
-                            featureDescription: formData.description ?? item?.description ?? '',
-                            stories: childStoriesForFeature.map((s) => ({ id: s.id, title: s.title, description: s.description })),
-                          }),
-                        });
-                        setSuggestedOrderIds(res.orderedIds);
-                        setSuggestedOrderContext('stories');
-                        setToastMessage('This is just a suggestion.');
-                        setTimeout(() => setToastMessage(null), 4000);
-                      } catch (e) {
-                        setSequenceError(e instanceof Error ? e.message : String(e));
-                      } finally {
-                        setSequenceLoading(false);
-                      }
-                    }}
+                    onClick={() =>
+                      requestSequence(
+                        {
+                          featureDescription: formData.description ?? item?.description ?? '',
+                          stories: childStoriesForFeature.map((s) => ({ id: s.id, title: s.title, description: s.description })),
+                        },
+                        'stories',
+                        { onSuggestToast }
+                      )
+                    }
                     style={{
                       padding: '6px 12px',
                       border: '1px solid #a78bfa',
@@ -1034,37 +994,15 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
                   {sequenceError.includes('not configured') ? 'Configure API to enable.' : sequenceError}
                 </div>
               )}
-              {suggestedOrderIds && suggestedOrderIds.length > 0 && suggestedOrderContext === 'stories' && (
-                <div style={{ marginBottom: '12px', padding: '12px', backgroundColor: '#f5f3ff', borderRadius: '6px', border: '1px solid #c4b5fd' }}>
-                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#5b21b6', marginBottom: '8px' }}>Suggested order</div>
-                  <ol style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', color: '#374151' }}>
-                    {suggestedOrderIds.map((id) => {
-                      const child = childStoriesForFeature.find((c) => c.id === id);
-                      return child ? <li key={id}>{child.title}</li> : null;
-                    })}
-                  </ol>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      suggestedOrderIds.forEach((id, index) => updateWorkItem(id, { order: index }));
-                      setSuggestedOrderIds(null);
-                      setSuggestedOrderContext(null);
-                    }}
-                    style={{
-                      marginTop: '8px',
-                      padding: '6px 12px',
-                      border: 'none',
-                      borderRadius: '6px',
-                      backgroundColor: '#6d28d9',
-                      color: '#fff',
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                      fontWeight: '500',
-                    }}
-                  >
-                    Apply
-                  </button>
-                </div>
+              {suggestion?.context === 'stories' && (
+                <SuggestedOrderBox
+                  orderedIds={suggestion.ids}
+                  items={childStoriesForFeature.map((s) => ({ id: s.id, title: s.title }))}
+                  onApply={async () => {
+                    await applyOrder({ orderedIds: suggestion.ids, updateWorkItem });
+                    clearSuggestion();
+                  }}
+                />
               )}
               {childStoriesForFeature.length > 0 && (
                 <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>

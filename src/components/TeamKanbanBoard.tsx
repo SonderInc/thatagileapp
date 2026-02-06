@@ -3,6 +3,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautif
 import { useStore } from '../store/useStore';
 import { KanbanColumn, WorkItem } from '../types';
 import { getStatusColor, getStatusForTeamColumn, isStatusInTeamColumn } from '../utils/boardConfig';
+import { compareWorkItemOrder } from '../utils/order';
 import WorkItemCard from './WorkItemCard';
 import { Check } from 'lucide-react';
 
@@ -38,7 +39,7 @@ const TeamKanbanBoard: React.FC<TeamKanbanBoardProps> = ({
   const getTasksForStory = (storyId: string): WorkItem[] =>
     workItems
       .filter((i) => i.parentId === storyId && (i.type === 'task' || i.type === 'bug'))
-      .sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || a.title.localeCompare(b.title));
+      .sort(compareWorkItemOrder);
 
   const allTasksDoneForStory = (storyId: string): boolean => {
     const tasks = getTasksForStory(storyId);
