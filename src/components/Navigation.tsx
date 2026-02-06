@@ -130,7 +130,7 @@ const Navigation: React.FC = () => {
           <LayoutDashboard size={24} color="#3b82f6" />
         )}
         <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#111827' }}>
-          thatagileapp.com
+          {currentCompany?.name ?? 'thatagileapp.com'}
         </h2>
       </button>
       
