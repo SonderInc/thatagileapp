@@ -1,5 +1,30 @@
 import React, { useState } from 'react';
 import Modal from './Modal';
+import { apiRequest } from '../api/client';
+
+function formatTodayMMDDYYYY(): string {
+  const d = new Date();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${month}/${day}/${year}`;
+}
+
+interface GenerateHypothesisResponse {
+  funnelEntryDate: string;
+  epicName: string;
+  epicOwner: string;
+  elevatorPitch: {
+    forCustomers: string;
+    who: string;
+    theSolution: string;
+    isA: string;
+    thatProvidesValue: string;
+    unlike: string;
+    ourSolution: string;
+  };
+  businessOutcomes: string[];
+}
 
 export interface EpicHypothesisData {
   funnelEntryDate: string;
@@ -76,10 +101,16 @@ export function buildEpicDescriptionFromHypothesis(data: EpicHypothesisData): st
 interface EpicHypothesisModalProps {
   onClose: () => void;
   onApply: (data: { title: string; description: string; assignee?: string }) => void;
+  initialNotes?: string | null;
 }
 
-const EpicHypothesisModal: React.FC<EpicHypothesisModalProps> = ({ onClose, onApply }) => {
-  const [data, setData] = useState<EpicHypothesisData>(defaultHypothesis);
+const EpicHypothesisModal: React.FC<EpicHypothesisModalProps> = ({ onClose, onApply, initialNotes }) => {
+  const [data, setData] = useState<EpicHypothesisData>(() => ({
+    ...defaultHypothesis,
+    funnelEntryDate: formatTodayMMDDYYYY(),
+  }));
+  const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
 
   const handleApply = () => {
     const title = data.epicName.trim() || 'New Epic';
@@ -90,6 +121,49 @@ const EpicHypothesisModal: React.FC<EpicHypothesisModalProps> = ({ onClose, onAp
       assignee: data.epicOwner.trim() || undefined,
     });
     onClose();
+  };
+
+  const handleGenerate = async () => {
+    setGenerateError(null);
+    setGenerating(true);
+    const hadEpicOwner = data.epicOwner.trim() !== '';
+    const ownerToKeep = data.epicOwner;
+    try {
+      const res = await apiRequest<GenerateHypothesisResponse>('/.netlify/functions/generate-hypothesis', {
+        method: 'POST',
+        body: JSON.stringify({
+          epicName: data.epicName.trim() || null,
+          epicOwner: data.epicOwner.trim() || null,
+          notes: initialNotes ?? null,
+        }),
+      });
+      const ep = res.elevatorPitch;
+      const businessOutcomesText = Array.isArray(res.businessOutcomes)
+        ? res.businessOutcomes.map((o) => `- ${o}`).join('\n')
+        : '';
+      setData({
+        funnelEntryDate: res.funnelEntryDate ?? formatTodayMMDDYYYY(),
+        epicName: res.epicName ?? '',
+        epicOwner: hadEpicOwner ? ownerToKeep : (res.epicOwner ?? ''),
+        epicDescription: {
+          forCustomers: ep?.forCustomers ?? '',
+          whoDoSomething: ep?.who ?? '',
+          theSolution: ep?.theSolution ?? '',
+          isA: ep?.isA ?? '',
+          thatProvidesValue: ep?.thatProvidesValue ?? '',
+          unlike: ep?.unlike ?? '',
+          ourSolution: ep?.ourSolution ?? '',
+        },
+        businessOutcomes: businessOutcomesText,
+        leadingIndicators: '',
+        nfrs: '',
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setGenerateError(msg.includes('not configured') ? 'Configure API to enable.' : `Generation failed: ${msg}`);
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const labelStyle: React.CSSProperties = { display: 'block', marginBottom: '6px', fontWeight: '500', fontSize: '13px', color: '#374151' };
@@ -109,9 +183,10 @@ const EpicHypothesisModal: React.FC<EpicHypothesisModalProps> = ({ onClose, onAp
       <div style={sectionStyle}>
           <label style={labelStyle}>Funnel Entry Date</label>
           <input
-            type="date"
+            type="text"
             value={data.funnelEntryDate}
             onChange={(e) => setData({ ...data, funnelEntryDate: e.target.value })}
+            placeholder="MM/DD/YYYY"
             style={inputStyle}
           />
           <div style={hintStyle}>The date that the epic entered the funnel.</div>
@@ -137,6 +212,31 @@ const EpicHypothesisModal: React.FC<EpicHypothesisModalProps> = ({ onClose, onAp
             placeholder="The name of the epic owner"
             style={inputStyle}
           />
+        </div>
+
+        <div style={sectionStyle}>
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={generating}
+            style={{
+              padding: '8px 14px',
+              border: '1px solid #8b5cf6',
+              borderRadius: '6px',
+              backgroundColor: '#ede9fe',
+              color: '#5b21b6',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: generating ? 'wait' : 'pointer',
+            }}
+          >
+            {generating ? 'Generating…' : 'Generate Hypothesis'}
+          </button>
+          {generateError && (
+            <div style={{ marginTop: '8px', padding: '8px 12px', backgroundColor: '#fef2f2', borderRadius: '6px', fontSize: '13px', color: '#b91c1c' }}>
+              {generateError}
+            </div>
+          )}
         </div>
 
         <div style={sectionStyle}>

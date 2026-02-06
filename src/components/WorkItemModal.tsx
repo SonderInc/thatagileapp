@@ -1125,6 +1125,7 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
             }));
             setShowEpicHypothesis(false);
           }}
+          initialNotes={formData.description ?? item?.description ?? undefined}
         />
       )}
       {showEpicHypothesisExample && (
