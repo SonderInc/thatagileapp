@@ -116,7 +116,7 @@ const CompanyProfilePage: React.FC = () => {
       });
       // Update store optimistically so UI reflects changes even if refetch fails (e.g. list permission)
       const updated = {
-        name: name.trim() || company?.name ?? '',
+        name: (name.trim() || company?.name) ?? '',
         companyType,
         vision: vision.trim() || undefined,
         logoUrl: logoUrl.trim() || undefined,
