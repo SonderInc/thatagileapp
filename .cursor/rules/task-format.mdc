@@ -1,0 +1,41 @@
+---
+description: Task description format — use when writing or interpreting tasks
+alwaysApply: false
+---
+
+# Task format
+
+When the user asks to add a task, create a task, or provides a task description, use the following format. When interpreting a task that uses this structure, follow the CURSOR INSTRUCTIONS section (OBJECTIVE, FILES TO CHANGE, IMPLEMENTATION STEPS, CONSTRAINTS, ACCEPTANCE CHECK).
+
+Fill OBJECTIVE, FILES TO CHANGE, IMPLEMENTATION STEPS, CONSTRAINTS, and ACCEPTANCE CHECK per task. The CONSTRAINTS and ACCEPTANCE CHECK bullets below are examples and can be adjusted for the task.
+
+## Template
+
+```
+<Human-readable intent (1–3 sentences max)>
+
+---
+CURSOR INSTRUCTIONS
+---
+OBJECTIVE:
+<What success looks like>
+
+FILES TO CHANGE:
+- path/to/file1.ts
+- path/to/file2.tsx
+
+IMPLEMENTATION STEPS:
+1) Step one (clear, imperative)
+2) Step two
+3) Step three
+
+CONSTRAINTS:
+- Do not change existing UI layout
+- Do not add new dependencies
+- Keep changes localized to the plugin
+
+ACCEPTANCE CHECK:
+- The feature compiles
+- No existing tests break
+- Manual verification steps pass
+```
