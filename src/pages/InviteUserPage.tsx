@@ -10,6 +10,8 @@ import type { Team } from '../types';
 
 const ALL_ROLES = Object.keys(ROLE_LABELS) as Role[];
 
+type UserManagementTab = 'create' | 'directory' | 'teams';
+
 const InviteUserPage: React.FC = () => {
   const {
     currentUser,
@@ -25,6 +27,7 @@ const InviteUserPage: React.FC = () => {
     updateTeam,
     deleteTeam,
   } = useStore();
+  const [activeTab, setActiveTab] = useState<UserManagementTab>('create');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -412,6 +415,12 @@ const InviteUserPage: React.FC = () => {
     }
   };
 
+  const tabs: { id: UserManagementTab; label: string }[] = [
+    { id: 'create', label: 'Create User' },
+    { id: 'directory', label: 'User Directory' },
+    { id: 'teams', label: 'Team Management' },
+  ];
+
   return (
     <div className="page-container">
       <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -420,12 +429,39 @@ const InviteUserPage: React.FC = () => {
         </button>
         <h1 className="page-title" style={{ margin: 0 }}>User Management</h1>
       </div>
+      <div
+        style={{
+          display: 'flex',
+          gap: '4px',
+          borderBottom: '1px solid #e5e7eb',
+          marginBottom: '24px',
+        }}
+      >
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              padding: '10px 20px',
+              border: 'none',
+              borderBottom: activeTab === tab.id ? '2px solid #3b82f6' : '2px solid transparent',
+              backgroundColor: 'transparent',
+              color: activeTab === tab.id ? '#3b82f6' : '#6b7280',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: activeTab === tab.id ? '600' : '400',
+              marginBottom: '-1px',
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
       {error && <div className="form-error">{error}</div>}
 
+      {activeTab === 'create' && (
       <section style={{ marginBottom: '32px' }}>
-        <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#111827' }}>
-          Create user
-        </h2>
         {createUserSuccess && (
           <div className="form-success" style={{ marginBottom: '16px' }}>
             {createUserSuccess}
@@ -515,11 +551,10 @@ const InviteUserPage: React.FC = () => {
           </button>
         </form>
       </section>
+      )}
 
+      {activeTab === 'directory' && (
       <section>
-        <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#111827' }}>
-          User directory
-        </h2>
         {directoryLoading ? (
           <p style={{ color: '#6b7280', fontSize: '14px' }}>Loading users…</p>
         ) : directoryError ? (
@@ -645,11 +680,10 @@ const InviteUserPage: React.FC = () => {
           </div>
         )}
       </section>
+      )}
 
+      {activeTab === 'teams' && (
       <section>
-        <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#111827' }}>
-          Teams
-        </h2>
         {teamError && (
           <p style={{ color: '#b91c1c', fontSize: '14px', marginBottom: '12px' }}>{teamError}</p>
         )}
@@ -734,6 +768,7 @@ const InviteUserPage: React.FC = () => {
           </div>
         )}
       </section>
+      )}
     </div>
   );
 };
