@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
-import { getDataStore } from '../lib/adapters';
+import { getAuth, getDataStore } from '../lib/adapters';
 import { mergeProfileForBackfill } from '../lib/firestore';
 import { isAdminForCompany } from '../lib/roles';
 import { ROLE_LABELS } from '../types';
@@ -33,7 +33,7 @@ const InviteUserPage: React.FC = () => {
   const [selectedRoles, setSelectedRoles] = useState<Role[]>(['developer']);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [createUserSuccess, setCreateUserSuccess] = useState<string | null>(null);
   const [companyUsers, setCompanyUsers] = useState<UserProfile[]>([]);
   const [directoryLoading, setDirectoryLoading] = useState(false);
   const [directoryError, setDirectoryError] = useState<string | null>(null);
@@ -206,10 +206,12 @@ const InviteUserPage: React.FC = () => {
     );
   }
 
+  const CREATE_USER_FN_PATH = '/.netlify/functions/create-company-user';
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setInviteLink(null);
+    setCreateUserSuccess(null);
     setLoading(true);
     if (!currentTenantId || !currentUser) {
       setError('No company or user context.');
@@ -264,20 +266,39 @@ const InviteUserPage: React.FC = () => {
       setLoading(false);
       return;
     }
+    const idToken = await getAuth().getIdToken();
+    if (!idToken) {
+      setError('Please sign in again.');
+      setLoading(false);
+      return;
+    }
     try {
-      const { token } = await getDataStore().addInvite({
-        email: trimmedEmail,
-        companyId: currentTenantId,
-        roles: selectedRoles,
-        invitedBy: currentUser.id,
-        firstName: trimmedFirst,
-        lastName: trimmedLast,
-        ...(employeeNumber.trim() && { employeeNumber: employeeNumber.trim() }),
-        ...(phone.trim() && { phone: phone.trim() }),
+      const res = await fetch(CREATE_USER_FN_PATH, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          email: trimmedEmail,
+          firstName: trimmedFirst,
+          lastName: trimmedLast,
+          companyId: currentTenantId,
+          roles: selectedRoles,
+          ...(employeeNumber.trim() && { employeeNumber: employeeNumber.trim() }),
+          ...(phone.trim() && { phone: phone.trim() }),
+        }),
       });
-      const base = typeof window !== 'undefined' ? window.location.origin + window.location.pathname : '';
-      const link = `${base}?invite=${token}`;
-      setInviteLink(link);
+      const rawData = await res.json().catch(() => ({}));
+      const errBody = rawData as { error?: string };
+      if (!res.ok) {
+        setError(errBody.error ?? 'Could not create user.');
+        setLoading(false);
+        return;
+      }
+      setCreateUserSuccess(
+        'User created. They can sign in with email and password 12341234 and will be prompted to change it on first login.'
+      );
       setFirstName('');
       setLastName('');
       setEmail('');
@@ -403,20 +424,11 @@ const InviteUserPage: React.FC = () => {
 
       <section style={{ marginBottom: '32px' }}>
         <h2 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: '#111827' }}>
-          Invite user
+          Create user
         </h2>
-        {inviteLink && (
+        {createUserSuccess && (
           <div className="form-success" style={{ marginBottom: '16px' }}>
-            <div style={{ fontWeight: '500', marginBottom: '8px' }}>Invite link (share with the user):</div>
-            <code style={{ wordBreak: 'break-all', fontSize: '12px' }}>{inviteLink}</code>
-            <button
-              type="button"
-              onClick={() => navigator.clipboard.writeText(inviteLink)}
-              className="btn-secondary"
-              style={{ display: 'block', marginTop: '8px' }}
-            >
-              Copy link
-            </button>
+            {createUserSuccess}
           </div>
         )}
         <form onSubmit={handleSubmit}>
@@ -499,7 +511,7 @@ const InviteUserPage: React.FC = () => {
             </select>
           </div>
           <button type="submit" className="btn-primary" disabled={loading}>
-            {loading ? 'Adding…' : 'Add User'}
+            {loading ? 'Creating…' : 'Create User'}
           </button>
         </form>
       </section>
