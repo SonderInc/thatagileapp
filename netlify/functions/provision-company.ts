@@ -123,6 +123,7 @@ export const handler = async (event: HandlerEvent) => {
       name,
       slug,
       companyType,
+      ownerUid: uid,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
       seats: 50,

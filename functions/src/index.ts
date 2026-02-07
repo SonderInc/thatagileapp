@@ -1,0 +1,1 @@
+export { grantTenantAccess } from "./grantTenantAccess";

@@ -71,3 +71,5 @@ export { db, auth, storage, analytics };
 export const isFirebaseConfigured = (): boolean => !!db;
 export const getFirebaseProjectId = (): string | null =>
   (app?.options?.projectId as string | undefined) ?? null;
+/** For callable functions (e.g. grantTenantAccess). Returns null if Firebase not configured. */
+export const getFirebaseApp = (): FirebaseApp | null => app;

@@ -337,36 +337,29 @@ export function mergeProfileForBackfill(
   };
 }
 
+/**
+ * Update user profile. Client must NOT write companyIds or adminCompanyIds (server-only via
+ * grantTenantAccess callable). We merge only allowed fields so Firestore rules accept the write.
+ */
 export async function setUserProfile(profile: UserProfile): Promise<void> {
   if (!db) return Promise.reject(new Error('Firebase not configured'));
-  const hasCompany =
-    profile.companyId != null ||
-    (profile.companyIds != null && profile.companyIds.length > 0) ||
-    (profile.companies != null && profile.companies.length > 0);
-  if (!hasCompany) {
-    return Promise.reject(new Error('User profile must have a company association (companyId or companyIds)'));
-  }
   const ref = doc(db, USERS_COLLECTION, profile.uid);
-  let companyIds = profile.companies?.map((c) => c.companyId) ?? (profile.companyId ? [profile.companyId] : []);
-  if (companyIds.length === 0 && profile.companyId) companyIds = [profile.companyId];
-  // Prefer explicit adminCompanyIds (e.g. from RegisterCompanyPage) so the registrar is always written as admin
-  const adminCompanyIds =
-    (profile.adminCompanyIds?.length ? profile.adminCompanyIds : undefined) ??
-    (profile.companies?.filter((c) => c.roles?.includes('admin')).map((c) => c.companyId) ?? []);
   const rteCompanyIds = profile.companies?.filter((c) => c.roles?.includes('rte-team-of-teams-coach')).map((c) => c.companyId) ?? [];
-  await setDoc(ref, {
-    email: profile.email,
-    displayName: profile.displayName,
-    companyId: profile.companyId,
-    companyIds,
-    adminCompanyIds,
-    rteCompanyIds,
-    ...(profile.companies && { companies: profile.companies }),
-    ...(profile.mustChangePassword !== undefined && { mustChangePassword: profile.mustChangePassword }),
-    ...(profile.appAdmin !== undefined && { appAdmin: profile.appAdmin }),
-    ...(profile.employeeNumber !== undefined && { employeeNumber: profile.employeeNumber }),
-    ...(profile.phone !== undefined && { phone: profile.phone }),
-  });
+  await setDoc(
+    ref,
+    {
+      email: profile.email,
+      displayName: profile.displayName,
+      companyId: profile.companyId,
+      ...(profile.companies && { companies: profile.companies }),
+      ...(profile.mustChangePassword !== undefined && { mustChangePassword: profile.mustChangePassword }),
+      ...(profile.appAdmin !== undefined && { appAdmin: profile.appAdmin }),
+      ...(profile.employeeNumber !== undefined && { employeeNumber: profile.employeeNumber }),
+      ...(profile.phone !== undefined && { phone: profile.phone }),
+      ...(rteCompanyIds.length > 0 && { rteCompanyIds }),
+    },
+    { merge: true }
+  );
 }
 
 export async function clearMustChangePassword(uid: string): Promise<void> {

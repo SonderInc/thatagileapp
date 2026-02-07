@@ -11,8 +11,7 @@ import FeatureBoard from './pages/FeatureBoard';
 import TeamBoard from './pages/TeamBoard';
 import TeamsListPage from './pages/TeamsListPage';
 import { getAuth, getDataStore } from './lib/adapters';
-import { mergeProfileForBackfill } from './lib/firestore';
-import { ensureUserTenantMembership } from './services/tenantMembershipService';
+import { ensureTenantAccess } from './services/tenantMembershipService';
 import { isAdminForCompany } from './lib/roles';
 import { getFirebaseProjectId } from './lib/firebase';
 import { mockWorkItems, mockSprints, mockBoards, mockUsers, mockTenantCompanies, SEED_TENANT_ID, isSeedEnabled } from './utils/mockData';
@@ -180,17 +179,6 @@ function App() {
             if (useStore.getState().viewMode === 'no-company') {
               setViewMode('landing');
             }
-            const merged = mergeProfileForBackfill(profile, tenantCompanyId, finalRoles);
-            try {
-              await getDataStore().setUserProfile(merged);
-            } catch (err) {
-              console.error('[App] Backfill setUserProfile failed:', err);
-              try {
-                await getDataStore().setUserProfile(merged);
-              } catch (retryErr) {
-                console.error('[App] Backfill setUserProfile retry failed:', retryErr);
-              }
-            }
           }
         } else {
           if (import.meta.env.DEV) {
@@ -289,9 +277,14 @@ function App() {
     const store = getDataStore();
     store
       .getUserProfile(uid)
-      .then((profile) => {
+      .then(async (profile) => {
         const ids = profile?.companyIds ?? (profile?.companyId ? [profile.companyId] : []);
         if (ids.length > 0) return store.getTenantCompaniesByIds(ids);
+        const tenantId = profile?.companyId ?? profile?.companyIds?.[0] ?? profile?.companies?.[0]?.companyId;
+        if (tenantId) {
+          await ensureTenantAccess(tenantId);
+          return store.getTenantCompaniesByIds([tenantId]);
+        }
         return store.getTenantCompanies();
       })
       .then((companies) => {
@@ -384,9 +377,7 @@ function App() {
                   if (useStore.getState().viewMode === 'no-company') {
                     setViewMode('landing');
                   }
-                  const merged = mergeProfileForBackfill(profile, tenantId, roles);
-                  return getDataStore()
-                    .setUserProfile(merged)
+                  return ensureTenantAccess(tenantId)
                     .then(() => getDataStore().getTenantCompanies())
                     .then((companies2) => {
                       setTenantCompanies(companies2);
@@ -430,23 +421,13 @@ function App() {
             if (import.meta.env.DEV) {
               console.warn('[App] Load tenant companies failed but profile has tenant; preserving tenant and attempting backfill', { uid });
             }
-            getDataStore()
-              .getUserProfile(uid)
-              .then((profile) => {
-                if (!profile) return;
-                const state = useStore.getState();
-                const current = state.currentTenantId;
-                if (!current) return;
-                const roles = (state.currentUser?.roles?.length ? state.currentUser.roles : profile.companies?.find((c) => c.companyId === current)?.roles) ?? (isAdminForCompany(profile, current) ? (['admin'] as Role[]) : []);
-                const merged = mergeProfileForBackfill(profile, current, roles);
-                return getDataStore().setUserProfile(merged);
-              })
+            ensureTenantAccess(useStore.getState().currentTenantId!)
               .then(() => getDataStore().getTenantCompanies())
               .then((companies2) => {
                 setTenantCompanies(companies2);
               })
               .catch((backfillErr) => {
-                if (import.meta.env.DEV) console.error('[App] Backfill or retry getTenantCompanies failed:', backfillErr);
+                if (import.meta.env.DEV) console.error('[App] ensureTenantAccess or getTenantCompanies failed:', backfillErr);
               });
           } else {
             getDataStore()
@@ -481,9 +462,7 @@ function App() {
                   if (useStore.getState().viewMode === 'no-company') {
                     setViewMode('landing');
                   }
-                  const merged = mergeProfileForBackfill(profile, tenantId, roles);
-                  return getDataStore()
-                    .setUserProfile(merged)
+                  return ensureTenantAccess(tenantId)
                     .then(() => getDataStore().getTenantCompanies())
                     .then((companies2) => {
                       setTenantCompanies(companies2);
@@ -522,13 +501,9 @@ function App() {
     if (!firebaseUser || !currentUser) return;
     const run = async () => {
       try {
-        await ensureUserTenantMembership({
-          uid: firebaseUser.uid,
-          tenantId: currentTenantId,
-          roles: currentUser.roles ?? [],
-        });
+        await ensureTenantAccess(currentTenantId);
       } catch (err) {
-        console.error('[App] ensureUserTenantMembership failed', err);
+        console.error('[App] ensureTenantAccess failed', err);
         return;
       }
       loadPlanningBoards(currentTenantId).catch((err) =>

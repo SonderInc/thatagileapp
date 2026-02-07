@@ -1,8 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { getDataStore } from '../lib/adapters';
-import { mergeProfileForBackfill } from '../lib/firestore';
-import { ensureUserTenantMembership } from '../services/tenantMembershipService';
-import { getUserProfile } from '../services/userProfileService';
+import { ensureTenantAccess } from '../services/tenantMembershipService';
 import { useStore } from '../store/useStore';
 import type { PlanningBoard as PlanningBoardType, PlanningBoardPlacement } from '../types';
 import WorkItemModal from '../components/WorkItemModal';
@@ -61,28 +58,8 @@ const PlanningBoardPage: React.FC = () => {
       setProvisionError(null);
       setIsProvisioning(true);
       try {
-        await ensureUserTenantMembership({
-          uid: firebaseUser.uid,
-          tenantId: currentTenantId,
-          roles: currentUser?.roles ?? [],
-        });
+        await ensureTenantAccess(currentTenantId);
         if (getCancelled?.()) return;
-
-        const profile = await getUserProfile(firebaseUser.uid);
-        console.log('[PERMS CHECK]', {
-          uid: firebaseUser.uid,
-          tenantId: currentTenantId,
-          companyIds: profile?.companyIds,
-        });
-        const ok =
-          Array.isArray(profile?.companyIds) && profile.companyIds.includes(currentTenantId);
-        if (!ok) {
-          throw new Error(
-            'MEMBERSHIP_MISSING: users/{uid}.companyIds does not include tenantId'
-          );
-        }
-        if (getCancelled?.()) return;
-
         await loadTeams(currentTenantId);
         await loadPlanningBoards(currentTenantId);
       } catch (err: unknown) {
@@ -92,28 +69,20 @@ const PlanningBoardPage: React.FC = () => {
           err && typeof err === 'object' && 'code' in err
             ? String((err as { code: string }).code)
             : undefined;
-        const originalCode =
-          err && typeof err === 'object' && 'originalCode' in err
-            ? String((err as { originalCode: string }).originalCode)
-            : undefined;
         const message =
           err && typeof err === 'object' && 'message' in err
             ? String((err as { message: string }).message)
             : err instanceof Error
               ? err.message
-              : 'permission error';
-        setProvisionError(originalCode ?? code ?? message);
+              : 'You don\'t have access to this company';
+        setProvisionError(
+          code === 'PERMISSION_DENIED' ? 'You don\'t have access to this company' : message
+        );
       } finally {
         if (!getCancelled?.()) setIsProvisioning(false);
       }
     },
-    [
-      firebaseUser,
-      currentTenantId,
-      currentUser?.roles,
-      loadTeams,
-      loadPlanningBoards,
-    ]
+    [firebaseUser, currentTenantId, loadTeams, loadPlanningBoards]
   );
 
   useEffect(() => {
@@ -150,33 +119,20 @@ const PlanningBoardPage: React.FC = () => {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       const isPermissionError = /permission|forbidden|denied/i.test(msg);
-      if (isPermissionError && firebaseUser && currentTenantId && currentUser) {
-        const rolesForMerge =
-          (currentUser.roles?.length ? currentUser.roles : canEdit ? ['admin'] : []) ?? [];
-        let syncSucceeded = false;
+      if (isPermissionError && firebaseUser && currentTenantId) {
         try {
-          const profile = await getDataStore().getUserProfile(firebaseUser.uid);
-          if (profile) {
-            const merged = mergeProfileForBackfill(profile, currentTenantId, rolesForMerge);
-            await getDataStore().setUserProfile(merged);
-            syncSucceeded = true;
-          }
+          await ensureTenantAccess(currentTenantId);
+          await addPlanningBoard(newBoard);
+          setSelectedPlanningBoardId(newBoard.id);
+          setShowCreateModal(false);
+          setCreateName('');
+          setCreateTeamIds([]);
+          setCreateError(null);
         } catch (syncErr) {
-          console.warn('[PlanningBoardPage] Sync admin status failed:', syncErr);
-        }
-        if (syncSucceeded) {
-          try {
-            await addPlanningBoard(newBoard);
-            setSelectedPlanningBoardId(newBoard.id);
-            setShowCreateModal(false);
-            setCreateName('');
-            setCreateTeamIds([]);
-            setCreateError(null);
-          } catch (retryErr) {
-            setCreateError("We've synced your admin status. Please try again.");
-          }
-        } else {
-          setCreateError("We couldn't sync your admin status. Please refresh and try again.");
+          console.warn('[PlanningBoardPage] ensureTenantAccess or retry failed:', syncErr);
+          setCreateError(
+            'You don\'t have access to this company or could not create the board. Try the Retry button on the page.'
+          );
         }
       } else {
         setCreateError(

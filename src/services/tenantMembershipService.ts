@@ -1,72 +1,74 @@
 /**
- * Ensures the user's Firestore profile has the given tenant in companyIds
- * (and adminCompanyIds when roles include 'admin') so planning board rules pass.
+ * Ensures the current user has tenant access (companyIds) via a trusted server path.
+ * Calls the callable Cloud Function grantTenantAccess so membership writes happen
+ * server-side; client no longer writes companyIds/adminCompanyIds.
  */
-import { getDataStore } from '../lib/adapters';
-import { mergeProfileForBackfill } from '../lib/firestore';
+import { getFunctions, httpsCallable } from "firebase/functions";
+import { getFirebaseApp, isFirebaseConfigured } from "../lib/firebase";
 
 export interface TenantMembershipError {
   code: string;
   message: string;
   details?: unknown;
-  /** When setUserProfile fails, the underlying error code (e.g. permission-denied). */
-  originalCode?: string;
 }
 
-export async function ensureUserTenantMembership(params: {
-  uid: string;
-  tenantId: string;
-  roles: string[];
-}): Promise<void> {
-  const { uid, tenantId, roles } = params;
-  if (!uid || !tenantId) {
-    throw { code: 'AUTH_MISSING', message: 'uid and tenantId are required' } as TenantMembershipError;
-  }
-
-  const store = getDataStore();
-  const profile = await store.getUserProfile(uid);
-  if (!profile) {
-    throw { code: 'AUTH_MISSING', message: 'User profile not found' } as TenantMembershipError;
-  }
-
-  const existingCompanyIds = profile.companyIds ?? profile.companies?.map((c) => c.companyId) ?? [];
-  const hasTenantInCompanyIds = existingCompanyIds.includes(tenantId);
-  const needsAdmin = roles.includes('admin');
-  const hasAdminForTenant = (profile.adminCompanyIds ?? []).includes(tenantId);
-  if (hasTenantInCompanyIds && (!needsAdmin || hasAdminForTenant)) {
-    return;
-  }
-
-  const merged = mergeProfileForBackfill(profile, tenantId, roles);
-  try {
-    await store.setUserProfile(merged);
-  } catch (err) {
-    const originalCode =
-      err && typeof err === 'object' && 'code' in err
-        ? String((err as { code: string }).code)
-        : undefined;
-    const message = err instanceof Error ? err.message : String(err);
-    console.error('[tenantMembershipService] setUserProfile failed', {
-      code: originalCode,
-      message,
-      uid,
-      tenantId,
-    });
-    const typed: TenantMembershipError = {
-      code: 'PROFILE_WRITE_FAILED',
-      message: message || 'Failed to update user profile',
-      details: err,
-      originalCode,
-    };
-    throw typed;
-  }
-
-  const reread = await store.getUserProfile(uid);
-  const rereadCompanyIds = reread?.companyIds ?? reread?.companies?.map((c) => c.companyId) ?? [];
-  if (!rereadCompanyIds.includes(tenantId)) {
+/**
+ * Request the server to grant the current user access to the tenant (add tenantId to
+ * users/{uid}.companyIds and optionally adminCompanyIds). Call after login/tenant
+ * selection and before loading planning boards. Idempotent; safe to call when
+ * user already has access.
+ *
+ * @throws {TenantMembershipError} If Firebase not configured, or server returns permission-denied / other error.
+ */
+export async function ensureTenantAccess(tenantId: string): Promise<void> {
+  if (!tenantId?.trim()) {
     throw {
-      code: 'MEMBERSHIP_NOT_PRESENT',
-      message: 'Profile was updated but tenant is not in companyIds after write',
+      code: "INVALID_ARGUMENT",
+      message: "tenantId is required",
+    } as TenantMembershipError;
+  }
+
+  if (!isFirebaseConfigured()) {
+    throw {
+      code: "NOT_CONFIGURED",
+      message: "Firebase is not configured",
+    } as TenantMembershipError;
+  }
+
+  const app = getFirebaseApp();
+  if (!app) {
+    throw {
+      code: "NOT_CONFIGURED",
+      message: "Firebase app is not available",
+    } as TenantMembershipError;
+  }
+
+  const functions = getFunctions(app);
+  const grantTenantAccessFn = httpsCallable<
+    { tenantId: string; targetUid?: string; role?: "member" | "admin" },
+    { ok: boolean }
+  >(functions, "grantTenantAccess");
+
+  try {
+    await grantTenantAccessFn({ tenantId: tenantId.trim() });
+  } catch (err: unknown) {
+    const code =
+      err && typeof err === "object" && "code" in err
+        ? String((err as { code: string }).code)
+        : "UNKNOWN";
+    const message =
+      err && typeof err === "object" && "message" in err
+        ? String((err as { message: string }).message)
+        : err instanceof Error
+          ? err.message
+          : "Failed to grant tenant access";
+    throw {
+      code: code === "functions/permission-denied" ? "PERMISSION_DENIED" : code,
+      message:
+        code === "functions/permission-denied"
+          ? "You don't have access to this company"
+          : message,
+      details: err,
     } as TenantMembershipError;
   }
 }
