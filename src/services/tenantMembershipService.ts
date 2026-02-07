@@ -1,13 +1,10 @@
 /**
  * Ensures the current user has tenant access (companyIds) via a trusted server path.
- * Calls the HTTP Cloud Function grantTenantAccess with Bearer token so membership
- * writes happen server-side. In-flight guard prevents repeated retries for the same tenant.
+ * Calls the Firebase Callable grantTenantAccess so membership writes happen server-side.
+ * In-flight guard prevents repeated retries for the same tenant.
  */
-import { getAuth } from "../lib/adapters";
-import {
-  getFirebaseProjectId,
-  isFirebaseConfigured,
-} from "../lib/firebase";
+import { getFunctions, httpsCallable } from "firebase/functions";
+import { getFirebaseApp, isFirebaseConfigured } from "../lib/firebase";
 
 export interface TenantMembershipError {
   code: string;
@@ -20,17 +17,6 @@ const STABLE_ERROR_MESSAGE =
 
 /** In-flight guard: one promise per tenantId; cleared on settle so user can retry manually. */
 const inFlightByTenant = new Map<string, Promise<void>>();
-
-function getGrantTenantAccessUrl(): string {
-  const projectId = getFirebaseProjectId();
-  if (!projectId) {
-    throw {
-      code: "NOT_CONFIGURED",
-      message: STABLE_ERROR_MESSAGE,
-    } as TenantMembershipError;
-  }
-  return `https://us-central1-${projectId}.cloudfunctions.net/grantTenantAccess`;
-}
 
 /**
  * Request the server to grant the current user access to the tenant (add tenantId to
@@ -60,6 +46,14 @@ export async function ensureTenantAccess(
     } as TenantMembershipError;
   }
 
+  const app = getFirebaseApp();
+  if (!app) {
+    throw {
+      code: "NOT_CONFIGURED",
+      message: STABLE_ERROR_MESSAGE,
+    } as TenantMembershipError;
+  }
+
   const existing = inFlightByTenant.get(key);
   if (existing) {
     return existing;
@@ -68,51 +62,39 @@ export async function ensureTenantAccess(
   const promise = (async () => {
     try {
       console.log("[ensureTenantAccess] start", { tenantId: key });
-      const token = await getAuth().getIdToken();
-      if (!token) {
-        throw {
-          code: "UNAUTHENTICATED",
-          message: STABLE_ERROR_MESSAGE,
-        } as TenantMembershipError;
-      }
-      const url = getGrantTenantAccessUrl();
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          tenantId: key,
-          ...(options?.role === "admin" && { role: "admin" }),
-        }),
+      const functions = getFunctions(app, "us-central1");
+      const grantTenantAccessFn = httpsCallable<
+        { tenantId: string; role?: "member" | "admin" },
+        { ok: boolean; tenantId: string; roleApplied: string }
+      >(functions, "grantTenantAccess");
+
+      await grantTenantAccessFn({
+        tenantId: key,
+        ...(options?.role === "admin" && { role: "admin" }),
       });
-      const data = (await res.json().catch(() => ({}))) as {
-        ok?: boolean;
-        code?: string;
-        message?: string;
-      };
-      if (!res.ok) {
-        console.log("[ensureTenantAccess] failed", {
-          tenantId: key,
-          status: res.status,
-          code: data.code,
-          message: data.message,
-        });
-        throw {
-          code: data.code || "UNKNOWN",
-          message: STABLE_ERROR_MESSAGE,
-          details: data,
-        } as TenantMembershipError;
-      }
-      if (data.ok !== true) {
-        throw {
-          code: "UNKNOWN",
-          message: STABLE_ERROR_MESSAGE,
-          details: data,
-        } as TenantMembershipError;
-      }
+
       console.log("[ensureTenantAccess] succeeded", { tenantId: key });
+    } catch (err: unknown) {
+      const code =
+        err && typeof err === "object" && "code" in err
+          ? String((err as { code: string }).code)
+          : "UNKNOWN";
+      const rawMessage =
+        err && typeof err === "object" && "message" in err
+          ? String((err as { message: string }).message)
+          : err instanceof Error
+            ? err.message
+            : STABLE_ERROR_MESSAGE;
+      console.log("[ensureTenantAccess] failed", {
+        tenantId: key,
+        code,
+        message: rawMessage,
+      });
+      throw {
+        code: code === "functions/permission-denied" ? "PERMISSION_DENIED" : code,
+        message: STABLE_ERROR_MESSAGE,
+        details: err,
+      } as TenantMembershipError;
     } finally {
       inFlightByTenant.delete(key);
     }

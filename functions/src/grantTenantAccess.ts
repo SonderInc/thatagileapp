@@ -1,80 +1,43 @@
 /**
- * v2 HTTP onRequest: grant the authenticated user access to a tenant (add tenantId to
- * users/{uid}.companyIds). Explicit CORS so OPTIONS preflight returns 204 with
- * Access-Control-Allow-Origin. Auth via Authorization: Bearer <idToken>.
- *
- * Deployed with invoker: "public" so Cloud Run answers OPTIONS; auth enforced in code.
+ * v2 Callable: grant the authenticated user access to a tenant (add tenantId to
+ * users/{uid}.companyIds and optionally adminCompanyIds). No CORS—callable uses
+ * Firebase SDK and includes the user's ID token automatically.
  */
-import { onRequest } from "firebase-functions/v2/https";
+import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 
 if (!admin.apps.length) admin.initializeApp();
 
-function isAllowedOrigin(origin?: string): boolean {
-  if (!origin) return false;
-
-  if (origin === "https://thatagileapp.com") return true;
-  if (origin === "http://localhost:5173") return true;
-
-  if (/^https:\/\/[a-z0-9-]+\.thatagileapp\.com$/i.test(origin)) return true;
-
-  return false;
-}
-
-export const grantTenantAccess = onRequest(
-  {
-    region: "us-central1",
-    invoker: "public",
-  },
-  async (req, res) => {
-    const origin = req.headers.origin;
-    const allowed = isAllowedOrigin(origin);
-
-    res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
-    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
-    res.set("Access-Control-Max-Age", "3600");
-    if (allowed) {
-      res.set("Access-Control-Allow-Origin", origin!);
-      res.set("Vary", "Origin");
+export const grantTenantAccess = onCall(
+  { region: "us-central1" },
+  async (request) => {
+    if (!request.auth?.uid) {
+      throw new HttpsError(
+        "unauthenticated",
+        "Must be signed in."
+      );
     }
 
-    console.log("[grantTenantAccess] origin:", origin);
-    console.log("[grantTenantAccess] allowed:", allowed);
+    const uid = request.auth.uid;
+    const data = request.data as { tenantId?: unknown; role?: unknown } | undefined;
+    const tenantId =
+      typeof data?.tenantId === "string" ? data.tenantId.trim() : "";
+    const role =
+      data?.role === "admin" ? "admin" : "member";
 
-    if (req.method === "OPTIONS") {
-      if (allowed) {
-        res.status(204).send("");
-      } else {
-        res.status(403).send("");
-      }
-      return;
+    if (!tenantId) {
+      throw new HttpsError(
+        "invalid-argument",
+        "tenantId is required."
+      );
     }
 
     try {
-      if (req.method !== "POST") {
-        res.status(405).json({ code: "METHOD_NOT_ALLOWED" });
-        return;
-      }
-
-      const authHeader = req.get("authorization") || "";
-      const match = authHeader.match(/^Bearer (.+)$/);
-      if (!match) {
-        res.status(401).json({ code: "UNAUTHENTICATED", message: "Missing Bearer token" });
-        return;
-      }
-      const decoded = await admin.auth().verifyIdToken(match[1]);
-
-      const tenantId = req.body?.tenantId;
-      if (!tenantId || typeof tenantId !== "string") {
-        res.status(400).json({ code: "INVALID_ARGUMENT", message: "tenantId required" });
-        return;
-      }
-
       const updates: Record<string, unknown> = {
         companyIds: admin.firestore.FieldValue.arrayUnion(tenantId),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       };
-      if (req.body?.role === "admin") {
+      if (role === "admin") {
         updates.adminCompanyIds =
           admin.firestore.FieldValue.arrayUnion(tenantId);
       }
@@ -82,16 +45,21 @@ export const grantTenantAccess = onRequest(
       await admin
         .firestore()
         .collection("users")
-        .doc(decoded.uid)
+        .doc(uid)
         .set(updates, { merge: true });
 
-      res.status(200).json({ ok: true });
+      return {
+        ok: true,
+        tenantId,
+        roleApplied: role,
+      };
     } catch (e: unknown) {
       const err = e as { message?: string };
       console.error("grantTenantAccess error", e);
-      res
-        .status(500)
-        .json({ code: "INTERNAL", message: err?.message || "Unknown error" });
+      throw new HttpsError(
+        "internal",
+        err?.message || "Unknown error"
+      );
     }
   }
 );
