@@ -92,7 +92,7 @@ const Navigation: React.FC = () => {
     setAdminMenuOpen(false);
   };
 
-  const isAdminActive = visibleAdminItems.some((a) => viewMode === a.id) || viewMode === 'settings' || viewMode === 'team-board-settings';
+  const isAdminActive = visibleAdminItems.some((a) => viewMode === a.id) || viewMode === 'settings' || viewMode === 'team-board-settings' || viewMode === 'planning';
 
   const avatarInitials = (): string => {
     const name = currentUser?.name?.trim();
@@ -490,6 +490,26 @@ const Navigation: React.FC = () => {
                     }}
                   >
                     Team Board Settings
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setViewMode('planning');
+                      setAdminMenuOpen(false);
+                    }}
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      padding: '10px 16px',
+                      textAlign: 'left',
+                      border: 'none',
+                      backgroundColor: viewMode === 'planning' ? '#eff6ff' : 'transparent',
+                      color: '#374151',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                    }}
+                  >
+                    Planning Board Settings
                   </button>
                 </>
               )}
