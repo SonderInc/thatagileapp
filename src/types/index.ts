@@ -186,6 +186,8 @@ export interface Team {
   createdBy?: string;
   /** When set to 'team-of-teams', represents a team that contains other teams (e.g. for Planning Board). */
   teamType?: 'team' | 'team-of-teams';
+  /** When teamType === 'team-of-teams', IDs of teams that belong to this team of teams. */
+  childTeamIds?: string[];
 }
 
 /** Planning board: name, tenant, ordered team ids (swimlanes). Columns fixed: Teams, Iteration 1–5. */

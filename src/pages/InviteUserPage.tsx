@@ -382,6 +382,7 @@ const InviteUserPage: React.FC = () => {
         updatedAt: now,
         createdBy: currentUser?.id,
         teamType,
+        ...(teamType === 'team-of-teams' && { childTeamIds: [] }),
       };
       await addTeam(team);
       setNewTeamName('');
@@ -413,6 +414,22 @@ const InviteUserPage: React.FC = () => {
       const msg = err instanceof Error ? err.message : String(err);
       setTeamError(msg);
     }
+  };
+
+  const resolveTeamName = (teamId: string): string => {
+    return teams.find((t) => t.id === teamId)?.name ?? teamId;
+  };
+
+  const handleAddChildTeam = async (teamId: string, childTeamId: string) => {
+    const team = teams.find((t) => t.id === teamId);
+    if (!team || (team.childTeamIds ?? []).includes(childTeamId)) return;
+    await updateTeam(teamId, { childTeamIds: [...(team.childTeamIds ?? []), childTeamId] });
+  };
+
+  const handleRemoveChildTeam = async (teamId: string, childTeamId: string) => {
+    const team = teams.find((t) => t.id === teamId);
+    if (!team) return;
+    await updateTeam(teamId, { childTeamIds: (team.childTeamIds ?? []).filter((id) => id !== childTeamId) });
   };
 
   const tabs: { id: UserManagementTab; label: string }[] = [
@@ -745,6 +762,73 @@ const InviteUserPage: React.FC = () => {
                     Delete team
                   </button>
                 </div>
+                {team.teamType === 'team-of-teams' && (
+                  <div style={{ marginBottom: '12px' }}>
+                    <div style={{ marginBottom: '8px', fontSize: '13px', color: '#374151', fontWeight: 500 }}>
+                      Teams in this group:
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+                      {(team.childTeamIds ?? []).length === 0 ? (
+                        <span style={{ fontSize: '13px', color: '#6b7280' }}>None</span>
+                      ) : (
+                        (team.childTeamIds ?? []).map((cid) => (
+                          <span
+                            key={cid}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '4px 8px',
+                              backgroundColor: '#e5e7eb',
+                              borderRadius: '6px',
+                              fontSize: '13px',
+                            }}
+                          >
+                            {resolveTeamName(cid)}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveChildTeam(team.id, cid)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                padding: '0 2px',
+                                color: '#6b7280',
+                                fontSize: '14px',
+                              }}
+                              title="Remove from group"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))
+                      )}
+                    </div>
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        const id = e.target.value;
+                        if (id) handleAddChildTeam(team.id, id);
+                        e.target.value = '';
+                      }}
+                      style={{ padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }}
+                    >
+                      <option value="">Add team…</option>
+                      {teams
+                        .filter(
+                          (t) =>
+                            t.id !== team.id &&
+                            (t.teamType !== 'team-of-teams' || !t.teamType) &&
+                            !(team.childTeamIds ?? []).includes(t.id)
+                        )
+                        .map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                )}
                 <div style={{ marginBottom: '8px', fontSize: '13px', color: '#6b7280' }}>
                   Members: {team.memberIds.length === 0 ? 'None' : team.memberIds.map((uid) => resolveMemberName(uid)).join(', ')}
                 </div>
