@@ -30,7 +30,7 @@ export function useWorkItemForm({
   defaultTeamId,
   defaultSprintId,
 }: UseWorkItemFormProps) {
-  const { workItems, addWorkItem, updateWorkItem, getWorkItemsByParent, currentTenantId } = useStore();
+  const { workItems, addWorkItem, updateWorkItem, getWorkItemsByParent, currentTenantId, getHierarchyConfigForProduct, getProductIdForWorkItem } = useStore();
   const [formData, setFormData] = useState<Partial<WorkItem>>({
     title: '',
     description: '',
@@ -46,10 +46,15 @@ export function useWorkItemForm({
   const parent = parentId ? workItems.find((i) => i.id === parentId) : null;
   const allowedTypes: WorkItemType[] = useMemo(() => {
     if (isEditing) return [item!.type];
-    if (allowedTypesProp?.length) return allowedTypesProp;
-    if (parent) return getAllowedChildTypes(parent.type);
-    return ['company', 'product'];
-  }, [isEditing, item, parent, allowedTypesProp]);
+    let base: WorkItemType[];
+    if (allowedTypesProp?.length) base = allowedTypesProp;
+    else if (parent) base = getAllowedChildTypes(parent.type);
+    else base = ['company', 'product'];
+    const productId = parent ? getProductIdForWorkItem(parent.id) : parentId ? getProductIdForWorkItem(parentId) : null;
+    if (!productId) return base;
+    const cfg = getHierarchyConfigForProduct(productId);
+    return base.filter((t) => cfg.enabledTypes.includes(t));
+  }, [isEditing, item, parent, parentId, allowedTypesProp, getHierarchyConfigForProduct, getProductIdForWorkItem]);
 
   useEffect(() => {
     if (item) {

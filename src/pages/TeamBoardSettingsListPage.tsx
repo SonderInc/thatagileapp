@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore';
 import { getDataStore } from '../lib/adapters';
 import type { UserProfile } from '../types';
 import type { Team } from '../types';
+import { getEffectiveMemberIds } from '../utils/teamUtils';
 
 const TeamBoardSettingsListPage: React.FC = () => {
   const {
@@ -159,12 +160,21 @@ const TeamBoardSettingsListPage: React.FC = () => {
             </div>
             {(() => {
               const liveTeam = teams.find((t) => t.id === editTeamModal.id);
-              const memberIds = liveTeam?.memberIds ?? editTeamModal.memberIds;
+              const team = liveTeam ?? editTeamModal;
+              const effectiveMemberIds = getEffectiveMemberIds(team, teams);
+              const memberIds = team.memberIds ?? [];
+              const isTeamOfTeams = team.teamType === 'team-of-teams';
               return (
                 <>
             <div style={{ marginBottom: '12px', fontSize: '13px', color: '#6b7280' }}>
-              Members: {memberIds.length === 0 ? 'None' : memberIds.map((uid) => resolveMemberName(uid)).join(', ')}
+              Members: {effectiveMemberIds.length === 0 ? 'None' : effectiveMemberIds.map((uid) => resolveMemberName(uid)).join(', ')}
             </div>
+            {isTeamOfTeams ? (
+              <p style={{ margin: 0, fontSize: '12px', color: '#6b7280' }}>
+                Membership is from the teams in this group.
+              </p>
+            ) : (
+              <>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', marginBottom: '16px' }}>
               <span style={{ fontSize: '13px', color: '#374151' }}>Add member:</span>
               <select
@@ -205,6 +215,8 @@ const TeamBoardSettingsListPage: React.FC = () => {
                 </span>
               ))}
             </div>
+              </>
+            )}
                 </>
               );
             })()}

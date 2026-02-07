@@ -13,9 +13,11 @@ import {
   orderBy,
   Timestamp,
   serverTimestamp,
+  onSnapshot,
+  type Unsubscribe,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import type { WorkItem, TenantCompany, UserProfile, Role, Team, PlanningBoard, PlanningBoardPlacement, BoardItem } from '../types';
+import type { WorkItem, TenantCompany, UserProfile, Role, Team, PlanningBoard, PlanningBoardPlacement, BoardItem, ProductHierarchyConfig, WorkItemType } from '../types';
 
 const WORK_ITEMS_COLLECTION = 'workItems';
 const COMPANIES_COLLECTION = 'companies';
@@ -905,4 +907,71 @@ export async function setProductTerminology(
     updatedAt: serverTimestamp(),
     updatedBy: uid,
   });
+}
+
+// --- Product hierarchy config (per-product enabled types + order) ---
+
+const PRODUCT_HIERARCHY_CONFIGS_COLLECTION = 'productHierarchyConfigs';
+
+function parseProductHierarchyConfigDoc(productId: string, data: Record<string, unknown>): ProductHierarchyConfig {
+  const updatedAt = data.updatedAt;
+  const enabledTypes = Array.isArray(data.enabledTypes) ? (data.enabledTypes as WorkItemType[]) : [];
+  const order = Array.isArray(data.order) ? (data.order as WorkItemType[]) : [];
+  return {
+    productId,
+    enabledTypes,
+    order,
+    updatedAt:
+      updatedAt && typeof (updatedAt as { toDate?: () => Date }).toDate === 'function'
+        ? (updatedAt as { toDate: () => Date }).toDate()
+        : updatedAt instanceof Date
+          ? updatedAt
+          : new Date(String(updatedAt)),
+    ...(data.updatedBy != null && { updatedBy: data.updatedBy as string }),
+  };
+}
+
+export async function getProductHierarchyConfig(productId: string): Promise<ProductHierarchyConfig | null> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = doc(db, PRODUCT_HIERARCHY_CONFIGS_COLLECTION, productId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  return parseProductHierarchyConfigDoc(productId, snap.data());
+}
+
+export async function setProductHierarchyConfig(
+  productId: string,
+  config: Pick<ProductHierarchyConfig, 'enabledTypes' | 'order'>,
+  uid: string
+): Promise<void> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = doc(db, PRODUCT_HIERARCHY_CONFIGS_COLLECTION, productId);
+  await setDoc(ref, {
+    enabledTypes: config.enabledTypes,
+    order: config.order,
+    updatedAt: serverTimestamp(),
+    updatedBy: uid,
+  });
+}
+
+export function subscribeProductHierarchyConfig(
+  productId: string,
+  callback: (config: ProductHierarchyConfig | null) => void
+): Unsubscribe {
+  if (!db) {
+    callback(null);
+    return () => {};
+  }
+  const ref = doc(db, PRODUCT_HIERARCHY_CONFIGS_COLLECTION, productId);
+  return onSnapshot(
+    ref,
+    (snap) => {
+      if (!snap.exists()) {
+        callback(null);
+        return;
+      }
+      callback(parseProductHierarchyConfigDoc(productId, snap.data()));
+    },
+    () => callback(null)
+  );
 }

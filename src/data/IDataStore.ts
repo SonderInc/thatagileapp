@@ -1,4 +1,4 @@
-import type { WorkItem, TenantCompany, UserProfile, Role, Team, PlanningBoard, PlanningBoardPlacement, BoardItem } from '../types';
+import type { WorkItem, TenantCompany, UserProfile, Role, Team, PlanningBoard, PlanningBoardPlacement, BoardItem, ProductHierarchyConfig } from '../types';
 
 /**
  * Data store interface — Firestore, Postgres, etc.
@@ -61,6 +61,15 @@ export interface IDataStore {
   /** Terminology per product: productTerminology/{productId} */
   getProductTerminology(productId: string): Promise<{ activePackId: string; overrides: Record<string, string> } | null>;
   setProductTerminology(productId: string, settings: { activePackId: string; overrides: Record<string, string> }, uid: string): Promise<void>;
+  /** Hierarchy config per product: productHierarchyConfigs/{productId} */
+  getProductHierarchyConfig(productId: string): Promise<ProductHierarchyConfig | null>;
+  setProductHierarchyConfig(
+    productId: string,
+    config: Pick<ProductHierarchyConfig, 'enabledTypes' | 'order'>,
+    uid: string
+  ): Promise<void>;
+  /** Subscribe to hierarchy config changes (returns unsubscribe). */
+  subscribeProductHierarchyConfig(productId: string, callback: (config: ProductHierarchyConfig | null) => void): () => void;
 }
 
 export type { WorkItem, TenantCompany, UserProfile, Role, Team, PlanningBoard, PlanningBoardPlacement, BoardItem };

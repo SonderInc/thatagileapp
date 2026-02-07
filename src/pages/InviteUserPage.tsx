@@ -8,6 +8,7 @@ import type { Role } from '../types';
 import type { UserProfile } from '../types';
 import type { Team } from '../types';
 import Modal from '../components/Modal';
+import { getEffectiveMemberIds } from '../utils/teamUtils';
 
 const ALL_ROLES = Object.keys(ROLE_LABELS) as Role[];
 
@@ -968,42 +969,51 @@ const InviteUserPage: React.FC = () => {
                   </div>
                 )}
                 <div style={{ marginBottom: '8px', fontSize: '13px', color: '#6b7280' }}>
-                  Members: {team.memberIds.length === 0 ? 'None' : team.memberIds.map((uid) => resolveMemberName(uid)).join(', ')}
+                  Members: {(() => {
+                    const effectiveMemberIds = getEffectiveMemberIds(team, teams);
+                    return effectiveMemberIds.length === 0 ? 'None' : effectiveMemberIds.map((uid) => resolveMemberName(uid)).join(', ');
+                  })()}
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-                  <span style={{ fontSize: '13px', color: '#374151' }}>Add member:</span>
-                  <select
-                    value=""
-                    onChange={(e) => {
-                      const uid = e.target.value;
-                      if (uid) handleAddTeamMember(team.id, uid);
-                      e.target.value = '';
-                    }}
-                    style={{ padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }}
-                  >
-                    <option value="">Select user…</option>
-                    {companyUsers
-                      .filter((u) => !team.memberIds.includes(u.uid))
-                      .map((u) => (
-                        <option key={u.uid} value={u.uid}>
-                          {u.displayName || u.email}
-                        </option>
-                      ))}
-                  </select>
-                  {team.memberIds.map((uid) => (
-                    <span key={uid} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px', backgroundColor: '#e5e7eb', borderRadius: '6px', fontSize: '13px' }}>
-                      {resolveMemberName(uid)}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveTeamMember(team.id, uid)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', color: '#6b7280', fontSize: '14px' }}
-                        title="Remove from team"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
+                {team.teamType === 'team-of-teams' ? (
+                  <p style={{ margin: 0, fontSize: '12px', color: '#6b7280' }}>
+                    Members are the combined members of the teams in this group.
+                  </p>
+                ) : (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                    <span style={{ fontSize: '13px', color: '#374151' }}>Add member:</span>
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        const uid = e.target.value;
+                        if (uid) handleAddTeamMember(team.id, uid);
+                        e.target.value = '';
+                      }}
+                      style={{ padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px' }}
+                    >
+                      <option value="">Select user…</option>
+                      {companyUsers
+                        .filter((u) => !team.memberIds.includes(u.uid))
+                        .map((u) => (
+                          <option key={u.uid} value={u.uid}>
+                            {u.displayName || u.email}
+                          </option>
+                        ))}
+                    </select>
+                    {team.memberIds.map((uid) => (
+                      <span key={uid} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px', backgroundColor: '#e5e7eb', borderRadius: '6px', fontSize: '13px' }}>
+                        {resolveMemberName(uid)}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTeamMember(team.id, uid)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', color: '#6b7280', fontSize: '14px' }}
+                          title="Remove from team"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>

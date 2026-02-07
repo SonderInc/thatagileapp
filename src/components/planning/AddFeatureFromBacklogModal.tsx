@@ -29,6 +29,8 @@ const AddFeatureFromBacklogModal: React.FC<AddFeatureFromBacklogModalProps> = ({
     backlogFeaturesByTeam,
     boardItems,
     addFeatureToPlanningBoard,
+    getProductIdForWorkItem,
+    getHierarchyConfigForProduct,
   } = useStore();
 
   const [search, setSearch] = useState('');
@@ -53,12 +55,14 @@ const AddFeatureFromBacklogModal: React.FC<AddFeatureFromBacklogModalProps> = ({
     [boardItems, teamId]
   );
   const availableFeatures = useMemo(() => {
-    return features.filter(
-      (f) =>
-        !placedWorkItemIds.has(f.id) &&
-        (search.trim() === '' || (f.title ?? '').toLowerCase().includes(search.trim().toLowerCase()))
-    );
-  }, [features, placedWorkItemIds, search]);
+    return features.filter((f) => {
+      if (placedWorkItemIds.has(f.id)) return false;
+      const productId = getProductIdForWorkItem(f.id);
+      if (productId && !getHierarchyConfigForProduct(productId).enabledTypes.includes('feature')) return false;
+      if (search.trim() !== '' && !(f.title ?? '').toLowerCase().includes(search.trim().toLowerCase())) return false;
+      return true;
+    });
+  }, [features, placedWorkItemIds, search, getProductIdForWorkItem, getHierarchyConfigForProduct]);
 
   const handleSelect = async (feature: WorkItem) => {
     if (!laneId || adding) return;

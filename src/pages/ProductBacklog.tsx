@@ -4,24 +4,31 @@ import { useStore } from '../store/useStore';
 import WorkItemModal from '../components/WorkItemModal';
 import { getAllowedChildTypes } from '../utils/hierarchy';
 import { WorkItem, WorkItemType } from '../types';
-import { compareWorkItemOrder } from '../utils/order';
+import { compareWorkItemOrder, compareWorkItemOrderWithOrder } from '../utils/order';
 import { Plus, ChevronDown, ChevronRight, ArrowLeft, GripVertical } from 'lucide-react';
 
-function buildTree(items: WorkItem[]): WorkItem[] {
+function buildTree(items: WorkItem[], typeOrder?: string[]): WorkItem[] {
   const byParent = new Map<string | undefined, WorkItem[]>();
   for (const item of items) {
     const key = item.parentId ?? '__root';
     if (!byParent.has(key)) byParent.set(key, []);
     byParent.get(key)!.push(item);
   }
+  const compare = typeOrder?.length
+    ? (a: WorkItem, b: WorkItem) => compareWorkItemOrderWithOrder(a, b, typeOrder)
+    : compareWorkItemOrder;
   for (const arr of byParent.values()) {
-    arr.sort(compareWorkItemOrder);
+    arr.sort(compare);
   }
   return byParent.get('__root') ?? [];
 }
 
-function getChildren(items: WorkItem[], parentId: string): WorkItem[] {
-  return items.filter((i) => i.parentId === parentId).sort(compareWorkItemOrder);
+function getChildren(items: WorkItem[], parentId: string, typeOrder?: string[]): WorkItem[] {
+  const children = items.filter((i) => i.parentId === parentId);
+  if (typeOrder?.length) {
+    return [...children].sort((a, b) => compareWorkItemOrderWithOrder(a, b, typeOrder));
+  }
+  return children.sort(compareWorkItemOrder);
 }
 
 /** When teamFilterId is set, return only items that are in the hierarchy of user-stories assigned to that team. */
@@ -212,6 +219,9 @@ interface DroppableTreeBlockProps {
   onAddChild: (parentId: string, type: WorkItemType) => void;
   onEdit: (itemId: string) => void;
   getTypeLabel: (type: WorkItemType) => string;
+  typeOrder?: string[];
+  droppableTypes?: WorkItemType[];
+  enabledTypes?: WorkItemType[];
 }
 
 const DroppableTreeBlock: React.FC<DroppableTreeBlockProps> = ({
@@ -224,18 +234,22 @@ const DroppableTreeBlock: React.FC<DroppableTreeBlockProps> = ({
   onAddChild,
   onEdit,
   getTypeLabel,
+  typeOrder,
+  droppableTypes = DROPPABLE_TYPES,
+  enabledTypes,
 }) => {
-  const canDrag = items.length > 1 && items.some((i) => DROPPABLE_TYPES.includes(i.type));
+  const canDrag = items.length > 1 && items.some((i) => droppableTypes.includes(i.type));
   return (
     <Droppable droppableId={droppableId}>
       {(droppableProvided) => (
         <div ref={droppableProvided.innerRef} {...droppableProvided.droppableProps}>
           {items.map((item, index) => {
-            const children = getChildren(allItems, item.id);
+            const children = getChildren(allItems, item.id, typeOrder);
             const hasChildren = children.length > 0;
             const isCollapsed = collapsed.has(item.id);
-            const allowedChildTypes = getAllowedChildTypes(item.type);
-            const isDraggable = canDrag && DROPPABLE_TYPES.includes(item.type);
+            let allowedChildTypes = getAllowedChildTypes(item.type);
+            if (enabledTypes?.length) allowedChildTypes = allowedChildTypes.filter((t) => enabledTypes.includes(t));
+            const isDraggable = canDrag && droppableTypes.includes(item.type);
             return (
               <Draggable key={item.id} draggableId={item.id} index={index} isDragDisabled={!isDraggable}>
                 {(draggableProvided) => (
@@ -264,6 +278,9 @@ const DroppableTreeBlock: React.FC<DroppableTreeBlockProps> = ({
                         onAddChild={onAddChild}
                         onEdit={onEdit}
                         getTypeLabel={getTypeLabel}
+                        typeOrder={typeOrder}
+                        droppableTypes={droppableTypes}
+                        enabledTypes={enabledTypes}
                       />
                     )}
                   </div>
@@ -286,6 +303,8 @@ const ProductBacklog: React.FC = () => {
     setSelectedProductId,
     getProductBacklogItems,
     getTypeLabel,
+    getHierarchyConfigForProduct,
+    loadHierarchyConfig,
     teams,
     loadTeams,
     currentTenantId,
@@ -321,7 +340,15 @@ const ProductBacklog: React.FC = () => {
     else loadProductTerminology(null);
   }, [selectedProductId, loadProductTerminology]);
 
+  useEffect(() => {
+    if (selectedProductId) loadHierarchyConfig(selectedProductId);
+  }, [selectedProductId, loadHierarchyConfig]);
+
   const product = selectedProductId ? workItems.find((i) => i.id === selectedProductId) : null;
+  const hierarchyConfig = selectedProductId ? getHierarchyConfigForProduct(selectedProductId) : null;
+  const backlogTypeOptions = hierarchyConfig?.enabledTypes ?? BACKLOG_TYPE_OPTIONS;
+  const droppableTypesList = hierarchyConfig?.enabledTypes ?? DROPPABLE_TYPES;
+
   const allItems = useMemo(() => {
     if (selectedProductId && product) return getProductBacklogItems(selectedProductId);
     return workItems;
@@ -335,8 +362,8 @@ const ProductBacklog: React.FC = () => {
   const roots = useMemo(() => {
     if (product && filteredItems.some((i) => i.id === product.id)) return [product];
     if (product) return [];
-    return buildTree(filteredItems);
-  }, [product, filteredItems]);
+    return buildTree(filteredItems, hierarchyConfig?.order);
+  }, [product, filteredItems, hierarchyConfig?.order]);
 
   const handleToggle = (id: string) => {
     setCollapsed((prev) => {
@@ -377,7 +404,7 @@ const ProductBacklog: React.FC = () => {
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination || result.source.droppableId !== result.destination.droppableId || result.source.index === result.destination.index) return;
     const parentId = result.source.droppableId === '__root' ? undefined : result.source.droppableId;
-    const siblings = parentId ? getChildren(filteredItems, parentId) : roots;
+    const siblings = parentId ? getChildren(filteredItems, parentId, hierarchyConfig?.order) : roots;
     const reordered = Array.from(siblings);
     const [removed] = reordered.splice(result.source.index, 1);
     reordered.splice(result.destination.index, 0, removed);
@@ -419,17 +446,25 @@ const ProductBacklog: React.FC = () => {
               : `Single source of truth for all work items. Products contain ${getTypeLabel('epic')}s, ${getTypeLabel('epic')}s contain ${getTypeLabel('feature')}s, ${getTypeLabel('feature')}s contain User Stories, User Stories contain Tasks and Bugs.`}
           </p>
           {product && (
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => {
-                setTerminologyProductId(selectedProductId!);
-                setViewMode('terminology');
-              }}
-              style={{ marginTop: '8px' }}
-            >
-              Configure terminology
-            </button>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => {
+                  setTerminologyProductId(selectedProductId!);
+                  setViewMode('terminology');
+                }}
+              >
+                Configure terminology
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setViewMode('product-hierarchy')}
+              >
+                Hierarchy
+              </button>
+            </div>
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
@@ -480,7 +515,7 @@ const ProductBacklog: React.FC = () => {
                   zIndex: 1000,
                 }}
               >
-                {BACKLOG_TYPE_OPTIONS.map((t) => (
+                {backlogTypeOptions.map((t) => (
                   <label
                     key={t}
                     style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', cursor: 'pointer', fontSize: '14px' }}
@@ -564,6 +599,9 @@ const ProductBacklog: React.FC = () => {
               onAddChild={handleAddChild}
               onEdit={handleEdit}
               getTypeLabel={getTypeLabel}
+              typeOrder={hierarchyConfig?.order}
+              droppableTypes={droppableTypesList}
+              enabledTypes={hierarchyConfig?.enabledTypes}
             />
           </DragDropContext>
         )}

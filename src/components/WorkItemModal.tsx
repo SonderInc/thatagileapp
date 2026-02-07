@@ -63,7 +63,7 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
   const effectiveParentId = createChildMode ? createChildMode.parentId : parentId;
   const effectiveType = createChildMode ? createChildMode.childType : type;
 
-  const { users, teams, loadTeams, currentTenantId, workItems, getAggregatedStoryPoints, setSelectedWorkItem, getTypeLabel, deleteWorkItem, canResetBacklog, updateWorkItem, planningContext, setTerminologyProductId, setViewMode } = useStore();
+  const { users, teams, loadTeams, currentTenantId, workItems, getAggregatedStoryPoints, setSelectedWorkItem, getTypeLabel, deleteWorkItem, canResetBacklog, updateWorkItem, planningContext, setTerminologyProductId, setViewMode, getProductIdForWorkItem, getHierarchyConfigForProduct, canEditProductHierarchy } = useStore();
   const {
     formData,
     setFormData,
@@ -315,6 +315,21 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
               Type
             </label>
+            {isEditing && item && (() => {
+              const productId = getProductIdForWorkItem(item.id);
+              const isDisabledType = productId && !getHierarchyConfigForProduct(productId).enabledTypes.includes(item.type);
+              const typeSelectDisabled = isEditing && (!isDisabledType || !canEditProductHierarchy(productId ?? ''));
+              return isDisabledType ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', padding: '2px 8px', backgroundColor: '#fef3c7', borderRadius: '4px' }}>
+                    Disabled type
+                  </span>
+                  {typeSelectDisabled && (
+                    <span style={{ fontSize: '13px', color: '#6b7280' }}>Type is read-only for this product.</span>
+                  )}
+                </div>
+              ) : null;
+            })()}
             <select
               value={allowedTypes.includes(formData.type!) ? formData.type : allowedTypes[0]}
               onChange={(e) => {
@@ -331,7 +346,11 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
                 borderRadius: '6px',
                 fontSize: '14px',
               }}
-              disabled={isEditing}
+              disabled={isEditing && (() => {
+                const productId = item ? getProductIdForWorkItem(item.id) : null;
+                const isDisabledType = productId && item && !getHierarchyConfigForProduct(productId).enabledTypes.includes(item.type);
+                return !isDisabledType || !canEditProductHierarchy(productId ?? '');
+              })()}
             >
               {allowedTypes.includes('product') && <option value="product">Product</option>}
               {allowedTypes.includes('epic') && <option value="epic">Epic</option>}

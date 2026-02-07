@@ -1,6 +1,15 @@
 // Work Item Types
 export type WorkItemType = 'company' | 'product' | 'epic' | 'feature' | 'user-story' | 'task' | 'bug';
 
+/** Per-product hierarchy: which work item types are enabled and their display order. */
+export interface ProductHierarchyConfig {
+  productId: string;
+  enabledTypes: WorkItemType[];
+  order: WorkItemType[];
+  updatedAt: Date;
+  updatedBy?: string;
+}
+
 export type EpicFeatureSize = 'small' | 'medium' | 'large' | 'xlarge' | 'xxlarge' | '?';
 
 /** Kanban board swimlane (task/bug only). */

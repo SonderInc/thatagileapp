@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import type { Team } from '../types';
+import { getEffectiveMemberIds } from '../utils/teamUtils';
 
 const TeamsListPage: React.FC = () => {
   const {
@@ -141,7 +142,10 @@ const TeamsListPage: React.FC = () => {
                 {team.name}
               </button>
               <span style={{ fontSize: '13px', color: '#6b7280' }}>
-                {team.memberIds.length} member{team.memberIds.length !== 1 ? 's' : ''}
+                {(() => {
+                const n = getEffectiveMemberIds(team, teams).length;
+                return `${n} member${n !== 1 ? 's' : ''}`;
+              })()}
               </span>
             </div>
           ))}

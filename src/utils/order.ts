@@ -18,6 +18,11 @@ export function getTypeSortIndex(type: string): number {
   return i === -1 ? Number.POSITIVE_INFINITY : i;
 }
 
+export function getTypeSortIndexFromOrder(type: string, order: string[]): number {
+  const i = order.indexOf(type);
+  return i === -1 ? Number.POSITIVE_INFINITY : i;
+}
+
 export function compareWorkItemOrder(
   a: { order?: number | null; type: string; title: string },
   b: { order?: number | null; type: string; title: string }
@@ -26,6 +31,20 @@ export function compareWorkItemOrder(
   const orderB = b.order ?? Number.POSITIVE_INFINITY;
   if (orderA !== orderB) return orderA - orderB;
   const typeDiff = getTypeSortIndex(a.type) - getTypeSortIndex(b.type);
+  if (typeDiff !== 0) return typeDiff;
+  return a.title.localeCompare(b.title);
+}
+
+/** Sort by custom type order then title (e.g. per-product hierarchy order). */
+export function compareWorkItemOrderWithOrder(
+  a: { order?: number | null; type: string; title: string },
+  b: { order?: number | null; type: string; title: string },
+  typeOrder: string[]
+): number {
+  const orderA = a.order ?? Number.POSITIVE_INFINITY;
+  const orderB = b.order ?? Number.POSITIVE_INFINITY;
+  if (orderA !== orderB) return orderA - orderB;
+  const typeDiff = getTypeSortIndexFromOrder(a.type, typeOrder) - getTypeSortIndexFromOrder(b.type, typeOrder);
   if (typeDiff !== 0) return typeDiff;
   return a.title.localeCompare(b.title);
 }

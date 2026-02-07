@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { WorkItem, Sprint, KanbanBoard, User, WorkItemType, TenantCompany, AuthUser, Role, KanbanLane, Team, PlanningBoard, PlanningBoardPlacement, BoardItem } from '../types';
-import { getAllowedChildTypes } from '../utils/hierarchy';
+import { WorkItem, Sprint, KanbanBoard, User, WorkItemType, TenantCompany, AuthUser, Role, KanbanLane, Team, PlanningBoard, PlanningBoardPlacement, BoardItem, ProductHierarchyConfig } from '../types';
+import { getAllowedChildTypes, ensureValidHierarchy } from '../utils/hierarchy';
 import { getTypeLabel as getTypeLabelFromNomenclature, getRoleLabel as getRoleLabelFromNomenclature } from '../utils/nomenclature';
 import { getDataStore } from '../lib/adapters';
 import { compareWorkItemOrder } from '../utils/order';
@@ -8,6 +8,7 @@ import type { GlossaryKey } from '../glossary/glossaryKeys';
 import type { TerminologySettings } from '../services/terminology/terminologyTypes';
 import * as terminologyService from '../services/terminology/terminologyService';
 import { resolveLabel } from '../services/terminology/terminologyResolver';
+import * as productHierarchyConfigService from '../services/productHierarchyConfigService';
 
 const TYPE_ORDER: Record<WorkItemType, number> = {
   company: 0,
@@ -48,6 +49,8 @@ interface AppState {
   productTerminologyLoadError: string | null;
   /** When on Terminology page in product mode, which product we're editing. */
   terminologyProductId: string | null;
+  /** Per-product hierarchy config (enabled types + order). */
+  hierarchyByProduct: Record<string, ProductHierarchyConfig>;
   currentUser: User | null;
   /** Tenant companies (from Firestore companies collection). */
   tenantCompanies: TenantCompany[];
@@ -77,7 +80,7 @@ interface AppState {
   planningContext: { teamId: string; sprintId?: string } | null;
   /** Board directory page: which type of boards we're listing (planning, epic, feature, team). */
   boardsDirectoryType: 'planning' | 'epic' | 'feature' | 'team' | null;
-  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing' | 'add-product' | 'add-company' | 'register-company' | 'invite-user' | 'licence' | 'company-profile' | 'settings' | 'team-board-settings' | 'feature-board-settings' | 'epic-board-settings' | 'nomenclature' | 'terminology' | 'import-backlog' | 'user-profile' | 'teams-list' | 'planning' | 'boards-directory' | 'app-admin' | 'no-company' | 'account-load-failed';
+  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing' | 'add-product' | 'add-company' | 'register-company' | 'invite-user' | 'licence' | 'company-profile' | 'settings' | 'team-board-settings' | 'feature-board-settings' | 'epic-board-settings' | 'nomenclature' | 'terminology' | 'product-hierarchy' | 'import-backlog' | 'user-profile' | 'teams-list' | 'planning' | 'boards-directory' | 'app-admin' | 'no-company' | 'account-load-failed';
   
   // Actions
   setWorkItems: (items: WorkItem[]) => void;
@@ -139,6 +142,8 @@ interface AppState {
   loadProductTerminology: (productId: string | null) => Promise<void>;
   saveProductTerminology: (productId: string, settings: TerminologySettings) => Promise<void>;
   setTerminologyProductId: (id: string | null) => void;
+  loadHierarchyConfig: (productId: string) => Promise<void>;
+  setHierarchyConfig: (productId: string, config: Pick<ProductHierarchyConfig, 'enabledTypes' | 'order'>) => Promise<void>;
 
   // Computed
   getEffectiveTerminologySettings: () => TerminologySettings;
@@ -173,6 +178,12 @@ interface AppState {
   getRoleLabel: (role: Role) => string;
   /** Resolved label for a glossary key (pack + overrides). */
   label: (key: GlossaryKey) => string;
+  /** Hierarchy config for a product (enabled types + order). Uses default if not loaded. */
+  getHierarchyConfigForProduct: (productId: string) => ProductHierarchyConfig;
+  /** True if current user can edit product hierarchy (admin or RTE for product's company). */
+  canEditProductHierarchy: (productId: string) => boolean;
+  /** Resolve product id for a work item (walk parentId until type product). Returns null if not under a product. */
+  getProductIdForWorkItem: (itemId: string) => string | null;
 }
 
 const TEAM_BOARD_STORAGE_KEY = 'thatagileapp_teamBoard';
@@ -206,6 +217,7 @@ export const useStore = create<AppState>((set, get) => ({
   productTerminologyProductId: null,
   productTerminologyLoadError: null,
   terminologyProductId: null,
+  hierarchyByProduct: {},
   currentUser: null,
   tenantCompanies: [],
   currentTenantId: null,
@@ -549,6 +561,17 @@ export const useStore = create<AppState>((set, get) => ({
     });
   },
   setTerminologyProductId: (id) => set({ terminologyProductId: id }),
+  loadHierarchyConfig: async (productId) => {
+    const config = await productHierarchyConfigService.getHierarchyConfig(productId);
+    set((state) => ({ hierarchyByProduct: { ...state.hierarchyByProduct, [productId]: config } }));
+  },
+  setHierarchyConfig: async (productId, nextConfig) => {
+    const uid = get().firebaseUser?.uid;
+    if (!uid) return;
+    const valid = ensureValidHierarchy({ ...nextConfig, productId });
+    set((state) => ({ hierarchyByProduct: { ...state.hierarchyByProduct, [productId]: { ...valid, updatedBy: uid } } }));
+    await productHierarchyConfigService.upsertHierarchyConfig(productId, { enabledTypes: valid.enabledTypes, order: valid.order }, uid);
+  },
   setKanbanLanesEnabled: (lanes) => {
     if (lanes.length === 0) return;
     set({ kanbanLanesEnabled: lanes });
@@ -844,5 +867,33 @@ export const useStore = create<AppState>((set, get) => ({
   getRoleLabel: (role) => {
     const companyType = get().getCurrentCompany()?.companyType ?? 'software';
     return getRoleLabelFromNomenclature(role, companyType);
+  },
+
+  getHierarchyConfigForProduct: (productId) => {
+    const cfg = get().hierarchyByProduct[productId];
+    return ensureValidHierarchy(cfg ? { ...cfg, productId } : { productId });
+  },
+
+  canEditProductHierarchy: (productId) => {
+    const user = get().currentUser;
+    const product = get().workItems.find((i) => i.id === productId);
+    const companyId = product?.companyId;
+    if (companyId && user?.adminCompanyIds?.length) {
+      if (user.adminCompanyIds.includes(companyId)) return true;
+    }
+    if (companyId && user?.rteCompanyIds?.length) {
+      if (user.rteCompanyIds.includes(companyId)) return true;
+    }
+    return (user?.roles?.includes('admin') ?? false) || (user?.roles?.includes('rte-team-of-teams-coach') ?? false);
+  },
+
+  getProductIdForWorkItem: (itemId) => {
+    const items = get().workItems;
+    let current = items.find((i) => i.id === itemId);
+    while (current) {
+      if (current.type === 'product') return current.id;
+      current = current.parentId ? items.find((i) => i.id === current!.parentId) ?? null : null;
+    }
+    return null;
   },
 }));

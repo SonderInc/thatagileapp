@@ -23,6 +23,7 @@ import CompanyProfilePage from './pages/CompanyProfilePage';
 import SettingsPage from './pages/SettingsPage';
 import NomenclaturePage from './pages/NomenclaturePage';
 import TerminologySettingsPage from './pages/settings/TerminologySettingsPage';
+import ProductHierarchySettingsPage from './pages/settings/ProductHierarchySettingsPage';
 import TeamBoardSettingsListPage from './pages/TeamBoardSettingsListPage';
 import FeatureBoardSettingsPage from './pages/FeatureBoardSettingsPage';
 import EpicBoardSettingsPage from './pages/EpicBoardSettingsPage';
@@ -591,6 +592,8 @@ function App() {
         return <NomenclaturePage />;
       case 'terminology':
         return <TerminologySettingsPage />;
+      case 'product-hierarchy':
+        return <ProductHierarchySettingsPage />;
       case 'team-board-settings':
         return <TeamBoardSettingsListPage />;
       case 'feature-board-settings':
