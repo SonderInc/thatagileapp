@@ -1,0 +1,23 @@
+{
+  "version": "1.0",
+  "enabledWorkItemTypes": ["company", "product", "feature", "user-story", "task", "bug"],
+  "workItemLabels": {
+    "company": "Company",
+    "product": "Product",
+    "epic": "Epic",
+    "feature": "Feature",
+    "user-story": "Story",
+    "task": "Task",
+    "bug": "Bug"
+  },
+  "hierarchy": {
+    "company": ["product"],
+    "product": ["feature"],
+    "epic": [],
+    "feature": ["user-story"],
+    "user-story": ["task", "bug"],
+    "task": [],
+    "bug": []
+  },
+  "workItemTypeOrder": ["company", "product", "feature", "user-story", "task", "bug"]
+}

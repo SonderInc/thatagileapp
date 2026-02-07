@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { useStore } from '../store/useStore';
 import WorkItemModal from '../components/WorkItemModal';
-import { getAllowedChildTypes } from '../utils/hierarchy';
 import { WorkItem, WorkItemType } from '../types';
 import { compareWorkItemOrder, compareWorkItemOrderWithOrder } from '../utils/order';
 import { Plus, ChevronDown, ChevronRight, ArrowLeft, GripVertical } from 'lucide-react';
@@ -219,6 +218,7 @@ interface DroppableTreeBlockProps {
   onAddChild: (parentId: string, type: WorkItemType) => void;
   onEdit: (itemId: string) => void;
   getTypeLabel: (type: WorkItemType) => string;
+  getAllowedChildTypes: (parentType: WorkItemType) => WorkItemType[];
   typeOrder?: string[];
   droppableTypes?: WorkItemType[];
   enabledTypes?: WorkItemType[];
@@ -234,6 +234,7 @@ const DroppableTreeBlock: React.FC<DroppableTreeBlockProps> = ({
   onAddChild,
   onEdit,
   getTypeLabel,
+  getAllowedChildTypes,
   typeOrder,
   droppableTypes = DROPPABLE_TYPES,
   enabledTypes,
@@ -278,6 +279,7 @@ const DroppableTreeBlock: React.FC<DroppableTreeBlockProps> = ({
                         onAddChild={onAddChild}
                         onEdit={onEdit}
                         getTypeLabel={getTypeLabel}
+                        getAllowedChildTypes={getAllowedChildTypes}
                         typeOrder={typeOrder}
                         droppableTypes={droppableTypes}
                         enabledTypes={enabledTypes}
@@ -304,7 +306,9 @@ const ProductBacklog: React.FC = () => {
     getProductBacklogItems,
     getTypeLabel,
     getHierarchyConfigForProduct,
+    getAllowedChildTypes,
     loadHierarchyConfig,
+    loadFrameworkSettings,
     teams,
     loadTeams,
     currentTenantId,
@@ -343,6 +347,10 @@ const ProductBacklog: React.FC = () => {
   useEffect(() => {
     if (selectedProductId) loadHierarchyConfig(selectedProductId);
   }, [selectedProductId, loadHierarchyConfig]);
+
+  useEffect(() => {
+    if (currentTenantId) loadFrameworkSettings(currentTenantId, selectedProductId ?? undefined);
+  }, [currentTenantId, selectedProductId, loadFrameworkSettings]);
 
   const product = selectedProductId ? workItems.find((i) => i.id === selectedProductId) : null;
   const hierarchyConfig = selectedProductId ? getHierarchyConfigForProduct(selectedProductId) : null;
@@ -599,6 +607,7 @@ const ProductBacklog: React.FC = () => {
               onAddChild={handleAddChild}
               onEdit={handleEdit}
               getTypeLabel={getTypeLabel}
+              getAllowedChildTypes={getAllowedChildTypes}
               typeOrder={hierarchyConfig?.order}
               droppableTypes={droppableTypesList}
               enabledTypes={hierarchyConfig?.enabledTypes}

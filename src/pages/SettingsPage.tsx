@@ -7,6 +7,8 @@ import {
 } from '../lib/firebaseConfig';
 import type { KanbanLane } from '../types';
 import { useStore } from '../store/useStore';
+import { FRAMEWORK_PRESETS, type PresetId } from '../presets';
+import * as frameworkSettingsService from '../services/frameworkSettingsService';
 
 const KANBAN_LANES_UI: { id: KanbanLane; title: string }[] = [
   { id: 'expedite', title: 'Expedite' },
@@ -28,6 +30,7 @@ const SPRINT_START_DAY_LABELS: Record<number, string> = {
 const SettingsPage: React.FC = () => {
   const {
     currentTenantId,
+    selectedProductId,
     hydrateTeamBoardSettings,
     teamBoardMode,
     sprintLengthWeeks,
@@ -40,8 +43,14 @@ const SettingsPage: React.FC = () => {
     kanbanLanesEnabled,
     setViewMode,
     label,
+    loadFrameworkSettings,
+    firebaseUser,
   } = useStore();
   const [override, setOverride] = useState(false);
+  const [frameworkPresetId, setFrameworkPresetId] = useState<PresetId | ''>('');
+  const [frameworkApplyBusy, setFrameworkApplyBusy] = useState(false);
+  const [frameworkApplyError, setFrameworkApplyError] = useState<string | null>(null);
+  const [frameworkApplySuccess, setFrameworkApplySuccess] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [teamBoardSaveMessage, setTeamBoardSaveMessage] = useState<string | null>(null);
@@ -56,6 +65,10 @@ const SettingsPage: React.FC = () => {
   useEffect(() => {
     hydrateTeamBoardSettings(currentTenantId);
   }, [currentTenantId, hydrateTeamBoardSettings]);
+
+  useEffect(() => {
+    if (currentTenantId) loadFrameworkSettings(currentTenantId, selectedProductId ?? undefined);
+  }, [currentTenantId, selectedProductId, loadFrameworkSettings]);
 
   useEffect(() => {
     setOverride(hasFirebaseConfigOverride());
@@ -108,6 +121,38 @@ const SettingsPage: React.FC = () => {
       setTeamBoardSaveMessage(null);
       teamBoardSaveTimeoutRef.current = null;
     }, 2500);
+  };
+
+  const handleApplyCompanyPreset = async () => {
+    if (!currentTenantId || !frameworkPresetId || !firebaseUser?.uid) return;
+    setFrameworkApplyError(null);
+    setFrameworkApplySuccess(null);
+    setFrameworkApplyBusy(true);
+    try {
+      await frameworkSettingsService.applyCompanyPreset(currentTenantId, frameworkPresetId as PresetId, firebaseUser.uid);
+      await loadFrameworkSettings(currentTenantId, selectedProductId ?? undefined);
+      setFrameworkApplySuccess('Company preset applied.');
+    } catch (e) {
+      setFrameworkApplyError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setFrameworkApplyBusy(false);
+    }
+  };
+
+  const handleApplyProductPreset = async () => {
+    if (!currentTenantId || !selectedProductId || !frameworkPresetId || !firebaseUser?.uid) return;
+    setFrameworkApplyError(null);
+    setFrameworkApplySuccess(null);
+    setFrameworkApplyBusy(true);
+    try {
+      await frameworkSettingsService.applyProductPreset(selectedProductId, currentTenantId, frameworkPresetId as PresetId, firebaseUser.uid);
+      await loadFrameworkSettings(currentTenantId, selectedProductId);
+      setFrameworkApplySuccess('Product preset applied.');
+    } catch (e) {
+      setFrameworkApplyError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setFrameworkApplyBusy(false);
+    }
   };
 
   useEffect(() => {
@@ -281,6 +326,49 @@ const SettingsPage: React.FC = () => {
             <span style={{ fontSize: '14px', color: '#059669', fontWeight: '500' }}>{teamBoardSaveMessage}</span>
           )}
         </div>
+      </section>
+
+      <section style={{ marginBottom: '24px' }}>
+        <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px', color: '#374151' }}>
+          Framework presets
+        </h2>
+        <p style={{ marginBottom: '12px', fontSize: '14px', color: '#6b7280' }}>
+          Apply a preset (SAFe, LeSS, Spotify, Apple, DaD) to set work item labels, enabled types, and hierarchy for the company or a single product.
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+          <select
+            value={frameworkPresetId}
+            onChange={(e) => setFrameworkPresetId((e.target.value || '') as PresetId | '')}
+            style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '14px', minWidth: '140px' }}
+          >
+            <option value="">Select preset</option>
+            {FRAMEWORK_PRESETS.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={!frameworkPresetId || frameworkApplyBusy}
+            onClick={handleApplyCompanyPreset}
+            style={{ padding: '8px 16px', borderRadius: '6px', fontSize: '14px' }}
+          >
+            Apply to company
+          </button>
+          {selectedProductId && (
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={!frameworkPresetId || frameworkApplyBusy}
+              onClick={handleApplyProductPreset}
+              style={{ padding: '8px 16px', borderRadius: '6px', fontSize: '14px' }}
+            >
+              Apply to this product
+            </button>
+          )}
+        </div>
+        {frameworkApplyError && <p style={{ fontSize: '14px', color: '#dc2626', marginBottom: '8px' }}>{frameworkApplyError}</p>}
+        {frameworkApplySuccess && <p style={{ fontSize: '14px', color: '#059669', marginBottom: '8px' }}>{frameworkApplySuccess}</p>}
       </section>
 
       <section style={{ marginBottom: '24px' }}>

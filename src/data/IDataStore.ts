@@ -1,4 +1,5 @@
 import type { WorkItem, TenantCompany, UserProfile, Role, Team, PlanningBoard, PlanningBoardPlacement, BoardItem, ProductHierarchyConfig } from '../types';
+import type { FrameworkSettings } from '../types/frameworkSettings';
 
 /**
  * Data store interface — Firestore, Postgres, etc.
@@ -70,6 +71,12 @@ export interface IDataStore {
   ): Promise<void>;
   /** Subscribe to hierarchy config changes (returns unsubscribe). */
   subscribeProductHierarchyConfig(productId: string, callback: (config: ProductHierarchyConfig | null) => void): () => void;
+  /** Framework settings: company default. */
+  getCompanySettings(companyId: string): Promise<{ presetId: string | null; settings: FrameworkSettings } | null>;
+  setCompanySettings(companyId: string, presetId: string | null, settings: FrameworkSettings, uid: string): Promise<void>;
+  /** Framework settings: product overrides. */
+  getProductSettings(productId: string): Promise<{ presetId: string | null; overrides: Partial<FrameworkSettings> } | null>;
+  setProductSettings(productId: string, companyId: string, presetId: string | null, overrides: Partial<FrameworkSettings>, uid: string): Promise<void>;
 }
 
 export type { WorkItem, TenantCompany, UserProfile, Role, Team, PlanningBoard, PlanningBoardPlacement, BoardItem };

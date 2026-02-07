@@ -9,6 +9,9 @@ import type { TerminologySettings } from '../services/terminology/terminologyTyp
 import * as terminologyService from '../services/terminology/terminologyService';
 import { resolveLabel } from '../services/terminology/terminologyResolver';
 import * as productHierarchyConfigService from '../services/productHierarchyConfigService';
+import * as frameworkSettingsService from '../services/frameworkSettingsService';
+import type { FrameworkSettings } from '../types/frameworkSettings';
+import { DEFAULT_FRAMEWORK_SETTINGS } from '../types/frameworkSettings';
 
 const TYPE_ORDER: Record<WorkItemType, number> = {
   company: 0,
@@ -51,6 +54,9 @@ interface AppState {
   terminologyProductId: string | null;
   /** Per-product hierarchy config (enabled types + order). */
   hierarchyByProduct: Record<string, ProductHierarchyConfig>;
+  /** Effective framework settings (company + product preset merge). Default until loadFrameworkSettings. */
+  frameworkSettings: FrameworkSettings;
+  frameworkSettingsLoadError: string | null;
   currentUser: User | null;
   /** Tenant companies (from Firestore companies collection). */
   tenantCompanies: TenantCompany[];
@@ -144,6 +150,7 @@ interface AppState {
   setTerminologyProductId: (id: string | null) => void;
   loadHierarchyConfig: (productId: string) => Promise<void>;
   setHierarchyConfig: (productId: string, config: Pick<ProductHierarchyConfig, 'enabledTypes' | 'order'>) => Promise<void>;
+  loadFrameworkSettings: (companyId: string, productId?: string) => Promise<void>;
 
   // Computed
   getEffectiveTerminologySettings: () => TerminologySettings;
@@ -178,6 +185,8 @@ interface AppState {
   getRoleLabel: (role: Role) => string;
   /** Resolved label for a glossary key (pack + overrides). */
   label: (key: GlossaryKey) => string;
+  /** Allowed child work item types for a parent type (from effective framework settings). */
+  getAllowedChildTypes: (parentType: WorkItemType) => WorkItemType[];
   /** Hierarchy config for a product (enabled types + order). Uses default if not loaded. */
   getHierarchyConfigForProduct: (productId: string) => ProductHierarchyConfig;
   /** True if current user can edit product hierarchy (admin or RTE for product's company). */
@@ -218,6 +227,8 @@ export const useStore = create<AppState>((set, get) => ({
   productTerminologyLoadError: null,
   terminologyProductId: null,
   hierarchyByProduct: {},
+  frameworkSettings: DEFAULT_FRAMEWORK_SETTINGS,
+  frameworkSettingsLoadError: null,
   currentUser: null,
   tenantCompanies: [],
   currentTenantId: null,
@@ -250,8 +261,10 @@ export const useStore = create<AppState>((set, get) => ({
     }
     if (itemWithTenant.parentId) {
       const parent = state.workItems.find((i) => i.id === itemWithTenant.parentId);
-      if (parent && !getAllowedChildTypes(parent.type).includes(itemWithTenant.type)) {
-        return;
+      if (parent) {
+        const fs = state.frameworkSettings;
+        const allowed = (fs.hierarchy[parent.type] ?? []).filter((t) => fs.enabledWorkItemTypes.includes(t));
+        if (allowed.length && !allowed.includes(itemWithTenant.type)) return;
       }
     }
     let nextItems = [...state.workItems, itemWithTenant];
@@ -274,9 +287,11 @@ export const useStore = create<AppState>((set, get) => ({
     const newParentId = updates.parentId !== undefined ? updates.parentId : item.parentId;
     if (newParentId !== item.parentId && newParentId != null) {
       const newParent = state.workItems.find((i) => i.id === newParentId);
-      if (!newParent || !getAllowedChildTypes(newParent.type).includes(item.type)) {
-        return state;
-      }
+      if (newParent) {
+        const fs = state.frameworkSettings;
+        const allowed = (fs.hierarchy[newParent.type] ?? []).filter((t) => fs.enabledWorkItemTypes.includes(t));
+        if (allowed.length && !allowed.includes(item.type)) return state;
+      } else return state;
     }
     const merged = { ...updates, updatedAt: new Date() };
     let nextItems = state.workItems.map((i) =>
@@ -572,6 +587,15 @@ export const useStore = create<AppState>((set, get) => ({
     set((state) => ({ hierarchyByProduct: { ...state.hierarchyByProduct, [productId]: { ...valid, updatedBy: uid } } }));
     await productHierarchyConfigService.upsertHierarchyConfig(productId, { enabledTypes: valid.enabledTypes, order: valid.order }, uid);
   },
+  loadFrameworkSettings: async (companyId, productId) => {
+    try {
+      const settings = await frameworkSettingsService.resolveEffectiveSettings({ companyId, productId });
+      set({ frameworkSettings: settings, frameworkSettingsLoadError: null });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      set({ frameworkSettingsLoadError: msg });
+    }
+  },
   setKanbanLanesEnabled: (lanes) => {
     if (lanes.length === 0) return;
     set({ kanbanLanesEnabled: lanes });
@@ -848,6 +872,8 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   getTypeLabel: (type) => {
+    const fs = get().frameworkSettings;
+    if (fs.workItemLabels[type]) return fs.workItemLabels[type];
     const settings = get().getEffectiveTerminologySettings();
     const keyMap: Partial<Record<WorkItemType, GlossaryKey>> = {
       product: 'product',
@@ -869,9 +895,28 @@ export const useStore = create<AppState>((set, get) => ({
     return getRoleLabelFromNomenclature(role, companyType);
   },
 
+  getAllowedChildTypes: (parentType) => {
+    const fs = get().frameworkSettings;
+    const children = fs.hierarchy[parentType];
+    if (children?.length) return children.filter((t) => fs.enabledWorkItemTypes.includes(t));
+    return getAllowedChildTypes(parentType);
+  },
   getHierarchyConfigForProduct: (productId) => {
-    const cfg = get().hierarchyByProduct[productId];
-    return ensureValidHierarchy(cfg ? { ...cfg, productId } : { productId });
+    const state = get();
+    const fs = state.frameworkSettings;
+    const productCfg = state.hierarchyByProduct[productId];
+    const base: ProductHierarchyConfig = {
+      productId,
+      enabledTypes: fs.enabledWorkItemTypes,
+      order: fs.workItemTypeOrder ?? (Object.keys(fs.workItemLabels) as WorkItemType[]),
+      ...(productCfg?.updatedAt && { updatedAt: productCfg.updatedAt }),
+      ...(productCfg?.updatedBy && { updatedBy: productCfg.updatedBy }),
+    };
+    if (productCfg) {
+      base.enabledTypes = productCfg.enabledTypes;
+      base.order = productCfg.order;
+    }
+    return ensureValidHierarchy(base);
   },
 
   canEditProductHierarchy: (productId) => {

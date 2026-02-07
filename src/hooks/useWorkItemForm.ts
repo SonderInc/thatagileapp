@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { WorkItem, WorkItemType, WorkItemStatus, KanbanLane } from '../types';
 import { useStore } from '../store/useStore';
-import { getAllowedChildTypes } from '../utils/hierarchy';
 import { computeWsjfScore } from '../components/WsjfCalculator';
 
 const FEATURE_STATUSES: WorkItemStatus[] = ['funnel', 'analysis', 'program-backlog', 'implementation', 'validating', 'deploying', 'releasing'];
@@ -30,7 +29,7 @@ export function useWorkItemForm({
   defaultTeamId,
   defaultSprintId,
 }: UseWorkItemFormProps) {
-  const { workItems, addWorkItem, updateWorkItem, getWorkItemsByParent, currentTenantId, getHierarchyConfigForProduct, getProductIdForWorkItem } = useStore();
+  const { workItems, addWorkItem, updateWorkItem, getWorkItemsByParent, currentTenantId, getHierarchyConfigForProduct, getProductIdForWorkItem, getAllowedChildTypes } = useStore();
   const [formData, setFormData] = useState<Partial<WorkItem>>({
     title: '',
     description: '',
@@ -54,7 +53,7 @@ export function useWorkItemForm({
     if (!productId) return base;
     const cfg = getHierarchyConfigForProduct(productId);
     return base.filter((t) => cfg.enabledTypes.includes(t));
-  }, [isEditing, item, parent, parentId, allowedTypesProp, getHierarchyConfigForProduct, getProductIdForWorkItem]);
+  }, [isEditing, item, parent, parentId, allowedTypesProp, getHierarchyConfigForProduct, getProductIdForWorkItem, getAllowedChildTypes]);
 
   useEffect(() => {
     if (item) {

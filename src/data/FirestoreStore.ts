@@ -54,4 +54,8 @@ export const FirestoreStore: IDataStore = {
   getProductHierarchyConfig: firestore.getProductHierarchyConfig,
   setProductHierarchyConfig: firestore.setProductHierarchyConfig,
   subscribeProductHierarchyConfig: firestore.subscribeProductHierarchyConfig,
+  getCompanySettings: firestore.getCompanySettings,
+  setCompanySettings: firestore.setCompanySettings,
+  getProductSettings: firestore.getProductSettings,
+  setProductSettings: firestore.setProductSettings,
 };

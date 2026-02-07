@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { WorkItem, WorkItemType, WorkItemStatus, EpicFeatureSize, KanbanLane } from '../types';
 import { useStore } from '../store/useStore';
-import { getAllowedParentTypes, getAllowedChildTypes } from '../utils/hierarchy';
+import { getAllowedParentTypes } from '../utils/hierarchy';
 import { SIZE_OPTIONS, STORY_POINT_OPTIONS, DAYS_OPTIONS } from '../utils/estimates';
 import { extractCursorInstruction } from '../lib/cursorInstruction';
 import { Plus, FileText, BookOpen, Sparkles, ArrowLeft } from 'lucide-react';
@@ -63,7 +63,7 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
   const effectiveParentId = createChildMode ? createChildMode.parentId : parentId;
   const effectiveType = createChildMode ? createChildMode.childType : type;
 
-  const { users, teams, loadTeams, currentTenantId, workItems, getAggregatedStoryPoints, setSelectedWorkItem, getTypeLabel, deleteWorkItem, canResetBacklog, updateWorkItem, planningContext, setTerminologyProductId, setViewMode, getProductIdForWorkItem, getHierarchyConfigForProduct, canEditProductHierarchy } = useStore();
+  const { users, teams, loadTeams, currentTenantId, workItems, getAggregatedStoryPoints, setSelectedWorkItem, getTypeLabel, deleteWorkItem, canResetBacklog, updateWorkItem, planningContext, setTerminologyProductId, setViewMode, getProductIdForWorkItem, getHierarchyConfigForProduct, canEditProductHierarchy, getAllowedChildTypes } = useStore();
   const {
     formData,
     setFormData,

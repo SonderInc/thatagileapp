@@ -18,6 +18,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type { WorkItem, TenantCompany, UserProfile, Role, Team, PlanningBoard, PlanningBoardPlacement, BoardItem, ProductHierarchyConfig, WorkItemType } from '../types';
+import type { FrameworkSettings } from '../types/frameworkSettings';
 
 const WORK_ITEMS_COLLECTION = 'workItems';
 const COMPANIES_COLLECTION = 'companies';
@@ -974,4 +975,92 @@ export function subscribeProductHierarchyConfig(
     },
     () => callback(null)
   );
+}
+
+// --- Company / product framework settings (presets) ---
+
+const COMPANY_SETTINGS_COLLECTION = 'companySettings';
+const PRODUCT_SETTINGS_COLLECTION = 'productSettings';
+
+function serializeFrameworkSettings(s: FrameworkSettings): Record<string, unknown> {
+  return {
+    version: s.version,
+    enabledWorkItemTypes: s.enabledWorkItemTypes,
+    workItemLabels: s.workItemLabels,
+    hierarchy: s.hierarchy,
+    ...(s.workItemTypeOrder && { workItemTypeOrder: s.workItemTypeOrder }),
+    ...(s.roles && { roles: s.roles }),
+  };
+}
+
+function parseFrameworkSettings(data: Record<string, unknown>): FrameworkSettings {
+  const version = data.version === '1.0' ? '1.0' : '1.0';
+  const enabledWorkItemTypes = Array.isArray(data.enabledWorkItemTypes) ? (data.enabledWorkItemTypes as WorkItemType[]) : [];
+  const workItemLabels = (data.workItemLabels as Record<WorkItemType, string>) ?? {};
+  const hierarchy = (data.hierarchy as Record<WorkItemType, WorkItemType[]>) ?? {};
+  const workItemTypeOrder = Array.isArray(data.workItemTypeOrder) ? (data.workItemTypeOrder as WorkItemType[]) : undefined;
+  const roles = data.roles as FrameworkSettings['roles'] | undefined;
+  return { version, enabledWorkItemTypes, workItemLabels, hierarchy, workItemTypeOrder, roles };
+}
+
+export async function getCompanySettings(companyId: string): Promise<{ presetId: string | null; settings: FrameworkSettings } | null> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = doc(db, COMPANY_SETTINGS_COLLECTION, companyId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  const settings = parseFrameworkSettings((data.settings as Record<string, unknown>) ?? {});
+  return {
+    presetId: (data.presetId as string) ?? null,
+    settings,
+  };
+}
+
+export async function setCompanySettings(
+  companyId: string,
+  presetId: string | null,
+  settings: FrameworkSettings,
+  uid: string
+): Promise<void> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = doc(db, COMPANY_SETTINGS_COLLECTION, companyId);
+  await setDoc(ref, {
+    companyId,
+    presetId,
+    settings: serializeFrameworkSettings(settings),
+    updatedAt: serverTimestamp(),
+    updatedBy: uid,
+  });
+}
+
+export async function getProductSettings(productId: string): Promise<{ presetId: string | null; overrides: Partial<FrameworkSettings> } | null> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = doc(db, PRODUCT_SETTINGS_COLLECTION, productId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  const overrides = (data.overrides as Partial<FrameworkSettings>) ?? {};
+  return {
+    presetId: (data.presetId as string) ?? null,
+    overrides,
+  };
+}
+
+export async function setProductSettings(
+  productId: string,
+  companyId: string,
+  presetId: string | null,
+  overrides: Partial<FrameworkSettings>,
+  uid: string
+): Promise<void> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = doc(db, PRODUCT_SETTINGS_COLLECTION, productId);
+  await setDoc(ref, {
+    productId,
+    companyId,
+    presetId,
+    overrides,
+    updatedAt: serverTimestamp(),
+    updatedBy: uid,
+  });
 }
