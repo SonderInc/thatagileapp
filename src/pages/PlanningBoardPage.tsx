@@ -15,7 +15,6 @@ const COLUMN_MIN_WIDTH = 200;
 const PlanningBoardPage: React.FC = () => {
   const {
     currentTenantId,
-    currentUser,
     firebaseUser,
     teams,
     loadTeams,
