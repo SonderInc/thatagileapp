@@ -16,6 +16,7 @@ const PlanningBoardPage: React.FC = () => {
     currentTenantId,
     teams,
     loadTeams,
+    loadPlanningBoards,
     planningBoards,
     planningPlacements,
     selectedPlanningBoardId,
@@ -38,6 +39,7 @@ const PlanningBoardPage: React.FC = () => {
   const [createName, setCreateName] = useState('');
   const [createTeamIds, setCreateTeamIds] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [showFeaturePicker, setShowFeaturePicker] = useState<{ teamId: string; iterationColumn: 1 | 2 | 3 | 4 | 5 } | null>(null);
   const [showCardModal, setShowCardModal] = useState(false);
   const [addStoryContext, setAddStoryContext] = useState<{ parentId: string; defaultTeamId: string; defaultSprintId?: string } | null>(null);
@@ -46,8 +48,13 @@ const PlanningBoardPage: React.FC = () => {
   const features = getWorkItemsByType('feature');
 
   useEffect(() => {
-    if (currentTenantId) loadTeams(currentTenantId);
-  }, [currentTenantId, loadTeams]);
+    if (currentTenantId) {
+      loadTeams(currentTenantId);
+      loadPlanningBoards(currentTenantId).catch((err) =>
+        console.error('[PlanningBoardPage] Load planning boards failed:', err?.message ?? err)
+      );
+    }
+  }, [currentTenantId, loadTeams, loadPlanningBoards]);
 
   useEffect(() => {
     if (selectedPlanningBoardId) loadPlanningPlacements(selectedPlanningBoardId);
@@ -57,6 +64,7 @@ const PlanningBoardPage: React.FC = () => {
     e.preventDefault();
     if (!currentTenantId || !createName.trim()) return;
     setCreating(true);
+    setCreateError(null);
     try {
       const newBoard: PlanningBoardType = {
         id: `planning-${Date.now()}`,
@@ -69,12 +77,21 @@ const PlanningBoardPage: React.FC = () => {
       setShowCreateModal(false);
       setCreateName('');
       setCreateTeamIds([]);
+      setCreateError(null);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const friendly =
+        /permission|forbidden|denied/i.test(msg)
+          ? 'Could not save board. You may need admin or RTE access for this company.'
+          : `Could not save board. ${msg}`;
+      setCreateError(friendly);
     } finally {
       setCreating(false);
     }
   };
 
   const toggleCreateTeam = (teamId: string) => {
+    setCreateError(null);
     setCreateTeamIds((prev) =>
       prev.includes(teamId) ? prev.filter((id) => id !== teamId) : [...prev, teamId]
     );
@@ -143,7 +160,10 @@ const PlanningBoardPage: React.FC = () => {
         {canEdit && (
           <button
             type="button"
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => {
+              setCreateError(null);
+              setShowCreateModal(true);
+            }}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -185,14 +205,37 @@ const PlanningBoardPage: React.FC = () => {
           ))}
         </ul>
         {showCreateModal && (
-          <Modal title="Create Planning Board" onClose={() => setShowCreateModal(false)}>
+          <Modal
+            title="Create Planning Board"
+            onClose={() => {
+              setCreateError(null);
+              setShowCreateModal(false);
+            }}
+          >
             <form onSubmit={handleCreateBoard}>
+              {createError && (
+                <p
+                  style={{
+                    margin: '0 0 16px 0',
+                    padding: '10px 12px',
+                    backgroundColor: '#fef2f2',
+                    color: '#b91c1c',
+                    borderRadius: 6,
+                    fontSize: 14,
+                  }}
+                >
+                  {createError}
+                </p>
+              )}
               <div style={{ marginBottom: 16 }}>
                 <label style={{ display: 'block', marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Board name *</label>
                 <input
                   type="text"
                   value={createName}
-                  onChange={(e) => setCreateName(e.target.value)}
+                  onChange={(e) => {
+                    setCreateName(e.target.value);
+                    setCreateError(null);
+                  }}
                   placeholder="e.g. Q1 Planning"
                   style={{
                     width: '100%',
