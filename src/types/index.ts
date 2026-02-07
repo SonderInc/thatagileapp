@@ -161,6 +161,10 @@ export interface User {
   avatar?: string;
   /** When true, user is an app-level administrator (can see all instances). */
   appAdmin?: boolean;
+  /** Company IDs for which the user has admin (used for permission checks). */
+  adminCompanyIds?: string[];
+  /** Company IDs for which the user is RTE; can edit planning boards and product hierarchy. */
+  rteCompanyIds?: string[];
 }
 
 /** User profile in Firestore users collection (per-company roles in Phase 3). */

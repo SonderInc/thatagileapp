@@ -889,10 +889,10 @@ export const useStore = create<AppState>((set, get) => ({
 
   getProductIdForWorkItem: (itemId) => {
     const items = get().workItems;
-    let current = items.find((i) => i.id === itemId);
+    let current: WorkItem | undefined = items.find((i) => i.id === itemId);
     while (current) {
       if (current.type === 'product') return current.id;
-      current = current.parentId ? items.find((i) => i.id === current!.parentId) ?? null : null;
+      current = current.parentId ? items.find((i) => i.id === current!.parentId) : undefined;
     }
     return null;
   },
