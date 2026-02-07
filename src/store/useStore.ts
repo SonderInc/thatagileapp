@@ -10,8 +10,10 @@ import * as terminologyService from '../services/terminology/terminologyService'
 import { resolveLabel } from '../services/terminology/terminologyResolver';
 import * as productHierarchyConfigService from '../services/productHierarchyConfigService';
 import * as frameworkSettingsService from '../services/frameworkSettingsService';
+import * as frameworkService from '../services/frameworkService';
 import type { FrameworkSettings } from '../types/frameworkSettings';
 import { DEFAULT_FRAMEWORK_SETTINGS } from '../types/frameworkSettings';
+import type { CompanyFrameworkConfig } from '../lib/frameworkTypes';
 
 const TYPE_ORDER: Record<WorkItemType, number> = {
   company: 0,
@@ -61,6 +63,9 @@ interface AppState {
   /** Effective framework settings (company + product preset merge). Default until loadFrameworkSettings. */
   frameworkSettings: FrameworkSettings;
   frameworkSettingsLoadError: string | null;
+  /** Company framework config from companies/{id}/settings/framework (for migration UI). */
+  frameworkConfigByCompany: Record<string, CompanyFrameworkConfig | null>;
+  frameworkConfigLoading: boolean;
   currentUser: User | null;
   /** Tenant companies (from Firestore companies collection). */
   tenantCompanies: TenantCompany[];
@@ -155,6 +160,8 @@ interface AppState {
   loadHierarchyConfig: (productId: string) => Promise<void>;
   setHierarchyConfig: (productId: string, config: Pick<ProductHierarchyConfig, 'enabledTypes' | 'order'>) => Promise<void>;
   loadFrameworkSettings: (companyId: string, productId?: string) => Promise<void>;
+  loadFrameworkConfig: (companyId: string) => Promise<void>;
+  setFrameworkPreset: (companyId: string, presetKey: string) => Promise<void>;
 
   // Computed
   getEffectiveTerminologySettings: () => TerminologySettings;
@@ -233,6 +240,8 @@ export const useStore = create<AppState>((set, get) => ({
   hierarchyByProduct: {},
   frameworkSettings: DEFAULT_FRAMEWORK_SETTINGS,
   frameworkSettingsLoadError: null,
+  frameworkConfigByCompany: {},
+  frameworkConfigLoading: false,
   currentUser: null,
   tenantCompanies: [],
   currentTenantId: null,
@@ -599,6 +608,28 @@ export const useStore = create<AppState>((set, get) => ({
       const msg = err instanceof Error ? err.message : String(err);
       set({ frameworkSettingsLoadError: msg });
     }
+  },
+  loadFrameworkConfig: async (companyId) => {
+    set({ frameworkConfigLoading: true });
+    try {
+      const config = await frameworkService.getCompanyFrameworkConfig(companyId);
+      set((s) => ({
+        frameworkConfigByCompany: { ...s.frameworkConfigByCompany, [companyId]: config },
+        frameworkConfigLoading: false,
+      }));
+    } catch {
+      set((s) => ({
+        frameworkConfigByCompany: { ...s.frameworkConfigByCompany, [companyId]: null },
+        frameworkConfigLoading: false,
+      }));
+    }
+  },
+  setFrameworkPreset: async (companyId, presetKey) => {
+    const uid = get().firebaseUser?.uid;
+    if (!uid) return;
+    await frameworkService.setCompanyFrameworkPreset(companyId, presetKey, uid);
+    await get().loadFrameworkConfig(companyId);
+    await get().loadFrameworkSettings(companyId, get().selectedProductId ?? undefined);
   },
   setKanbanLanesEnabled: (lanes) => {
     if (lanes.length === 0) return;

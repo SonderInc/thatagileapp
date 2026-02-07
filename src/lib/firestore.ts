@@ -1064,3 +1064,129 @@ export async function setProductSettings(
     updatedBy: uid,
   });
 }
+
+// --- Company framework config: companies/{companyId}/settings/framework ---
+
+const FRAMEWORK_SETTINGS_DOC_ID = 'framework';
+
+export async function getCompanyFrameworkConfig(companyId: string): Promise<{
+  presetKey: string;
+  presetVersion: string;
+  enabledTypes: WorkItemType[];
+  hierarchy: Record<string, WorkItemType[]>;
+  glossary: Record<string, string>;
+  updatedAt: unknown;
+  updatedBy: string;
+} | null> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = doc(db, COMPANIES_COLLECTION, companyId, 'settings', FRAMEWORK_SETTINGS_DOC_ID);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  return {
+    presetKey: (data.presetKey as string) ?? '',
+    presetVersion: (data.presetVersion as string) ?? '1.0',
+    enabledTypes: Array.isArray(data.enabledTypes) ? (data.enabledTypes as WorkItemType[]) : [],
+    hierarchy: (data.hierarchy as Record<string, WorkItemType[]>) ?? {},
+    glossary: (data.glossary as Record<string, string>) ?? {},
+    updatedAt: data.updatedAt,
+    updatedBy: (data.updatedBy as string) ?? '',
+  };
+}
+
+export async function setCompanyFrameworkConfig(
+  companyId: string,
+  config: {
+    presetKey: string;
+    presetVersion: string;
+    enabledTypes: WorkItemType[];
+    hierarchy: Record<string, WorkItemType[]>;
+    glossary: Record<string, string>;
+  },
+  uid: string
+): Promise<void> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = doc(db, COMPANIES_COLLECTION, companyId, 'settings', FRAMEWORK_SETTINGS_DOC_ID);
+  await setDoc(ref, {
+    presetKey: config.presetKey,
+    presetVersion: config.presetVersion,
+    enabledTypes: config.enabledTypes,
+    hierarchy: config.hierarchy,
+    glossary: config.glossary,
+    updatedAt: serverTimestamp(),
+    updatedBy: uid,
+  });
+}
+
+// --- Framework migration job/report (read-only from client; callable writes) ---
+
+export async function getFrameworkMigrationJob(
+  companyId: string,
+  jobId: string
+): Promise<{
+  jobId: string;
+  companyId: string;
+  fromPresetKey: string;
+  toPresetKey: string;
+  status: string;
+  mode: string;
+  startedAt: unknown;
+  finishedAt?: unknown;
+  progress: { total: number; done: number };
+  summary: { createdContainers: number; movedItems: number; flaggedForReview: number; invalidItems: number };
+  errors?: unknown[];
+  reportRef?: string;
+} | null> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = doc(db, COMPANIES_COLLECTION, companyId, 'frameworkMigrations', jobId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  return {
+    jobId: (data.jobId as string) ?? jobId,
+    companyId: (data.companyId as string) ?? companyId,
+    fromPresetKey: (data.fromPresetKey as string) ?? '',
+    toPresetKey: (data.toPresetKey as string) ?? '',
+    status: (data.status as string) ?? 'QUEUED',
+    mode: (data.mode as string) ?? 'DRY_RUN',
+    startedAt: data.startedAt,
+    finishedAt: data.finishedAt,
+    progress: (data.progress as { total: number; done: number }) ?? { total: 0, done: 0 },
+    summary: (data.summary as { createdContainers: number; movedItems: number; flaggedForReview: number; invalidItems: number }) ?? {
+      createdContainers: 0,
+      movedItems: 0,
+      flaggedForReview: 0,
+      invalidItems: 0,
+    },
+    errors: data.errors as unknown[] | undefined,
+    reportRef: data.reportRef as string | undefined,
+  };
+}
+
+export async function getFrameworkMigrationReport(
+  companyId: string,
+  jobId: string
+): Promise<{
+  jobId: string;
+  companyId: string;
+  issues: Array<{ type: string; severity: string; itemId?: string; itemType?: string; message: string; suggestion?: unknown }>;
+  reviewQueue: Array<{ itemId: string; itemType: string; reason: string; suggestedActions: unknown[] }>;
+  createdContainers: Array<{ id: string; type: string; title: string }>;
+  movedItems: Array<{ itemId: string; fromParentId: string | null; toParentId: string | null; fromOrder?: number; toOrder?: number }>;
+  generatedAt: unknown;
+} | null> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = doc(db, COMPANIES_COLLECTION, companyId, 'frameworkMigrationReports', jobId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  return {
+    jobId: (data.jobId as string) ?? jobId,
+    companyId: (data.companyId as string) ?? companyId,
+    issues: (data.issues as Array<{ type: string; severity: string; itemId?: string; itemType?: string; message: string; suggestion?: unknown }>) ?? [],
+    reviewQueue: (data.reviewQueue as Array<{ itemId: string; itemType: string; reason: string; suggestedActions: unknown[] }>) ?? [],
+    createdContainers: (data.createdContainers as Array<{ id: string; type: string; title: string }>) ?? [],
+    movedItems: (data.movedItems as Array<{ itemId: string; fromParentId: string | null; toParentId: string | null; fromOrder?: number; toOrder?: number }>) ?? [],
+    generatedAt: data.generatedAt,
+  };
+}

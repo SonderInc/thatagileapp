@@ -9,6 +9,8 @@ import type { KanbanLane } from '../types';
 import { useStore } from '../store/useStore';
 import { FRAMEWORK_PRESETS, type PresetId } from '../presets';
 import * as frameworkSettingsService from '../services/frameworkSettingsService';
+import { getFrameworkPreset } from '../lib/frameworkPresets';
+import * as frameworkMigrationService from '../services/frameworkMigrationService';
 
 const KANBAN_LANES_UI: { id: KanbanLane; title: string }[] = [
   { id: 'expedite', title: 'Expedite' },
@@ -44,6 +46,7 @@ const SettingsPage: React.FC = () => {
     setViewMode,
     label,
     loadFrameworkSettings,
+    setFrameworkPreset,
     firebaseUser,
   } = useStore();
   const [override, setOverride] = useState(false);
@@ -51,6 +54,9 @@ const SettingsPage: React.FC = () => {
   const [frameworkApplyBusy, setFrameworkApplyBusy] = useState(false);
   const [frameworkApplyError, setFrameworkApplyError] = useState<string | null>(null);
   const [frameworkApplySuccess, setFrameworkApplySuccess] = useState<string | null>(null);
+  const [migrationBusy, setMigrationBusy] = useState(false);
+  const [migrationError, setMigrationError] = useState<string | null>(null);
+  const [lastMigrationJob, setLastMigrationJob] = useState<{ jobId: string; summary?: { movedItems: number; flaggedForReview: number } } | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [teamBoardSaveMessage, setTeamBoardSaveMessage] = useState<string | null>(null);
@@ -124,13 +130,12 @@ const SettingsPage: React.FC = () => {
   };
 
   const handleApplyCompanyPreset = async () => {
-    if (!currentTenantId || !frameworkPresetId || !firebaseUser?.uid) return;
+    if (!currentTenantId || !frameworkPresetId) return;
     setFrameworkApplyError(null);
     setFrameworkApplySuccess(null);
     setFrameworkApplyBusy(true);
     try {
-      await frameworkSettingsService.applyCompanyPreset(currentTenantId, frameworkPresetId as PresetId, firebaseUser.uid);
-      await loadFrameworkSettings(currentTenantId, selectedProductId ?? undefined);
+      await setFrameworkPreset(currentTenantId, frameworkPresetId);
       setFrameworkApplySuccess('Company preset applied.');
     } catch (e) {
       setFrameworkApplyError(e instanceof Error ? e.message : String(e));
@@ -152,6 +157,48 @@ const SettingsPage: React.FC = () => {
       setFrameworkApplyError(e instanceof Error ? e.message : String(e));
     } finally {
       setFrameworkApplyBusy(false);
+    }
+  };
+
+  const handleMigrationScan = async () => {
+    if (!currentTenantId || !frameworkPresetId) return;
+    setMigrationError(null);
+    setLastMigrationJob(null);
+    setMigrationBusy(true);
+    try {
+      const preset = getFrameworkPreset(frameworkPresetId);
+      const result = await frameworkMigrationService.startFrameworkMigration(
+        currentTenantId,
+        frameworkPresetId,
+        'DRY_RUN',
+        { enabledTypes: preset.enabledTypes, hierarchy: preset.hierarchy as Record<string, string[]> }
+      );
+      setLastMigrationJob({ jobId: result.jobId, summary: result.summary });
+    } catch (e) {
+      setMigrationError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setMigrationBusy(false);
+    }
+  };
+
+  const handleMigrationApply = async () => {
+    if (!currentTenantId || !frameworkPresetId) return;
+    setMigrationError(null);
+    setLastMigrationJob(null);
+    setMigrationBusy(true);
+    try {
+      const preset = getFrameworkPreset(frameworkPresetId);
+      const result = await frameworkMigrationService.startFrameworkMigration(
+        currentTenantId,
+        frameworkPresetId,
+        'APPLY',
+        { enabledTypes: preset.enabledTypes, hierarchy: preset.hierarchy as Record<string, string[]> }
+      );
+      setLastMigrationJob({ jobId: result.jobId, summary: result.summary });
+    } catch (e) {
+      setMigrationError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setMigrationBusy(false);
     }
   };
 
@@ -369,6 +416,39 @@ const SettingsPage: React.FC = () => {
         </div>
         {frameworkApplyError && <p style={{ fontSize: '14px', color: '#dc2626', marginBottom: '8px' }}>{frameworkApplyError}</p>}
         {frameworkApplySuccess && <p style={{ fontSize: '14px', color: '#059669', marginBottom: '8px' }}>{frameworkApplySuccess}</p>}
+
+        <p style={{ marginTop: '16px', marginBottom: '8px', fontSize: '14px', color: '#6b7280' }}>
+          After changing preset, run a compatibility scan or apply automated migration (re-parents invalid items; logs moves for rollback).
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={!frameworkPresetId || migrationBusy}
+            onClick={handleMigrationScan}
+            style={{ padding: '8px 16px', borderRadius: '6px', fontSize: '14px' }}
+          >
+            Run migration scan (dry run)
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={!frameworkPresetId || migrationBusy}
+            onClick={handleMigrationApply}
+            style={{ padding: '8px 16px', borderRadius: '6px', fontSize: '14px' }}
+          >
+            Apply migration
+          </button>
+        </div>
+        {migrationError && <p style={{ fontSize: '14px', color: '#dc2626', marginTop: '8px' }}>{migrationError}</p>}
+        {lastMigrationJob && (
+          <p style={{ fontSize: '14px', color: '#059669', marginTop: '8px' }}>
+            Job {lastMigrationJob.jobId} completed.
+            {lastMigrationJob.summary && (
+              <> Moved: {lastMigrationJob.summary.movedItems}; flagged for review: {lastMigrationJob.summary.flaggedForReview}</>
+            )}
+          </p>
+        )}
       </section>
 
       <section style={{ marginBottom: '24px' }}>
