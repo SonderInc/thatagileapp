@@ -6,7 +6,7 @@ import { LayoutDashboard, Layers, Package, List, ListOrdered, Home, LogOut, Shie
 type BoardsDirectoryType = 'planning' | 'epic' | 'feature' | 'team';
 
 const Navigation: React.FC = () => {
-  const { viewMode, setViewMode, setSelectedProductId, setSelectedTeamId, selectedTeamId, teams, loadTeams, currentTenantId, tenantCompanies, firebaseUser, setFirebaseUser, setCurrentUser, setCurrentTenantId, currentUser, getTypeLabel, canAccessTeamBoardSettings, setBoardsDirectoryType } = useStore();
+  const { viewMode, setViewMode, setSelectedProductId, loadTeams, currentTenantId, tenantCompanies, firebaseUser, setFirebaseUser, setCurrentUser, setCurrentTenantId, currentUser, getTypeLabel, canAccessTeamBoardSettings, setBoardsDirectoryType } = useStore();
   const currentCompany = tenantCompanies.find((c) => c.id === currentTenantId) ?? null;
   const [adminMenuOpen, setAdminMenuOpen] = useState(false);
   const [boardsMenuOpen, setBoardsMenuOpen] = useState(false);
