@@ -59,9 +59,13 @@ export async function ensureTenantAccess(
     return existing;
   }
 
+  const role = options?.role === "admin" ? "admin" : "member";
   const promise = (async () => {
     try {
-      console.log("[ensureTenantAccess] start", { tenantId: key });
+      console.log("[ensureTenantAccess] calling httpsCallable grantTenantAccess", {
+        tenantId: key,
+        role,
+      });
       const functions = getFunctions(app, "us-central1");
       const grantTenantAccessFn = httpsCallable<
         { tenantId: string; role?: "member" | "admin" },
@@ -85,10 +89,12 @@ export async function ensureTenantAccess(
           : err instanceof Error
             ? err.message
             : STABLE_ERROR_MESSAGE;
+      const details = err && typeof err === "object" && "details" in err ? (err as { details: unknown }).details : undefined;
       console.log("[ensureTenantAccess] failed", {
         tenantId: key,
         code,
         message: rawMessage,
+        details,
       });
       throw {
         code: code === "functions/permission-denied" ? "PERMISSION_DENIED" : code,

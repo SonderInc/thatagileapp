@@ -11,6 +11,10 @@ if (!admin.apps.length) admin.initializeApp();
 export const grantTenantAccess = onCall(
   { region: "us-central1" },
   async (request) => {
+    console.log("[grantTenantAccess] called", {
+      uid: request.auth?.uid,
+      tenantId: (request.data as { tenantId?: string })?.tenantId,
+    });
     if (!request.auth?.uid) {
       throw new HttpsError(
         "unauthenticated",
