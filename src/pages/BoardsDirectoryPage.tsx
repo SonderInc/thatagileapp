@@ -4,12 +4,6 @@ import type { Team } from '../types';
 
 type TeamTypeFilter = 'all' | 'team' | 'team-of-teams';
 
-const PAGE_TITLES: Record<'planning' | 'epic' | 'feature' | 'team', string> = {
-  planning: 'Planning Boards',
-  epic: 'Epic Boards',
-  feature: 'Feature Boards',
-  team: 'Team Boards',
-};
 
 const BoardsDirectoryPage: React.FC = () => {
   const {
@@ -21,11 +15,23 @@ const BoardsDirectoryPage: React.FC = () => {
     setSelectedTeamId,
     setViewMode,
     getTypeLabel,
+    label,
     currentTenantId,
     selectedPlanningBoardId,
     selectedTeamId,
     viewMode,
   } = useStore();
+
+  const pageTitle =
+    boardsDirectoryType === 'planning'
+      ? `${label('planning_board')}s`
+      : boardsDirectoryType === 'epic'
+        ? `${label('epic')} Boards`
+        : boardsDirectoryType === 'feature'
+          ? `${label('feature')} Boards`
+          : boardsDirectoryType === 'team'
+            ? `${label('team')} Boards`
+            : '';
 
   const [searchQuery, setSearchQuery] = useState('');
   const [teamTypeFilter, setTeamTypeFilter] = useState<TeamTypeFilter>('all');
@@ -78,7 +84,7 @@ const BoardsDirectoryPage: React.FC = () => {
     );
   }
 
-  const title = PAGE_TITLES[boardsDirectoryType];
+  const title = pageTitle;
 
   const handleBack = () => {
     setViewMode('landing');
@@ -176,7 +182,7 @@ const BoardsDirectoryPage: React.FC = () => {
                 }}
               >
                 <span style={{ fontWeight: '600', color: '#111827' }}>{b.name}</span>
-                <span style={{ marginLeft: '8px', fontSize: '12px', color: '#6b7280' }}>{b.teamIds.length} teams</span>
+                <span style={{ marginLeft: '8px', fontSize: '12px', color: '#6b7280' }}>{b.teamIds.length} {label('team')}s</span>
               </li>
             ))
           )}

@@ -4,6 +4,10 @@ import { getAllowedChildTypes } from '../utils/hierarchy';
 import { getTypeLabel as getTypeLabelFromNomenclature, getRoleLabel as getRoleLabelFromNomenclature } from '../utils/nomenclature';
 import { getDataStore } from '../lib/adapters';
 import { compareWorkItemOrder } from '../utils/order';
+import type { GlossaryKey } from '../glossary/glossaryKeys';
+import type { TerminologySettings } from '../services/terminology/terminologyTypes';
+import * as terminologyService from '../services/terminology/terminologyService';
+import { resolveLabel } from '../services/terminology/terminologyResolver';
 
 const TYPE_ORDER: Record<WorkItemType, number> = {
   company: 0,
@@ -32,6 +36,10 @@ interface AppState {
   boardItems: BoardItem[];
   /** Set when loadPlanningBoards fails with permission-denied; cleared on success. */
   planningBoardsLoadError: string | null;
+  /** Terminology (label pack + overrides) per tenant; loaded on tenant change. */
+  terminologySettings: TerminologySettings;
+  /** Set when loadTerminology fails; cleared on success. */
+  terminologyLoadError: string | null;
   currentUser: User | null;
   /** Tenant companies (from Firestore companies collection). */
   tenantCompanies: TenantCompany[];
@@ -61,7 +69,7 @@ interface AppState {
   planningContext: { teamId: string; sprintId?: string } | null;
   /** Board directory page: which type of boards we're listing (planning, epic, feature, team). */
   boardsDirectoryType: 'planning' | 'epic' | 'feature' | 'team' | null;
-  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing' | 'add-product' | 'add-company' | 'register-company' | 'invite-user' | 'licence' | 'company-profile' | 'settings' | 'team-board-settings' | 'feature-board-settings' | 'epic-board-settings' | 'nomenclature' | 'import-backlog' | 'user-profile' | 'teams-list' | 'planning' | 'boards-directory' | 'app-admin' | 'no-company' | 'account-load-failed';
+  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing' | 'add-product' | 'add-company' | 'register-company' | 'invite-user' | 'licence' | 'company-profile' | 'settings' | 'team-board-settings' | 'feature-board-settings' | 'epic-board-settings' | 'nomenclature' | 'terminology' | 'import-backlog' | 'user-profile' | 'teams-list' | 'planning' | 'boards-directory' | 'app-admin' | 'no-company' | 'account-load-failed';
   
   // Actions
   setWorkItems: (items: WorkItem[]) => void;
@@ -118,6 +126,8 @@ interface AppState {
   setSprintStartDay: (day: number) => void;
   setKanbanLanesEnabled: (lanes: KanbanLane[]) => void;
   hydrateTeamBoardSettings: (tenantId: string | null) => void;
+  loadTerminology: (companyId: string) => Promise<void>;
+  saveTerminology: (companyId: string, settings: TerminologySettings) => Promise<void>;
 
   // Computed
   canAccessTeamBoardSettings: () => boolean;
@@ -145,10 +155,12 @@ interface AppState {
   getKanbanLanes: () => { id: KanbanLane; title: string }[];
   getItemsForKanbanLane: (laneId: string) => WorkItem[];
   getCurrentCompany: () => TenantCompany | null;
-  /** Type label for current company's nomenclature (e.g. Epic vs Program). */
+  /** Type label for current company's nomenclature (e.g. Epic vs Program). Uses terminology when loaded. */
   getTypeLabel: (type: WorkItemType) => string;
   /** Role label for current company's nomenclature (e.g. Participant vs Customer for training). */
   getRoleLabel: (role: Role) => string;
+  /** Resolved label for a glossary key (pack + overrides). */
+  label: (key: GlossaryKey) => string;
 }
 
 const TEAM_BOARD_STORAGE_KEY = 'thatagileapp_teamBoard';
@@ -176,6 +188,8 @@ export const useStore = create<AppState>((set, get) => ({
   backlogFeaturesByTeam: {},
   boardItems: [],
   planningBoardsLoadError: null,
+  terminologySettings: terminologyService.getDefaultTerminologySettings(),
+  terminologyLoadError: null,
   currentUser: null,
   tenantCompanies: [],
   currentTenantId: null,
@@ -463,6 +477,22 @@ export const useStore = create<AppState>((set, get) => ({
       }));
     }
   },
+  loadTerminology: async (companyId) => {
+    set({ terminologyLoadError: null });
+    try {
+      const settings = await terminologyService.loadTerminologySettings(companyId);
+      set({ terminologySettings: settings, terminologyLoadError: null });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      set({ terminologyLoadError: msg });
+    }
+  },
+  saveTerminology: async (companyId, settings) => {
+    const uid = get().firebaseUser?.uid;
+    if (!uid) return;
+    await terminologyService.saveTerminologySettings(companyId, settings, uid);
+    set({ terminologySettings: settings, terminologyLoadError: null });
+  },
   setKanbanLanesEnabled: (lanes) => {
     if (lanes.length === 0) return;
     set({ kanbanLanesEnabled: lanes });
@@ -727,9 +757,21 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   getTypeLabel: (type) => {
+    const { terminologySettings } = get();
+    const keyMap: Partial<Record<WorkItemType, GlossaryKey>> = {
+      product: 'product',
+      epic: 'epic',
+      feature: 'feature',
+      'user-story': 'story',
+      task: 'task',
+    };
+    const key = keyMap[type];
+    if (key) return resolveLabel(key, terminologySettings);
     const companyType = get().getCurrentCompany()?.companyType ?? 'software';
     return getTypeLabelFromNomenclature(type, companyType);
   },
+
+  label: (key) => resolveLabel(key, get().terminologySettings),
 
   getRoleLabel: (role) => {
     const companyType = get().getCurrentCompany()?.companyType ?? 'software';

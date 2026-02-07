@@ -39,6 +39,7 @@ const SettingsPage: React.FC = () => {
     canConfigureSprintStart,
     kanbanLanesEnabled,
     setViewMode,
+    label,
   } = useStore();
   const [override, setOverride] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -235,7 +236,7 @@ const SettingsPage: React.FC = () => {
               Sprint start day
             </label>
             <p style={{ marginBottom: '8px', fontSize: '13px', color: '#6b7280' }}>
-              Only admins and RTE/Team of Teams Coach can change this.
+              {`Only admins and ${label('rte')}/Team of Teams Coach can change this.`}
             </p>
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               {[0, 1, 2, 3, 4, 5, 6].map((day) => (
@@ -284,17 +285,17 @@ const SettingsPage: React.FC = () => {
 
       <section style={{ marginBottom: '24px' }}>
         <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px', color: '#374151' }}>
-          Nomenclature
+          Terminology
         </h2>
         <p style={{ marginBottom: '12px', fontSize: '14px', color: '#6b7280' }}>
-          Set work item type labels and terminology (e.g. Epic, Feature, User Story). Can be wired up later.
+          Choose a framework label pack (e.g. SAFe, LeSS) and override terms. Labels apply across Backlog, Planning Board, and forms.
         </p>
         <button
           type="button"
           className="btn-secondary"
-          onClick={() => setViewMode('nomenclature')}
+          onClick={() => setViewMode('terminology')}
         >
-          Set nomenclature
+          Configure terminology
         </button>
       </section>
 

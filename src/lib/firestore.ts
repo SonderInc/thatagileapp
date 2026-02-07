@@ -836,3 +836,40 @@ export async function deletePlanningPlacement(id: string): Promise<void> {
   const ref = doc(db, PLANNING_PLACEMENTS_COLLECTION, id);
   await deleteDoc(ref);
 }
+
+/** Terminology settings document: companies/{companyId}/settings/terminology */
+const TERMINOLOGY_DOC_ID = 'terminology';
+
+export interface TerminologyDoc {
+  activePackId: string;
+  overrides: Record<string, string>;
+  updatedAt: ReturnType<typeof serverTimestamp>;
+  updatedBy?: string;
+}
+
+export async function getTerminologySettings(companyId: string): Promise<{ activePackId: string; overrides: Record<string, string> } | null> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = doc(db, COMPANIES_COLLECTION, companyId, 'settings', TERMINOLOGY_DOC_ID);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  return {
+    activePackId: (data.activePackId as string) ?? 'default',
+    overrides: (data.overrides as Record<string, string>) ?? {},
+  };
+}
+
+export async function setTerminologySettings(
+  companyId: string,
+  settings: { activePackId: string; overrides: Record<string, string> },
+  uid: string
+): Promise<void> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = doc(db, COMPANIES_COLLECTION, companyId, 'settings', TERMINOLOGY_DOC_ID);
+  await setDoc(ref, {
+    activePackId: settings.activePackId,
+    overrides: settings.overrides,
+    updatedAt: serverTimestamp(),
+    updatedBy: uid,
+  });
+}

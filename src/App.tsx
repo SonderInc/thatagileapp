@@ -22,6 +22,7 @@ import LicencePage from './pages/LicencePage';
 import CompanyProfilePage from './pages/CompanyProfilePage';
 import SettingsPage from './pages/SettingsPage';
 import NomenclaturePage from './pages/NomenclaturePage';
+import TerminologySettingsPage from './pages/settings/TerminologySettingsPage';
 import TeamBoardSettingsListPage from './pages/TeamBoardSettingsListPage';
 import FeatureBoardSettingsPage from './pages/FeatureBoardSettingsPage';
 import EpicBoardSettingsPage from './pages/EpicBoardSettingsPage';
@@ -104,6 +105,7 @@ function App() {
     mustChangePassword,
     setMustChangePassword,
     loadPlanningBoards,
+    loadTerminology,
   } = useStore();
 
   useEffect(() => {
@@ -503,6 +505,11 @@ function App() {
 
   useEffect(() => {
     if (!currentTenantId || !getAuth().isConfigured()) return;
+    loadTerminology(currentTenantId);
+  }, [currentTenantId, loadTerminology]);
+
+  useEffect(() => {
+    if (!currentTenantId || !getAuth().isConfigured()) return;
     if (!firebaseUser || !currentUser) return;
     if (viewMode === 'planning') return;
     const run = async () => {
@@ -582,6 +589,8 @@ function App() {
         return <SettingsPage />;
       case 'nomenclature':
         return <NomenclaturePage />;
+      case 'terminology':
+        return <TerminologySettingsPage />;
       case 'team-board-settings':
         return <TeamBoardSettingsListPage />;
       case 'feature-board-settings':

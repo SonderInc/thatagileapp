@@ -55,6 +55,9 @@ export interface IDataStore {
   ): Promise<string>;
   updateBoardItem(boardId: string, itemId: string, updates: { laneId?: string; columnId?: string }): Promise<void>;
   deleteBoardItem(boardId: string, itemId: string): Promise<void>;
+  /** Terminology: companies/{companyId}/settings/terminology */
+  getTerminologySettings(companyId: string): Promise<{ activePackId: string; overrides: Record<string, string> } | null>;
+  setTerminologySettings(companyId: string, settings: { activePackId: string; overrides: Record<string, string> }, uid: string): Promise<void>;
 }
 
 export type { WorkItem, TenantCompany, UserProfile, Role, Team, PlanningBoard, PlanningBoardPlacement, BoardItem };

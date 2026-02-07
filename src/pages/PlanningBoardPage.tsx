@@ -21,7 +21,6 @@ function parseCellId(id: string): { laneId: string; columnId: string } | null {
   return { laneId: id.slice(0, idx), columnId: id.slice(idx + 1) };
 }
 
-const COLUMN_LABELS = ['Teams', 'Iteration 1', 'Iteration 2', 'Iteration 3', 'Iteration 4', 'Iteration 5'];
 const LANE_LABEL_WIDTH = 180;
 const COLUMN_MIN_WIDTH = 200;
 
@@ -47,7 +46,20 @@ const PlanningBoardPage: React.FC = () => {
     canEditPlanningBoard,
     moveBoardItem,
     removeFeatureFromPlanningBoard,
+    label,
   } = useStore();
+
+  const columnLabels = React.useMemo(
+    () => [
+      `${label('team')}s`,
+      `${label('iteration')} 1`,
+      `${label('iteration')} 2`,
+      `${label('iteration')} 3`,
+      `${label('iteration')} 4`,
+      `${label('iteration')} 5`,
+    ],
+    [label]
+  );
 
   const canEdit = canEditPlanningBoard();
 
@@ -161,14 +173,14 @@ const PlanningBoardPage: React.FC = () => {
           console.warn('[PlanningBoardPage] ensureTenantAccess or retry failed:', syncErr);
           setCreateError(
             accessGranted
-              ? "You don't have permission to create boards for this company. You need admin or RTE access."
+              ? `You don't have permission to create boards for this company. You need admin or ${label('rte')} access.`
               : "You don't have access to this company."
           );
         }
       } else {
         setCreateError(
           isPermissionError
-            ? 'Could not save board. You may need admin or RTE access for this company.'
+            ? `Could not save board. You may need admin or ${label('rte')} access for this company.`
             : `Could not save board. ${msg}`
         );
       }
@@ -258,7 +270,7 @@ const PlanningBoardPage: React.FC = () => {
   if (!currentTenantId) {
     return (
       <div style={{ padding: spacing.xxl }}>
-        <p style={{ color: '#6b7280' }}>Select a company to use Planning Board.</p>
+        <p style={{ color: '#6b7280' }}>Select a company to use {label('planning_board')}.</p>
       </div>
     );
   }
@@ -275,10 +287,10 @@ const PlanningBoardPage: React.FC = () => {
     return (
       <div style={{ padding: spacing.xxl }}>
         <h1 style={{ margin: '0 0 8px 0', fontSize: '32px', fontWeight: 700, color: '#111827' }}>
-          Planning Boards
+          {label('planning_board')}s
         </h1>
         <p style={{ margin: '0 0 24px 0', color: '#6b7280', fontSize: '14px' }}>
-          Create a board with a name and teams (swimlanes). Then add features to iteration columns.
+          Create a board with a name and {label('team')}s (swimlanes). Then add features to {label('iteration')} columns.
         </p>
         {isProvisioning && (
           <p style={{ margin: '0 0 16px 0', color: '#6b7280', fontSize: '14px' }}>
@@ -388,7 +400,7 @@ const PlanningBoardPage: React.FC = () => {
         </ul>
         {showCreateModal && (
           <Modal
-            title="Create Planning Board"
+            title={`Create ${label('planning_board')}`}
             onClose={() => {
               setCreateError(null);
               setShowCreateModal(false);
@@ -488,7 +500,7 @@ const PlanningBoardPage: React.FC = () => {
         )}
         {editingBoard && (
           <Modal
-            title="Edit Planning Board"
+            title={`Edit ${label('planning_board')}`}
             onClose={() => {
               setEditError(null);
               setEditingBoard(null);
@@ -632,9 +644,9 @@ const PlanningBoardPage: React.FC = () => {
       <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: 8, backgroundColor: '#fff' }}>
         <DragDropContext onDragEnd={handleDragEnd}>
           <div style={{ display: 'flex', flexShrink: 0, borderBottom: '2px solid #e5e7eb' }}>
-            {COLUMN_LABELS.map((label, idx) => (
+            {columnLabels.map((colLabel, idx) => (
               <div
-                key={label}
+                key={colLabel}
                 style={{
                   minWidth: idx === 0 ? LANE_LABEL_WIDTH : COLUMN_MIN_WIDTH,
                   width: idx === 0 ? LANE_LABEL_WIDTH : COLUMN_MIN_WIDTH,
@@ -646,7 +658,7 @@ const PlanningBoardPage: React.FC = () => {
                   textTransform: idx === 0 ? 'uppercase' : 'none',
                 }}
               >
-                {label}
+                {colLabel}
               </div>
             ))}
           </div>
