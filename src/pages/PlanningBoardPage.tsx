@@ -732,7 +732,7 @@ const PlanningBoardPage: React.FC = () => {
               {([1, 2, 3, 4, 5] as const).map((iter) => {
                 const cellItems = getBoardItemsForCell(team.id, iter);
                 return (
-                  <Droppable key={iter} droppableId={cellId(team.id, iter)}>
+                  <Droppable key={cellId(team.id, iter)} droppableId={cellId(team.id, iter)}>
                     {(droppableProvided) => (
                       <div
                         ref={droppableProvided.innerRef}
@@ -740,6 +740,7 @@ const PlanningBoardPage: React.FC = () => {
                         style={{
                           minWidth: COLUMN_MIN_WIDTH,
                           width: COLUMN_MIN_WIDTH,
+                          minHeight: 80,
                           padding: 8,
                           borderRight: '1px solid #e5e7eb',
                           display: 'flex',
