@@ -8,6 +8,7 @@ export const PACK_LESS: LabelPack = {
     program: 'Requirement Area',
     product: 'Product',
     team: 'Feature Team',
+    team_of_teams: 'Requirement Area',
     feature: 'Feature',
     epic: 'Epic',
     story: 'User Story',

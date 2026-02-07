@@ -8,6 +8,7 @@ export const PACK_APPLE: LabelPack = {
     program: 'Program',
     product: 'Product',
     team: 'Team',
+    team_of_teams: 'Product Group',
     feature: 'Feature',
     epic: 'Epic',
     story: 'Story',

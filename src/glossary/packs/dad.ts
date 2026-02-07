@@ -8,6 +8,7 @@ export const PACK_DAD: LabelPack = {
     program: 'Program',
     product: 'Product',
     team: 'Team',
+    team_of_teams: 'Value Stream',
     feature: 'Feature',
     epic: 'Epic',
     story: 'Story',

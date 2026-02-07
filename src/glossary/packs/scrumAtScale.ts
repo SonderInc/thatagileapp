@@ -1,22 +1,22 @@
 import type { LabelPack } from './types';
 
-export const PACK_DEFAULT: LabelPack = {
-  id: 'default',
-  name: 'Default',
+export const PACK_SCRUM_AT_SCALE: LabelPack = {
+  id: 'scrum_at_scale',
+  name: 'Scrum@Scale',
   labels: {
     portfolio: 'Portfolio',
     initiative: 'Initiative',
     product: 'Product',
     program: 'Program',
     team: 'Team',
-    team_of_teams: 'Team of Teams',
+    team_of_teams: 'Scrum of Scrums',
     feature: 'Feature',
     epic: 'Epic',
     story: 'User Story',
     task: 'Task',
-    iteration: 'Iteration',
-    planning_event: 'Planning Event',
-    demo_review: 'Review',
+    iteration: 'Sprint',
+    planning_event: 'Sprint Planning',
+    demo_review: 'Sprint Review',
     retro: 'Retrospective',
     rte: 'RTE',
     po: 'Product Owner',

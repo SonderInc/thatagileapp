@@ -1,15 +1,15 @@
 import type { LabelPack } from './types';
 
-export const PACK_DEFAULT: LabelPack = {
-  id: 'default',
-  name: 'Default',
+export const PACK_KANBAN_SCALED: LabelPack = {
+  id: 'kanban_scaled',
+  name: 'Kanban (scaled)',
   labels: {
     portfolio: 'Portfolio',
     initiative: 'Initiative',
     product: 'Product',
     program: 'Program',
     team: 'Team',
-    team_of_teams: 'Team of Teams',
+    team_of_teams: 'Value Stream',
     feature: 'Feature',
     epic: 'Epic',
     story: 'User Story',

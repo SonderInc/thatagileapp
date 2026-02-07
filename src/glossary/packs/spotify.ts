@@ -7,6 +7,7 @@ export const PACK_SPOTIFY: LabelPack = {
     product: 'Product',
     program: 'Tribe',
     team: 'Squad',
+    team_of_teams: 'Tribe',
     initiative: 'Mission',
     feature: 'Feature',
     epic: 'Epic',

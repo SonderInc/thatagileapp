@@ -9,6 +9,7 @@ export const PACK_SAFE: LabelPack = {
     product: 'Solution',
     program: 'Agile Release Train',
     team: 'Team',
+    team_of_teams: 'ART',
     feature: 'Feature',
     epic: 'Epic',
     story: 'Story',

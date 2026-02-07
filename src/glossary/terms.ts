@@ -13,6 +13,7 @@ export const TERMS: GlossaryTerm[] = [
   { key: 'product', defaultLabel: 'Product', description: 'Product or value stream', category: 'work_item' },
   { key: 'program', defaultLabel: 'Program', description: 'Program or train', category: 'work_item' },
   { key: 'team', defaultLabel: 'Team', description: 'Team', category: 'work_item' },
+  { key: 'team_of_teams', defaultLabel: 'Team of Teams', description: 'Long-lived team of teams delivering on a value stream (e.g. ART, Tribe)', category: 'work_item' },
   { key: 'feature', defaultLabel: 'Feature', description: 'Feature', category: 'work_item' },
   { key: 'epic', defaultLabel: 'Epic', description: 'Epic', category: 'work_item' },
   { key: 'story', defaultLabel: 'User Story', description: 'User story', category: 'work_item' },

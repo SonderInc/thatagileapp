@@ -7,6 +7,7 @@ export type GlossaryKey =
   | 'product'
   | 'program'
   | 'team'
+  | 'team_of_teams'
   | 'feature'
   | 'epic'
   | 'story'
@@ -29,6 +30,7 @@ export const GLOSSARY_KEYS: GlossaryKey[] = [
   'product',
   'program',
   'team',
+  'team_of_teams',
   'feature',
   'epic',
   'story',
