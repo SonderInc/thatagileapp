@@ -5,6 +5,7 @@
  */
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { getFirebaseApp, isFirebaseConfigured } from "../lib/firebase";
+import { useStore } from "../store/useStore";
 
 export interface TenantMembershipError {
   code: string;
@@ -26,6 +27,13 @@ export async function ensureTenantAccess(
   tenantId: string,
   options?: { role?: "member" | "admin" }
 ): Promise<void> {
+  const { currentTenantId, firebaseUser, currentUser } = useStore.getState();
+  console.log("[ensureTenantAccess] start", {
+    tenantId,
+    currentTenantId,
+    firebaseUser: !!firebaseUser,
+    currentUser,
+  });
   if (!tenantId?.trim()) {
     throw {
       code: "INVALID_ARGUMENT",
@@ -58,7 +66,9 @@ export async function ensureTenantAccess(
 
   try {
     await grantTenantAccessFn({ tenantId: tenantId.trim(), ...(role && { role }) });
+    console.log("[ensureTenantAccess] succeeded", { tenantId: tenantId.trim() });
   } catch (err: unknown) {
+    console.log("[ensureTenantAccess] failed", { tenantId: tenantId.trim() });
     const code =
       err && typeof err === "object" && "code" in err
         ? String((err as { code: string }).code)

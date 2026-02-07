@@ -506,7 +506,7 @@ function App() {
         console.error('[App] ensureTenantAccess failed', err);
         return;
       }
-      loadPlanningBoards(currentTenantId).catch((err) =>
+      await loadPlanningBoards(currentTenantId).catch((err) =>
         console.error('[App] Load planning boards failed:', err?.message || err)
       );
     };

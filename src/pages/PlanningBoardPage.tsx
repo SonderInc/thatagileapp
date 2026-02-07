@@ -60,6 +60,7 @@ const PlanningBoardPage: React.FC = () => {
         await ensureTenantAccess(currentTenantId);
         if (getCancelled?.()) return;
         await loadTeams(currentTenantId);
+        if (getCancelled?.()) return;
         await loadPlanningBoards(currentTenantId);
       } catch (err: unknown) {
         if (getCancelled?.()) return;
@@ -208,6 +209,14 @@ const PlanningBoardPage: React.FC = () => {
     return (
       <div style={{ padding: spacing.xxl }}>
         <p style={{ color: '#6b7280' }}>Select a company to use Planning Board.</p>
+      </div>
+    );
+  }
+
+  if (currentTenantId && !firebaseUser) {
+    return (
+      <div style={{ padding: spacing.xxl }}>
+        <p style={{ color: '#6b7280' }}>Loading…</p>
       </div>
     );
   }

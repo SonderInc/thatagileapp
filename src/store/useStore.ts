@@ -309,6 +309,7 @@ export const useStore = create<AppState>((set, get) => ({
   setPlanningBoards: (boards) => set({ planningBoards: boards }),
   setPlanningPlacements: (placements) => set({ planningPlacements: placements }),
   loadPlanningBoards: async (companyId) => {
+    console.log("[loadPlanningBoards] invoked", { companyId });
     try {
       const boards = await getDataStore().getPlanningBoards(companyId);
       set({ planningBoards: boards, planningBoardsLoadError: null });
