@@ -55,55 +55,67 @@ export const grantTenantAccess = functions.https.onCall(
       );
     }
 
-    const usersRef = db.collection("users");
-    const callerDoc = await usersRef.doc(callerUid).get();
-    const callerData = callerDoc.exists ? callerDoc.data() : null;
-    const callerCompanyIds = (callerData?.companyIds as string[] | undefined) ?? [];
-    const callerAdminCompanyIds =
-      (callerData?.adminCompanyIds as string[] | undefined) ?? [];
-    const callerCompanies = (callerData?.companies as { companyId: string }[] | undefined) ?? [];
-    const hasTenantInCompanyIds =
-      callerCompanyIds.includes(tenantId) || callerAdminCompanyIds.includes(tenantId);
-    const hasTenantInCompanies = callerCompanies.some(
-      (c: { companyId: string }) => c.companyId === tenantId
-    );
+    try {
+      const usersRef = db.collection("users");
+      const callerDoc = await usersRef.doc(callerUid).get();
+      const callerData = callerDoc.exists ? callerDoc.data() : null;
+      const callerCompanyIds = (callerData?.companyIds as string[] | undefined) ?? [];
+      const callerAdminCompanyIds =
+        (callerData?.adminCompanyIds as string[] | undefined) ?? [];
+      const callerCompanies = (callerData?.companies as { companyId: string }[] | undefined) ?? [];
+      const hasTenantInCompanyIds =
+        callerCompanyIds.includes(tenantId) || callerAdminCompanyIds.includes(tenantId);
+      const hasTenantInCompanies = callerCompanies.some(
+        (c: { companyId: string }) => c.companyId === tenantId
+      );
 
-    if (targetUid !== callerUid) {
-      if (!callerAdminCompanyIds.includes(tenantId)) {
-        throw new functions.https.HttpsError(
-          "permission-denied",
-          "Only an admin of this company can grant access to another user"
-        );
-      }
-    } else {
-      if (!hasTenantInCompanyIds && !hasTenantInCompanies) {
-        const companyDoc = await db.collection("companies").doc(tenantId).get();
-        const companyData = companyDoc.exists ? companyDoc.data() : null;
-        const ownerUid =
-          companyData?.ownerUid != null
-            ? String(companyData.ownerUid)
-            : undefined;
-        if (ownerUid !== callerUid) {
+      if (targetUid !== callerUid) {
+        if (!callerAdminCompanyIds.includes(tenantId)) {
           throw new functions.https.HttpsError(
             "permission-denied",
-            "You do not have access to this company"
+            "Only an admin of this company can grant access to another user"
           );
         }
+      } else {
+        if (!hasTenantInCompanyIds && !hasTenantInCompanies) {
+          const companyDoc = await db.collection("companies").doc(tenantId).get();
+          const companyData = companyDoc.exists ? companyDoc.data() : null;
+          const ownerUid =
+            companyData?.ownerUid != null
+              ? String(companyData.ownerUid)
+              : undefined;
+          if (ownerUid !== callerUid) {
+            throw new functions.https.HttpsError(
+              "permission-denied",
+              "You do not have access to this company"
+            );
+          }
+        }
       }
+
+      const targetRef = usersRef.doc(targetUid);
+      const updates: Record<string, unknown> = {
+        companyIds: FieldValue.arrayUnion(tenantId),
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+      if (role === "admin") {
+        (updates as Record<string, unknown>).adminCompanyIds =
+          FieldValue.arrayUnion(tenantId);
+      }
+
+      await targetRef.set(updates, { merge: true });
+
+      return { ok: true };
+    } catch (err: unknown) {
+      if (err instanceof functions.https.HttpsError) {
+        throw err;
+      }
+      const message = err instanceof Error ? err.message : String(err);
+      functions.logger.error("grantTenantAccess failed", { err, message, callerUid, tenantId });
+      throw new functions.https.HttpsError(
+        "internal",
+        `Grant tenant access failed: ${message}`
+      );
     }
-
-    const targetRef = usersRef.doc(targetUid);
-    const updates: Record<string, unknown> = {
-      companyIds: FieldValue.arrayUnion(tenantId),
-      updatedAt: FieldValue.serverTimestamp(),
-    };
-    if (role === "admin") {
-      (updates as Record<string, unknown>).adminCompanyIds =
-        FieldValue.arrayUnion(tenantId);
-    }
-
-    await targetRef.set(updates, { merge: true });
-
-    return { ok: true };
   }
 );
