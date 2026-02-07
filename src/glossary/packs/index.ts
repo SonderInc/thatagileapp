@@ -5,9 +5,11 @@ import { PACK_LESS } from './less';
 import { PACK_SPOTIFY } from './spotify';
 import { PACK_APPLE } from './apple';
 import { PACK_DAD } from './dad';
+import { PACK_CUSTOM } from './custom';
 
 export const PACKS: LabelPack[] = [
   PACK_DEFAULT,
+  PACK_CUSTOM,
   PACK_SAFE,
   PACK_LESS,
   PACK_SPOTIFY,
@@ -15,5 +17,5 @@ export const PACKS: LabelPack[] = [
   PACK_DAD,
 ];
 
-export { PACK_DEFAULT, PACK_SAFE, PACK_LESS, PACK_SPOTIFY, PACK_APPLE, PACK_DAD };
+export { PACK_DEFAULT, PACK_CUSTOM, PACK_SAFE, PACK_LESS, PACK_SPOTIFY, PACK_APPLE, PACK_DAD };
 export type { LabelPack, FrameworkId } from './types';

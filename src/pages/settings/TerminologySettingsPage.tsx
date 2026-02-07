@@ -196,6 +196,9 @@ const TerminologySettingsPage: React.FC = () => {
         )}
       </div>
 
+      <p style={{ marginBottom: '8px', fontSize: '13px', color: '#6b7280' }}>
+        Custom label: type any text; suggestions are from framework packs.
+      </p>
       <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
           <thead>
