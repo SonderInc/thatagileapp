@@ -23,10 +23,13 @@ import CompanyProfilePage from './pages/CompanyProfilePage';
 import SettingsPage from './pages/SettingsPage';
 import NomenclaturePage from './pages/NomenclaturePage';
 import TeamBoardSettingsListPage from './pages/TeamBoardSettingsListPage';
+import FeatureBoardSettingsPage from './pages/FeatureBoardSettingsPage';
+import EpicBoardSettingsPage from './pages/EpicBoardSettingsPage';
 import ImportBacklogPage from './pages/ImportBacklogPage';
 import UserProfilePage from './pages/UserProfilePage';
 import NoCompanyPage from './pages/NoCompanyPage';
 import PlanningBoardPage from './pages/PlanningBoardPage';
+import BoardsDirectoryPage from './pages/BoardsDirectoryPage';
 import AppAdminPage from './pages/AppAdminPage';
 import ChangePasswordRequired from './components/ChangePasswordRequired';
 import type { Role } from './types';
@@ -563,6 +566,8 @@ function App() {
         return <FeatureBoard />;
       case 'planning':
         return <PlanningBoardPage />;
+      case 'boards-directory':
+        return <BoardsDirectoryPage />;
       case 'teams-list':
         return <TeamsListPage />;
       case 'team':
@@ -579,6 +584,10 @@ function App() {
         return <NomenclaturePage />;
       case 'team-board-settings':
         return <TeamBoardSettingsListPage />;
+      case 'feature-board-settings':
+        return <FeatureBoardSettingsPage />;
+      case 'epic-board-settings':
+        return <EpicBoardSettingsPage />;
       case 'import-backlog':
         return <ImportBacklogPage />;
       case 'user-profile':

@@ -59,7 +59,9 @@ interface AppState {
   selectedPlanningBoardId: string | null;
   /** When opening a feature from Planning Board, set so "Add user story" uses this team/sprint. */
   planningContext: { teamId: string; sprintId?: string } | null;
-  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing' | 'add-product' | 'add-company' | 'register-company' | 'invite-user' | 'licence' | 'company-profile' | 'settings' | 'team-board-settings' | 'nomenclature' | 'import-backlog' | 'user-profile' | 'teams-list' | 'planning' | 'app-admin' | 'no-company' | 'account-load-failed';
+  /** Board directory page: which type of boards we're listing (planning, epic, feature, team). */
+  boardsDirectoryType: 'planning' | 'epic' | 'feature' | 'team' | null;
+  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing' | 'add-product' | 'add-company' | 'register-company' | 'invite-user' | 'licence' | 'company-profile' | 'settings' | 'team-board-settings' | 'feature-board-settings' | 'epic-board-settings' | 'nomenclature' | 'import-backlog' | 'user-profile' | 'teams-list' | 'planning' | 'boards-directory' | 'app-admin' | 'no-company' | 'account-load-failed';
   
   // Actions
   setWorkItems: (items: WorkItem[]) => void;
@@ -85,6 +87,7 @@ interface AppState {
   setSelectedCompanyId: (id: string | null) => void;
   setSelectedTeamId: (id: string | null) => void;
   setSelectedPlanningBoardId: (id: string | null) => void;
+  setBoardsDirectoryType: (type: AppState['boardsDirectoryType']) => void;
   setPlanningContext: (ctx: { teamId: string; sprintId?: string } | null) => void;
   setPlanningBoards: (boards: PlanningBoard[]) => void;
   setPlanningPlacements: (placements: PlanningBoardPlacement[]) => void;
@@ -189,6 +192,7 @@ export const useStore = create<AppState>((set, get) => ({
   selectedTeamId: null,
   selectedPlanningBoardId: null,
   planningContext: null,
+  boardsDirectoryType: null,
   viewMode: 'landing',
   
   // Actions
@@ -322,6 +326,7 @@ export const useStore = create<AppState>((set, get) => ({
   setSelectedCompanyId: (id) => set({ selectedCompanyId: id }),
   setSelectedTeamId: (id) => set({ selectedTeamId: id }),
   setSelectedPlanningBoardId: (id) => set({ selectedPlanningBoardId: id }),
+  setBoardsDirectoryType: (type) => set({ boardsDirectoryType: type }),
   setPlanningContext: (ctx) => set({ planningContext: ctx }),
   setPlanningBoards: (boards) => set({ planningBoards: boards }),
   setPlanningPlacements: (placements) => set({ planningPlacements: placements }),
