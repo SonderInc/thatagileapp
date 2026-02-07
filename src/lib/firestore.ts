@@ -873,3 +873,32 @@ export async function setTerminologySettings(
     updatedBy: uid,
   });
 }
+
+const PRODUCT_TERMINOLOGY_COLLECTION = 'productTerminology';
+
+export async function getProductTerminology(productId: string): Promise<{ activePackId: string; overrides: Record<string, string> } | null> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = doc(db, PRODUCT_TERMINOLOGY_COLLECTION, productId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  return {
+    activePackId: (data.activePackId as string) ?? 'default',
+    overrides: (data.overrides as Record<string, string>) ?? {},
+  };
+}
+
+export async function setProductTerminology(
+  productId: string,
+  settings: { activePackId: string; overrides: Record<string, string> },
+  uid: string
+): Promise<void> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = doc(db, PRODUCT_TERMINOLOGY_COLLECTION, productId);
+  await setDoc(ref, {
+    activePackId: settings.activePackId,
+    overrides: settings.overrides,
+    updatedAt: serverTimestamp(),
+    updatedBy: uid,
+  });
+}

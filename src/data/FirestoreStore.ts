@@ -49,4 +49,6 @@ export const FirestoreStore: IDataStore = {
   deleteBoardItem: firestore.deleteBoardItem,
   getTerminologySettings: firestore.getTerminologySettings,
   setTerminologySettings: firestore.setTerminologySettings,
+  getProductTerminology: firestore.getProductTerminology,
+  setProductTerminology: firestore.setProductTerminology,
 };

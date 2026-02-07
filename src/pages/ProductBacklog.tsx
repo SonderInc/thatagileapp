@@ -290,6 +290,9 @@ const ProductBacklog: React.FC = () => {
     loadTeams,
     currentTenantId,
     updateWorkItem,
+    loadProductTerminology,
+    setTerminologyProductId,
+    setViewMode,
   } = useStore();
   const [showModal, setShowModal] = useState(false);
   const [modalItemId, setModalItemId] = useState<string | null>(null);
@@ -312,6 +315,11 @@ const ProductBacklog: React.FC = () => {
   useEffect(() => {
     if (currentTenantId) loadTeams(currentTenantId);
   }, [currentTenantId, loadTeams]);
+
+  useEffect(() => {
+    if (selectedProductId) loadProductTerminology(selectedProductId);
+    else loadProductTerminology(null);
+  }, [selectedProductId, loadProductTerminology]);
 
   const product = selectedProductId ? workItems.find((i) => i.id === selectedProductId) : null;
   const allItems = useMemo(() => {
@@ -410,6 +418,19 @@ const ProductBacklog: React.FC = () => {
               ? `Backlog for ${product.title}. ${getTypeLabel('epic')}s, ${getTypeLabel('feature')}s, User Stories, Tasks and Bugs.`
               : `Single source of truth for all work items. Products contain ${getTypeLabel('epic')}s, ${getTypeLabel('epic')}s contain ${getTypeLabel('feature')}s, ${getTypeLabel('feature')}s contain User Stories, User Stories contain Tasks and Bugs.`}
           </p>
+          {product && (
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => {
+                setTerminologyProductId(selectedProductId!);
+                setViewMode('terminology');
+              }}
+              style={{ marginTop: '8px' }}
+            >
+              Configure terminology
+            </button>
+          )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           <div ref={typeFilterRef} style={{ position: 'relative' }}>

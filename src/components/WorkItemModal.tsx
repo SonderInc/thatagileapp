@@ -63,7 +63,7 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
   const effectiveParentId = createChildMode ? createChildMode.parentId : parentId;
   const effectiveType = createChildMode ? createChildMode.childType : type;
 
-  const { users, teams, loadTeams, currentTenantId, workItems, getAggregatedStoryPoints, setSelectedWorkItem, getTypeLabel, deleteWorkItem, canResetBacklog, updateWorkItem, planningContext } = useStore();
+  const { users, teams, loadTeams, currentTenantId, workItems, getAggregatedStoryPoints, setSelectedWorkItem, getTypeLabel, deleteWorkItem, canResetBacklog, updateWorkItem, planningContext, setTerminologyProductId, setViewMode } = useStore();
   const {
     formData,
     setFormData,
@@ -169,6 +169,31 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
   const showParentContent = isEditing && item && !createChildMode;
   const allowedChildTypes = showParentContent ? getAllowedChildTypes(item.type) : [];
 
+  const currentProductId = useMemo(() => {
+    const walkToProduct = (startId: string | undefined): string | null => {
+      if (!startId) return null;
+      let current: WorkItem | undefined = workItems.find((i) => i.id === startId);
+      while (current) {
+        if (current.type === 'product') return current.id;
+        current = current.parentId ? workItems.find((i) => i.id === current!.parentId) : undefined;
+      }
+      return null;
+    };
+    if (item?.type === 'product') return item.id;
+    if (effectiveParentId) return walkToProduct(effectiveParentId);
+    if (item?.parentId) return walkToProduct(item.parentId);
+    if (formData.parentId) return walkToProduct(formData.parentId);
+    return null;
+  }, [workItems, item?.type, item?.id, item?.parentId, effectiveParentId, formData.parentId]);
+
+  const handleConfigureNomenclature = () => {
+    if (currentProductId) {
+      setTerminologyProductId(currentProductId);
+      setViewMode('terminology');
+      onClose();
+    }
+  };
+
   return (
     <Modal
       title={
@@ -201,6 +226,25 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
         >
           <ArrowLeft size={18} />
           Back to {parentItemForBack.title}
+        </button>
+      )}
+      {currentProductId && (
+        <button
+          type="button"
+          onClick={handleConfigureNomenclature}
+          style={{
+            display: 'block',
+            marginBottom: '16px',
+            padding: '4px 0',
+            background: 'none',
+            border: 'none',
+            color: '#6b7280',
+            fontSize: '13px',
+            cursor: 'pointer',
+            textDecoration: 'underline',
+          }}
+        >
+          Configure nomenclature for this product
         </button>
       )}
       {submitError && (

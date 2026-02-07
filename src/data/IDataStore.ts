@@ -58,6 +58,9 @@ export interface IDataStore {
   /** Terminology: companies/{companyId}/settings/terminology */
   getTerminologySettings(companyId: string): Promise<{ activePackId: string; overrides: Record<string, string> } | null>;
   setTerminologySettings(companyId: string, settings: { activePackId: string; overrides: Record<string, string> }, uid: string): Promise<void>;
+  /** Terminology per product: productTerminology/{productId} */
+  getProductTerminology(productId: string): Promise<{ activePackId: string; overrides: Record<string, string> } | null>;
+  setProductTerminology(productId: string, settings: { activePackId: string; overrides: Record<string, string> }, uid: string): Promise<void>;
 }
 
 export type { WorkItem, TenantCompany, UserProfile, Role, Team, PlanningBoard, PlanningBoardPlacement, BoardItem };

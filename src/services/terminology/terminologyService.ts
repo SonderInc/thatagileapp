@@ -32,3 +32,27 @@ export async function saveTerminologySettings(
     uid
   );
 }
+
+export async function loadProductTerminology(productId: string): Promise<TerminologySettings> {
+  const raw = await getDataStore().getProductTerminology(productId);
+  if (raw == null) return getDefaultTerminologySettings();
+  return {
+    activePackId: raw.activePackId as FrameworkId,
+    overrides: raw.overrides ?? {},
+  };
+}
+
+export async function saveProductTerminology(
+  productId: string,
+  settings: TerminologySettings,
+  uid: string
+): Promise<void> {
+  await getDataStore().setProductTerminology(
+    productId,
+    {
+      activePackId: settings.activePackId,
+      overrides: settings.overrides,
+    },
+    uid
+  );
+}

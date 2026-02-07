@@ -40,6 +40,14 @@ interface AppState {
   terminologySettings: TerminologySettings;
   /** Set when loadTerminology fails; cleared on success. */
   terminologyLoadError: string | null;
+  /** Terminology for the currently selected product (when viewing product backlog). */
+  productTerminologySettings: TerminologySettings | null;
+  /** Product id that productTerminologySettings was loaded for; used to match selectedProductId. */
+  productTerminologyProductId: string | null;
+  /** Set when loadProductTerminology fails; cleared on success. */
+  productTerminologyLoadError: string | null;
+  /** When on Terminology page in product mode, which product we're editing. */
+  terminologyProductId: string | null;
   currentUser: User | null;
   /** Tenant companies (from Firestore companies collection). */
   tenantCompanies: TenantCompany[];
@@ -128,8 +136,12 @@ interface AppState {
   hydrateTeamBoardSettings: (tenantId: string | null) => void;
   loadTerminology: (companyId: string) => Promise<void>;
   saveTerminology: (companyId: string, settings: TerminologySettings) => Promise<void>;
+  loadProductTerminology: (productId: string | null) => Promise<void>;
+  saveProductTerminology: (productId: string, settings: TerminologySettings) => Promise<void>;
+  setTerminologyProductId: (id: string | null) => void;
 
   // Computed
+  getEffectiveTerminologySettings: () => TerminologySettings;
   canAccessTeamBoardSettings: () => boolean;
   canConfigureSprintStart: () => boolean;
   getProductBacklog: () => WorkItem[];
@@ -190,6 +202,10 @@ export const useStore = create<AppState>((set, get) => ({
   planningBoardsLoadError: null,
   terminologySettings: terminologyService.getDefaultTerminologySettings(),
   terminologyLoadError: null,
+  productTerminologySettings: null,
+  productTerminologyProductId: null,
+  productTerminologyLoadError: null,
+  terminologyProductId: null,
   currentUser: null,
   tenantCompanies: [],
   currentTenantId: null,
@@ -493,6 +509,35 @@ export const useStore = create<AppState>((set, get) => ({
     await terminologyService.saveTerminologySettings(companyId, settings, uid);
     set({ terminologySettings: settings, terminologyLoadError: null });
   },
+  loadProductTerminology: async (productId) => {
+    if (productId == null) {
+      set({ productTerminologySettings: null, productTerminologyProductId: null, productTerminologyLoadError: null });
+      return;
+    }
+    set({ productTerminologyLoadError: null });
+    try {
+      const settings = await terminologyService.loadProductTerminology(productId);
+      set({
+        productTerminologySettings: settings,
+        productTerminologyProductId: productId,
+        productTerminologyLoadError: null,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      set({ productTerminologyLoadError: msg, productTerminologySettings: null, productTerminologyProductId: null });
+    }
+  },
+  saveProductTerminology: async (productId, settings) => {
+    const uid = get().firebaseUser?.uid;
+    if (!uid) return;
+    await terminologyService.saveProductTerminology(productId, settings, uid);
+    set({
+      productTerminologySettings: settings,
+      productTerminologyProductId: productId,
+      productTerminologyLoadError: null,
+    });
+  },
+  setTerminologyProductId: (id) => set({ terminologyProductId: id }),
   setKanbanLanesEnabled: (lanes) => {
     if (lanes.length === 0) return;
     set({ kanbanLanesEnabled: lanes });
@@ -756,8 +801,20 @@ export const useStore = create<AppState>((set, get) => ({
     return tenantCompanies.find((c) => c.id === currentTenantId) ?? null;
   },
 
+  getEffectiveTerminologySettings: () => {
+    const { selectedProductId, productTerminologySettings, productTerminologyProductId, terminologySettings } = get();
+    if (
+      selectedProductId != null &&
+      productTerminologyProductId === selectedProductId &&
+      productTerminologySettings != null
+    ) {
+      return productTerminologySettings;
+    }
+    return terminologySettings;
+  },
+
   getTypeLabel: (type) => {
-    const { terminologySettings } = get();
+    const settings = get().getEffectiveTerminologySettings();
     const keyMap: Partial<Record<WorkItemType, GlossaryKey>> = {
       product: 'product',
       epic: 'epic',
@@ -766,12 +823,12 @@ export const useStore = create<AppState>((set, get) => ({
       task: 'task',
     };
     const key = keyMap[type];
-    if (key) return resolveLabel(key, terminologySettings);
+    if (key) return resolveLabel(key, settings);
     const companyType = get().getCurrentCompany()?.companyType ?? 'software';
     return getTypeLabelFromNomenclature(type, companyType);
   },
 
-  label: (key) => resolveLabel(key, get().terminologySettings),
+  label: (key) => resolveLabel(key, get().getEffectiveTerminologySettings()),
 
   getRoleLabel: (role) => {
     const companyType = get().getCurrentCompany()?.companyType ?? 'software';

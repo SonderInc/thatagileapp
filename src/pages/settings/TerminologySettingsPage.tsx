@@ -12,14 +12,29 @@ const TerminologySettingsPage: React.FC = () => {
   const {
     currentTenantId,
     terminologySettings,
+    productTerminologySettings,
+    terminologyProductId,
+    workItems,
     setViewMode,
     saveTerminology,
+    saveProductTerminology,
+    loadProductTerminology,
+    setTerminologyProductId,
   } = useStore();
 
-  const [draft, setDraft] = useState<TerminologySettings>(() => terminologySettings);
+  const product = terminologyProductId ? workItems.find((i) => i.id === terminologyProductId) : null;
+  const isProductMode = terminologyProductId != null;
+
+  const [draft, setDraft] = useState<TerminologySettings>(() =>
+    isProductMode && productTerminologySettings ? productTerminologySettings : terminologySettings
+  );
   useEffect(() => {
-    setDraft(terminologySettings);
-  }, [currentTenantId, terminologySettings]);
+    if (terminologyProductId) loadProductTerminology(terminologyProductId);
+  }, [terminologyProductId, loadProductTerminology]);
+  useEffect(() => {
+    if (isProductMode && productTerminologySettings) setDraft(productTerminologySettings);
+    else if (!isProductMode) setDraft(terminologySettings);
+  }, [isProductMode, terminologySettings, productTerminologySettings]);
   const [search, setSearch] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -51,6 +66,21 @@ const TerminologySettingsPage: React.FC = () => {
   };
 
   const handleSave = async () => {
+    if (isProductMode) {
+      if (!terminologyProductId) return;
+      setSaving(true);
+      setSaveMessage(null);
+      try {
+        await saveProductTerminology(terminologyProductId, effectiveDraft);
+        setSaveMessage('Saved.');
+        setTimeout(() => setSaveMessage(null), 2500);
+      } catch (err) {
+        setSaveMessage(err instanceof Error ? err.message : 'Save failed');
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
     if (!currentTenantId) return;
     setSaving(true);
     setSaveMessage(null);
@@ -69,7 +99,7 @@ const TerminologySettingsPage: React.FC = () => {
     setDraft(getDefaultTerminologySettings());
   };
 
-  if (!currentTenantId) {
+  if (!isProductMode && !currentTenantId) {
     return (
       <div className="page-container">
         <p style={{ color: '#6b7280' }}>Select a company to configure terminology.</p>
@@ -82,18 +112,29 @@ const TerminologySettingsPage: React.FC = () => {
 
   const packOptions = PACKS.map((p) => ({ id: p.id, name: p.name }));
 
+  const handleBack = () => {
+    if (isProductMode) {
+      setTerminologyProductId(null);
+      setViewMode('backlog');
+    } else {
+      setViewMode('settings');
+    }
+  };
+
   return (
     <div className="page-container">
       <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-        <button type="button" className="btn-secondary" onClick={() => setViewMode('settings')}>
-          Back to Settings
+        <button type="button" className="btn-secondary" onClick={handleBack}>
+          {isProductMode ? 'Back to Backlog' : 'Back to Settings'}
         </button>
         <h1 className="page-title" style={{ margin: 0 }}>
-          Terminology
+          {isProductMode && product ? `Terminology for ${product.title}` : 'Terminology'}
         </h1>
       </div>
       <p className="page-description" style={{ marginTop: 0, marginBottom: '24px' }}>
-        Choose a framework label pack and optionally override individual terms. Labels are used across Backlog, Planning Board, and forms.
+        {isProductMode
+          ? 'Choose a framework label pack and overrides for this product. Labels apply when viewing this product\'s backlog and in the work item form.'
+          : 'Choose a framework label pack and optionally override individual terms. Labels are used across Backlog, Planning Board, and forms.'}
       </p>
 
       <div style={{ marginBottom: '16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px' }}>
