@@ -9,11 +9,11 @@ import * as admin from "firebase-admin";
 if (!admin.apps.length) admin.initializeApp();
 
 export const grantTenantAccess = onCall(
-  { region: "us-central1" },
+  { region: "us-central1", invoker: "public" },
   async (request) => {
-    console.log("[grantTenantAccess] called", {
+    console.log("[grantTenantAccess] HIT", {
       uid: request.auth?.uid,
-      tenantId: (request.data as { tenantId?: string })?.tenantId,
+      tenantId: (request.data as { tenantId?: string } | undefined)?.tenantId,
     });
     if (!request.auth?.uid) {
       throw new HttpsError(
