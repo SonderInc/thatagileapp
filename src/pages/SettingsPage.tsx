@@ -5,7 +5,15 @@ import {
   setFirebaseConfigOverride,
   type FirebaseConfig,
 } from '../lib/firebaseConfig';
+import type { KanbanLane } from '../types';
 import { useStore } from '../store/useStore';
+
+const KANBAN_LANES_UI: { id: KanbanLane; title: string }[] = [
+  { id: 'expedite', title: 'Expedite' },
+  { id: 'fixed-delivery-date', title: 'Fixed Delivery Date' },
+  { id: 'standard', title: 'Standard' },
+  { id: 'intangible', title: 'Intangible' },
+];
 
 const SPRINT_START_DAY_LABELS: Record<number, string> = {
   0: 'Sun',
@@ -27,7 +35,9 @@ const SettingsPage: React.FC = () => {
     setTeamBoardMode,
     setSprintLengthWeeks,
     setSprintStartDay,
+    setKanbanLanesEnabled,
     canConfigureSprintStart,
+    kanbanLanesEnabled,
   } = useStore();
   const [override, setOverride] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -153,6 +163,41 @@ const SettingsPage: React.FC = () => {
             Kanban
           </button>
         </div>
+        {teamBoardMode === 'kanban' && (
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
+              Show lanes on Kanban board
+            </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {KANBAN_LANES_UI.map(({ id, title }) => {
+                const isEnabled = kanbanLanesEnabled.includes(id);
+                const toggleLane = () => {
+                  if (isEnabled && kanbanLanesEnabled.length <= 1) return;
+                  const next = isEnabled
+                    ? kanbanLanesEnabled.filter((l) => l !== id)
+                    : [...kanbanLanesEnabled, id];
+                  setKanbanLanesEnabled(next);
+                };
+                return (
+                  <label key={id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px', color: '#374151' }}>
+                    <input
+                      type="checkbox"
+                      checked={isEnabled}
+                      onChange={toggleLane}
+                      disabled={isEnabled && kanbanLanesEnabled.length <= 1}
+                    />
+                    {title}
+                  </label>
+                );
+              })}
+            </div>
+            {kanbanLanesEnabled.length <= 1 && (
+              <p style={{ marginTop: '6px', fontSize: '13px', color: '#6b7280' }}>
+                At least one lane must be enabled.
+              </p>
+            )}
+          </div>
+        )}
         <div style={{ marginBottom: '16px' }}>
           <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '500', color: '#374151' }}>
             Sprint length (Scrum)

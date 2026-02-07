@@ -39,6 +39,8 @@ interface AppState {
   sprintLengthWeeks: 1 | 2 | 3 | 4;
   /** Sprint start day: 0 = Sunday, 1 = Monday, … 6 = Saturday. */
   sprintStartDay: number;
+  /** Kanban lanes to show on the team board (default all). */
+  kanbanLanesEnabled: KanbanLane[];
 
   // UI State
   selectedBoard: string | null;
@@ -95,6 +97,7 @@ interface AppState {
   setTeamBoardMode: (mode: 'scrum' | 'kanban') => void;
   setSprintLengthWeeks: (weeks: 1 | 2 | 3 | 4) => void;
   setSprintStartDay: (day: number) => void;
+  setKanbanLanesEnabled: (lanes: KanbanLane[]) => void;
   hydrateTeamBoardSettings: (tenantId: string | null) => void;
 
   // Computed
@@ -131,6 +134,14 @@ interface AppState {
 
 const TEAM_BOARD_STORAGE_KEY = 'thatagileapp_teamBoard';
 
+const ALL_KANBAN_LANES: KanbanLane[] = ['expedite', 'fixed-delivery-date', 'standard', 'intangible'];
+const KANBAN_LANE_TITLES: Record<KanbanLane, string> = {
+  expedite: 'Expedite',
+  'fixed-delivery-date': 'Fixed Delivery Date',
+  standard: 'Standard',
+  intangible: 'Intangible',
+};
+
 export const useStore = create<AppState>((set, get) => ({
   // Initial state
   workItems: [],
@@ -148,6 +159,7 @@ export const useStore = create<AppState>((set, get) => ({
   teamBoardMode: 'scrum',
   sprintLengthWeeks: 2,
   sprintStartDay: 1,
+  kanbanLanesEnabled: ALL_KANBAN_LANES,
   selectedBoard: null,
   selectedWorkItem: null,
   selectedProductId: null,
@@ -346,6 +358,7 @@ export const useStore = create<AppState>((set, get) => ({
         teamBoardMode: mode,
         sprintLengthWeeks: rest.sprintLengthWeeks,
         sprintStartDay: rest.sprintStartDay,
+        kanbanLanesEnabled: rest.kanbanLanesEnabled,
       }));
     }
   },
@@ -358,6 +371,7 @@ export const useStore = create<AppState>((set, get) => ({
         teamBoardMode: rest.teamBoardMode,
         sprintLengthWeeks: weeks,
         sprintStartDay: rest.sprintStartDay,
+        kanbanLanesEnabled: rest.kanbanLanesEnabled,
       }));
     }
   },
@@ -370,6 +384,21 @@ export const useStore = create<AppState>((set, get) => ({
         teamBoardMode: rest.teamBoardMode,
         sprintLengthWeeks: rest.sprintLengthWeeks,
         sprintStartDay: day,
+        kanbanLanesEnabled: rest.kanbanLanesEnabled,
+      }));
+    }
+  },
+  setKanbanLanesEnabled: (lanes) => {
+    if (lanes.length === 0) return;
+    set({ kanbanLanesEnabled: lanes });
+    const tid = get().currentTenantId;
+    if (tid && typeof localStorage !== 'undefined') {
+      const { teamBoardMode, sprintLengthWeeks, sprintStartDay, kanbanLanesEnabled: enabled } = get();
+      localStorage.setItem(`${TEAM_BOARD_STORAGE_KEY}_${tid}`, JSON.stringify({
+        teamBoardMode,
+        sprintLengthWeeks,
+        sprintStartDay,
+        kanbanLanesEnabled: enabled,
       }));
     }
   },
@@ -378,13 +407,22 @@ export const useStore = create<AppState>((set, get) => ({
     try {
       const raw = localStorage.getItem(`${TEAM_BOARD_STORAGE_KEY}_${tenantId}`);
       if (!raw) return;
-      const data = JSON.parse(raw) as { teamBoardMode?: string; sprintLengthWeeks?: number; sprintStartDay?: number };
-      const updates: Partial<Pick<AppState, 'teamBoardMode' | 'sprintLengthWeeks' | 'sprintStartDay'>> = {};
+      const data = JSON.parse(raw) as {
+        teamBoardMode?: string;
+        sprintLengthWeeks?: number;
+        sprintStartDay?: number;
+        kanbanLanesEnabled?: unknown;
+      };
+      const updates: Partial<Pick<AppState, 'teamBoardMode' | 'sprintLengthWeeks' | 'sprintStartDay' | 'kanbanLanesEnabled'>> = {};
       if (data.teamBoardMode === 'scrum' || data.teamBoardMode === 'kanban') updates.teamBoardMode = data.teamBoardMode;
       if (typeof data.sprintLengthWeeks === 'number' && data.sprintLengthWeeks >= 1 && data.sprintLengthWeeks <= 4)
         updates.sprintLengthWeeks = data.sprintLengthWeeks as 1 | 2 | 3 | 4;
       if (typeof data.sprintStartDay === 'number' && data.sprintStartDay >= 0 && data.sprintStartDay <= 6)
         updates.sprintStartDay = data.sprintStartDay;
+      const rawLanes = data.kanbanLanesEnabled;
+      if (Array.isArray(rawLanes) && rawLanes.length > 0 && rawLanes.every((l) => ALL_KANBAN_LANES.includes(l as KanbanLane))) {
+        updates.kanbanLanesEnabled = rawLanes as KanbanLane[];
+      }
       if (Object.keys(updates).length) set(updates);
     } catch {
       // ignore invalid stored data
@@ -588,12 +626,13 @@ export const useStore = create<AppState>((set, get) => ({
     return items.filter((i) => i.parentId === laneId && i.type === 'user-story').sort(compareWorkItemOrder);
   },
 
-  getKanbanLanes: () => [
-    { id: 'expedite' as KanbanLane, title: 'Expedite' },
-    { id: 'fixed-delivery-date' as KanbanLane, title: 'Fixed Delivery Date' },
-    { id: 'standard' as KanbanLane, title: 'Standard' },
-    { id: 'intangible' as KanbanLane, title: 'Intangible' },
-  ],
+  getKanbanLanes: () => {
+    const enabled = get().kanbanLanesEnabled;
+    return ALL_KANBAN_LANES.filter((id) => enabled.includes(id)).map((id) => ({
+      id,
+      title: KANBAN_LANE_TITLES[id],
+    }));
+  },
 
   getItemsForKanbanLane: (laneId: string) => {
     const { workItems, currentTenantId, selectedTeamId } = get();
