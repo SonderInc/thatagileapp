@@ -1,11 +1,13 @@
 /**
  * Ensures the current user has tenant access (companyIds) via a trusted server path.
- * Calls the callable Cloud Function grantTenantAccess so membership writes happen
- * server-side; client no longer writes companyIds/adminCompanyIds.
+ * Calls the HTTP Cloud Function grantTenantAccess with Bearer token so membership
+ * writes happen server-side. In-flight guard prevents repeated retries for the same tenant.
  */
-import { getFunctions, httpsCallable } from "firebase/functions";
-import { getFirebaseApp, isFirebaseConfigured } from "../lib/firebase";
-import { useStore } from "../store/useStore";
+import { getAuth } from "../lib/adapters";
+import {
+  getFirebaseProjectId,
+  isFirebaseConfigured,
+} from "../lib/firebase";
 
 export interface TenantMembershipError {
   code: string;
@@ -13,28 +15,38 @@ export interface TenantMembershipError {
   details?: unknown;
 }
 
+const STABLE_ERROR_MESSAGE =
+  "Unable to provision access (CORS/permissions). Try again.";
+
+/** In-flight guard: one promise per tenantId; cleared on settle so user can retry manually. */
+const inFlightByTenant = new Map<string, Promise<void>>();
+
+function getGrantTenantAccessUrl(): string {
+  const projectId = getFirebaseProjectId();
+  if (!projectId) {
+    throw {
+      code: "NOT_CONFIGURED",
+      message: STABLE_ERROR_MESSAGE,
+    } as TenantMembershipError;
+  }
+  return `https://us-central1-${projectId}.cloudfunctions.net/grantTenantAccess`;
+}
+
 /**
  * Request the server to grant the current user access to the tenant (add tenantId to
- * users/{uid}.companyIds and optionally adminCompanyIds). Call after login/tenant
- * selection and before loading planning boards. Idempotent; safe to call when
- * user already has access.
+ * users/{uid}.companyIds). Call after login/tenant selection and before loading
+ * planning boards. Idempotent; safe to call when user already has access.
+ * Concurrent calls for the same tenantId share one request; on failure the guard is
+ * cleared so the user can retry.
  *
- * @param options.role - When 'admin', the callable also adds tenantId to adminCompanyIds (required for creating planning boards).
- *
- * @throws {TenantMembershipError} If Firebase not configured, or server returns permission-denied / other error.
+ * @throws {TenantMembershipError} On not configured, unauthenticated, or server error.
  */
 export async function ensureTenantAccess(
   tenantId: string,
-  options?: { role?: "member" | "admin" }
+  _options?: { role?: "member" | "admin" }
 ): Promise<void> {
-  const { currentTenantId, firebaseUser, currentUser } = useStore.getState();
-  console.log("[ensureTenantAccess] start", {
-    tenantId,
-    currentTenantId,
-    firebaseUser: !!firebaseUser,
-    currentUser,
-  });
-  if (!tenantId?.trim()) {
+  const key = tenantId.trim();
+  if (!key) {
     throw {
       code: "INVALID_ARGUMENT",
       message: "tenantId is required",
@@ -44,54 +56,65 @@ export async function ensureTenantAccess(
   if (!isFirebaseConfigured()) {
     throw {
       code: "NOT_CONFIGURED",
-      message: "Firebase is not configured",
+      message: STABLE_ERROR_MESSAGE,
     } as TenantMembershipError;
   }
 
-  const app = getFirebaseApp();
-  if (!app) {
-    throw {
-      code: "NOT_CONFIGURED",
-      message: "Firebase app is not available",
-    } as TenantMembershipError;
+  const existing = inFlightByTenant.get(key);
+  if (existing) {
+    return existing;
   }
 
-  const functions = getFunctions(app, "us-central1");
-  const grantTenantAccessFn = httpsCallable<
-    { tenantId: string; targetUid?: string; role?: "member" | "admin" },
-    { ok: boolean }
-  >(functions, "grantTenantAccess");
+  const promise = (async () => {
+    try {
+      console.log("[ensureTenantAccess] start", { tenantId: key });
+      const token = await getAuth().getIdToken();
+      if (!token) {
+        throw {
+          code: "UNAUTHENTICATED",
+          message: STABLE_ERROR_MESSAGE,
+        } as TenantMembershipError;
+      }
+      const url = getGrantTenantAccessUrl();
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ tenantId: key }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        code?: string;
+        message?: string;
+      };
+      if (!res.ok) {
+        console.log("[ensureTenantAccess] failed", {
+          tenantId: key,
+          status: res.status,
+          code: data.code,
+          message: data.message,
+        });
+        throw {
+          code: data.code || "UNKNOWN",
+          message: STABLE_ERROR_MESSAGE,
+          details: data,
+        } as TenantMembershipError;
+      }
+      if (data.ok !== true) {
+        throw {
+          code: "UNKNOWN",
+          message: STABLE_ERROR_MESSAGE,
+          details: data,
+        } as TenantMembershipError;
+      }
+      console.log("[ensureTenantAccess] succeeded", { tenantId: key });
+    } finally {
+      inFlightByTenant.delete(key);
+    }
+  })();
 
-  const role = options?.role === "admin" ? "admin" : undefined;
-
-  try {
-    await grantTenantAccessFn({ tenantId: tenantId.trim(), ...(role && { role }) });
-    console.log("[ensureTenantAccess] succeeded", { tenantId: tenantId.trim() });
-  } catch (err: unknown) {
-    console.log("[ensureTenantAccess] failed", { tenantId: tenantId.trim() });
-    const code =
-      err && typeof err === "object" && "code" in err
-        ? String((err as { code: string }).code)
-        : "UNKNOWN";
-    const rawMessage =
-      err && typeof err === "object" && "message" in err
-        ? String((err as { message: string }).message)
-        : err instanceof Error
-          ? err.message
-          : "Failed to grant tenant access";
-    console.error("[ensureTenantAccess] grantTenantAccess failed", { code, message: rawMessage });
-    const message =
-      code === "functions/permission-denied"
-        ? "Access not provisioned. You don't have access to this company."
-        : code === "functions/internal" || rawMessage === "internal"
-          ? "Access not provisioned. Please try again or contact support."
-          : rawMessage.startsWith("Access not provisioned")
-            ? rawMessage
-            : `Access not provisioned. ${rawMessage}`;
-    throw {
-      code: code === "functions/permission-denied" ? "PERMISSION_DENIED" : code,
-      message,
-      details: err,
-    } as TenantMembershipError;
-  }
+  inFlightByTenant.set(key, promise);
+  return promise;
 }

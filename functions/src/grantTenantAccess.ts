@@ -1,137 +1,79 @@
 /**
- * Callable Cloud Function (v2): grant a user access to a tenant (add tenantId to users/{uid}.companyIds
- * and optionally adminCompanyIds). Writes are server-side only so Firestore rules can deny
- * client writes to companyIds/adminCompanyIds.
+ * v2 HTTP onRequest: grant the authenticated user access to a tenant (add tenantId to
+ * users/{uid}.companyIds). Explicit CORS so OPTIONS preflight returns 204 with
+ * Access-Control-Allow-Origin. Auth via Authorization: Bearer <idToken>.
  *
- * Deployed with invoker: "public" so the platform allows the request; auth is enforced in code.
- *
- * Input: { tenantId: string, targetUid?: string, role?: 'member' | 'admin' }
- * - If targetUid omitted, defaults to caller (self-grant).
- * - role: 'admin' adds tenantId to adminCompanyIds as well; default 'member'.
- *
- * Authorization:
- * - Self-grant (targetUid === caller): allowed if caller is tenant owner (companies/{tenantId}.ownerUid),
- *   OR caller already has tenantId in companyIds or adminCompanyIds (idempotent),
- *   OR caller's profile.companies has an entry for this tenantId (legacy membership).
- * - Grant to another (targetUid provided): allowed only if caller's adminCompanyIds contains tenantId.
+ * Deployed with invoker: "public" so Cloud Run answers OPTIONS; auth enforced in code.
  */
-import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { logger } from "firebase-functions/v2";
+import { onRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
+if (!admin.apps.length) admin.initializeApp();
 
-const db = admin.firestore();
-const FieldValue = admin.firestore.FieldValue;
+const ALLOWED_ORIGINS = new Set([
+  "https://thatagileapp.com",
+  "http://localhost:5173",
+]);
 
-interface GrantTenantAccessData {
-  tenantId?: string;
-  targetUid?: string;
-  role?: "member" | "admin";
-}
-
-export const grantTenantAccess = onCall<GrantTenantAccessData>(
+export const grantTenantAccess = onRequest(
   {
     region: "us-central1",
-    cors: ["https://thatagileapp.com", "http://localhost:5173"],
     invoker: "public",
   },
-  async (request) => {
-    if (!request.auth?.uid) {
-      throw new HttpsError(
-        "unauthenticated",
-        "Must be signed in to grant tenant access"
-      );
+  async (req, res) => {
+    const origin = req.get("origin") || "";
+    if (ALLOWED_ORIGINS.has(origin)) {
+      res.set("Access-Control-Allow-Origin", origin);
+      res.set("Vary", "Origin");
     }
+    res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.set("Access-Control-Max-Age", "3600");
 
-    const callerUid = request.auth.uid;
-    const data = request.data ?? {};
-    const tenantId =
-      typeof data.tenantId === "string" ? data.tenantId.trim() : "";
-    const targetUid =
-      typeof data.targetUid === "string" && data.targetUid.trim()
-        ? data.targetUid.trim()
-        : callerUid;
-    const role = data?.role === "admin" ? "admin" : "member";
-
-    if (!tenantId) {
-      throw new HttpsError("invalid-argument", "tenantId is required");
+    if (req.method === "OPTIONS") {
+      res.status(204).send("");
+      return;
     }
 
     try {
-      const usersRef = db.collection("users");
-      const callerDoc = await usersRef.doc(callerUid).get();
-      const callerData = callerDoc.exists ? callerDoc.data() : null;
-      const callerCompanyIds =
-        (callerData?.companyIds as string[] | undefined) ?? [];
-      const callerAdminCompanyIds =
-        (callerData?.adminCompanyIds as string[] | undefined) ?? [];
-      const callerCompanies =
-        (callerData?.companies as { companyId: string }[] | undefined) ?? [];
-      const hasTenantInCompanyIds =
-        callerCompanyIds.includes(tenantId) ||
-        callerAdminCompanyIds.includes(tenantId);
-      const hasTenantInCompanies = callerCompanies.some(
-        (c: { companyId: string }) => c.companyId === tenantId
-      );
-
-      if (targetUid !== callerUid) {
-        if (!callerAdminCompanyIds.includes(tenantId)) {
-          throw new HttpsError(
-            "permission-denied",
-            "Only an admin of this company can grant access to another user"
-          );
-        }
-      } else {
-        if (!hasTenantInCompanyIds && !hasTenantInCompanies) {
-          const companyDoc = await db
-            .collection("companies")
-            .doc(tenantId)
-            .get();
-          const companyData = companyDoc.exists ? companyDoc.data() : null;
-          const ownerUid =
-            companyData?.ownerUid != null
-              ? String(companyData.ownerUid)
-              : undefined;
-          if (ownerUid !== callerUid) {
-            throw new HttpsError(
-              "permission-denied",
-              "You do not have access to this company"
-            );
-          }
-        }
+      if (req.method !== "POST") {
+        res.status(405).json({ code: "METHOD_NOT_ALLOWED" });
+        return;
       }
 
-      const targetRef = usersRef.doc(targetUid);
-      const updates: Record<string, unknown> = {
-        companyIds: FieldValue.arrayUnion(tenantId),
-        updatedAt: FieldValue.serverTimestamp(),
-      };
-      if (role === "admin") {
-        (updates as Record<string, unknown>).adminCompanyIds =
-          FieldValue.arrayUnion(tenantId);
+      const authHeader = req.get("authorization") || "";
+      const match = authHeader.match(/^Bearer (.+)$/);
+      if (!match) {
+        res.status(401).json({ code: "UNAUTHENTICATED", message: "Missing Bearer token" });
+        return;
+      }
+      const decoded = await admin.auth().verifyIdToken(match[1]);
+
+      const tenantId = req.body?.tenantId;
+      if (!tenantId || typeof tenantId !== "string") {
+        res.status(400).json({ code: "INVALID_ARGUMENT", message: "tenantId required" });
+        return;
       }
 
-      await targetRef.set(updates, { merge: true });
+      await admin
+        .firestore()
+        .collection("users")
+        .doc(decoded.uid)
+        .set(
+          {
+            companyIds: admin.firestore.FieldValue.arrayUnion(tenantId),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
 
-      return { ok: true };
-    } catch (err: unknown) {
-      if (err instanceof HttpsError) {
-        throw err;
-      }
-      const message = err instanceof Error ? err.message : String(err);
-      logger.error("grantTenantAccess failed", {
-        err,
-        message,
-        callerUid,
-        tenantId,
-      });
-      throw new HttpsError(
-        "internal",
-        `Grant tenant access failed: ${message}`
-      );
+      res.status(200).json({ ok: true });
+    } catch (e: unknown) {
+      const err = e as { message?: string };
+      console.error("grantTenantAccess error", e);
+      res
+        .status(500)
+        .json({ code: "INTERNAL", message: err?.message || "Unknown error" });
     }
   }
 );
