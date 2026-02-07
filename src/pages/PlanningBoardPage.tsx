@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { ensureDefaultPlanningBoard } from '../services/boards/ensureDefaultBoard';
 import { ensureTenantAccess } from '../services/tenantMembershipService';
 import { useStore } from '../store/useStore';
 import type { PlanningBoard as PlanningBoardType, PlanningBoardPlacement } from '../types';
@@ -59,6 +60,9 @@ const PlanningBoardPage: React.FC = () => {
       try {
         await ensureTenantAccess(currentTenantId);
         if (getCancelled?.()) return;
+        const defaultBoardId = await ensureDefaultPlanningBoard(currentTenantId, firebaseUser.uid);
+        if (getCancelled?.()) return;
+        setSelectedPlanningBoardId(defaultBoardId);
         await loadTeams(currentTenantId);
         if (getCancelled?.()) return;
         await loadPlanningBoards(currentTenantId);
@@ -87,7 +91,7 @@ const PlanningBoardPage: React.FC = () => {
         if (!getCancelled?.()) setIsProvisioning(false);
       }
     },
-    [firebaseUser, currentTenantId, loadTeams, loadPlanningBoards]
+    [firebaseUser, currentTenantId, loadTeams, loadPlanningBoards, setSelectedPlanningBoardId]
   );
 
   useEffect(() => {

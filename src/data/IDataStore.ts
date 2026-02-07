@@ -33,7 +33,11 @@ export interface IDataStore {
   updateTeam(id: string, updates: Partial<Team>): Promise<void>;
   deleteTeam(id: string): Promise<void>;
   getPlanningBoards(companyId: string): Promise<PlanningBoard[]>;
-  addPlanningBoard(board: PlanningBoard): Promise<void>;
+  /** List planning boards from boards collection (companyId + type planning). */
+  listPlanningBoardsFromBoards(companyId: string): Promise<PlanningBoard[]>;
+  /** Create a default planning board in boards collection; returns the new document id. */
+  createDefaultPlanningBoard(companyId: string, createdBy: string): Promise<string>;
+  addPlanningBoard(board: PlanningBoard, createdBy?: string): Promise<void>;
   updatePlanningBoard(id: string, updates: Partial<Pick<PlanningBoard, 'name' | 'teamIds'>>): Promise<void>;
   deletePlanningBoard(id: string): Promise<void>;
   getPlanningPlacements(boardId: string): Promise<PlanningBoardPlacement[]>;

@@ -2,6 +2,7 @@
  * Ensures the current user has tenant access (companyIds) via a trusted server path.
  * Calls the Firebase Callable grantTenantAccess so membership writes happen server-side.
  * In-flight guard prevents repeated retries for the same tenant.
+ * Callable functions must not be invoked via fetch() URL; use httpsCallable to avoid CORS/preflight.
  */
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { getFirebaseApp, isFirebaseConfigured } from "../lib/firebase";

@@ -330,7 +330,8 @@ export const useStore = create<AppState>((set, get) => ({
     set({ planningPlacements: placements });
   },
   addPlanningBoard: async (board) => {
-    await getDataStore().addPlanningBoard(board);
+    const uid = get().firebaseUser?.uid;
+    await getDataStore().addPlanningBoard(board, uid);
     set((state) => ({ planningBoards: [...state.planningBoards, board] }));
   },
   updatePlanningBoard: async (id, updates) => {

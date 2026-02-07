@@ -1,4 +1,5 @@
 import {
+  addDoc,
   collection,
   doc,
   getDoc,
@@ -10,6 +11,7 @@ import {
   query,
   where,
   Timestamp,
+  serverTimestamp,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type { WorkItem, TenantCompany, UserProfile, Role, Team, PlanningBoard, PlanningBoardPlacement } from '../types';
@@ -20,6 +22,7 @@ const USERS_COLLECTION = 'users';
 const INVITES_COLLECTION = 'invites';
 const LICENCES_COLLECTION = 'licences';
 const TEAMS_COLLECTION = 'teams';
+const BOARDS_COLLECTION = 'boards';
 const PLANNING_BOARDS_COLLECTION = 'planningBoards';
 const PLANNING_PLACEMENTS_COLLECTION = 'planningPlacements';
 
@@ -586,20 +589,62 @@ export async function deleteTeam(id: string): Promise<void> {
   await deleteDoc(ref);
 }
 
-// --- Planning boards ---
+// --- Boards (planning boards live here; type == "planning") ---
 
-export async function getPlanningBoards(companyId: string): Promise<PlanningBoard[]> {
+/** List planning boards for a company from the boards collection. */
+export async function listPlanningBoardsFromBoards(companyId: string): Promise<PlanningBoard[]> {
   if (!db) return Promise.reject(new Error('Firebase not configured'));
   const q = query(
-    collection(db, PLANNING_BOARDS_COLLECTION),
-    where('companyId', '==', companyId)
+    collection(db, BOARDS_COLLECTION),
+    where('companyId', '==', companyId),
+    where('type', '==', 'planning')
   );
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as PlanningBoard));
+  return snapshot.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      name: (data.name as string) ?? 'Planning Board',
+      companyId: (data.companyId as string) ?? companyId,
+      teamIds: (data.teamIds as string[]) ?? [],
+    } as PlanningBoard;
+  });
 }
 
-export async function addPlanningBoard(board: PlanningBoard): Promise<void> {
+/** Create a planning board document in boards collection. Returns the new document id. */
+export async function createPlanningBoardInBoards(companyId: string, createdBy: string): Promise<string> {
   if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = await addDoc(collection(db, BOARDS_COLLECTION), {
+    companyId,
+    name: 'Planning Board',
+    type: 'planning',
+    teamIds: [],
+    createdAt: serverTimestamp(),
+    createdBy,
+  });
+  return ref.id;
+}
+
+// --- Planning boards (getPlanningBoards reads from boards; add/update/delete support both) ---
+
+export async function getPlanningBoards(companyId: string): Promise<PlanningBoard[]> {
+  return listPlanningBoardsFromBoards(companyId);
+}
+
+export async function addPlanningBoard(board: PlanningBoard, createdBy?: string): Promise<void> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  if (createdBy != null) {
+    const ref = doc(db, BOARDS_COLLECTION, board.id);
+    await setDoc(ref, {
+      companyId: board.companyId,
+      name: board.name,
+      type: 'planning',
+      teamIds: board.teamIds ?? [],
+      createdAt: serverTimestamp(),
+      createdBy,
+    });
+    return;
+  }
   const ref = doc(db, PLANNING_BOARDS_COLLECTION, board.id);
   await setDoc(ref, {
     name: board.name,
@@ -608,9 +653,18 @@ export async function addPlanningBoard(board: PlanningBoard): Promise<void> {
   });
 }
 
+/** Create a default planning board in boards collection (idempotent use via ensureDefaultPlanningBoard). Returns the new document id. */
+export async function createDefaultPlanningBoard(
+  companyId: string,
+  _name: string,
+  createdBy: string
+): Promise<string> {
+  return createPlanningBoardInBoards(companyId, createdBy);
+}
+
 export async function updatePlanningBoard(id: string, updates: Partial<Pick<PlanningBoard, 'name' | 'teamIds'>>): Promise<void> {
   if (!db) return Promise.reject(new Error('Firebase not configured'));
-  const ref = doc(db, PLANNING_BOARDS_COLLECTION, id);
+  const ref = doc(db, BOARDS_COLLECTION, id);
   const data: Record<string, unknown> = {};
   if (updates.name !== undefined) data.name = updates.name;
   if (updates.teamIds !== undefined) data.teamIds = updates.teamIds;
@@ -620,7 +674,7 @@ export async function updatePlanningBoard(id: string, updates: Partial<Pick<Plan
 
 export async function deletePlanningBoard(id: string): Promise<void> {
   if (!db) return Promise.reject(new Error('Firebase not configured'));
-  const ref = doc(db, PLANNING_BOARDS_COLLECTION, id);
+  const ref = doc(db, BOARDS_COLLECTION, id);
   await deleteDoc(ref);
 }
 

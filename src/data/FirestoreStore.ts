@@ -31,6 +31,9 @@ export const FirestoreStore: IDataStore = {
   updateTeam: firestore.updateTeam,
   deleteTeam: firestore.deleteTeam,
   getPlanningBoards: firestore.getPlanningBoards,
+  listPlanningBoardsFromBoards: firestore.listPlanningBoardsFromBoards,
+  createDefaultPlanningBoard: (companyId, createdBy) =>
+    firestore.createDefaultPlanningBoard(companyId, 'Default', createdBy),
   addPlanningBoard: firestore.addPlanningBoard,
   updatePlanningBoard: firestore.updatePlanningBoard,
   deletePlanningBoard: firestore.deletePlanningBoard,

@@ -2,6 +2,7 @@
  * v2 Callable: grant the authenticated user access to a tenant (add tenantId to
  * users/{uid}.companyIds and optionally adminCompanyIds). No CORS—callable uses
  * Firebase SDK and includes the user's ID token automatically.
+ * Callable functions must not be invoked via fetch() URL; use httpsCallable to avoid CORS/preflight.
  */
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
