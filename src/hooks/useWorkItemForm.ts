@@ -81,6 +81,8 @@ export function useWorkItemForm({
       const defaultType = (type && (allowedTypes.includes(type) || type === 'user-story')) ? type : allowedTypes[0];
       setFormData((prev) => ({
         ...prev,
+        title: '',
+        description: '',
         parentId,
         type: defaultType,
         ...(defaultStatus != null && { status: defaultStatus }),

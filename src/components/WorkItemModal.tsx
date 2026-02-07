@@ -1,10 +1,10 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { WorkItem, WorkItemType, WorkItemStatus, EpicFeatureSize, KanbanLane } from '../types';
 import { useStore } from '../store/useStore';
-import { getAllowedParentTypes } from '../utils/hierarchy';
+import { getAllowedParentTypes, getAllowedChildTypes } from '../utils/hierarchy';
 import { SIZE_OPTIONS, STORY_POINT_OPTIONS, DAYS_OPTIONS } from '../utils/estimates';
 import { extractCursorInstruction } from '../lib/cursorInstruction';
-import { Plus, FileText, BookOpen, Sparkles } from 'lucide-react';
+import { Plus, FileText, BookOpen, Sparkles, ArrowLeft } from 'lucide-react';
 import { useSequenceSuggestion } from '../hooks/useSequenceSuggestion';
 import SuggestedOrderBox from './SuggestedOrderBox';
 import Modal from './Modal';
@@ -53,6 +53,16 @@ function getDescendantIds(workItems: WorkItem[], rootId: string): Set<string> {
 }
 
 const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId, type, allowedTypes: allowedTypesProp, defaultStatus, showLaneField, defaultTeamId, defaultSprintId, onAddUserStoryForTeam, onSelectWorkItem }) => {
+  const [createChildMode, setCreateChildMode] = useState<{ parentId: string; childType: WorkItemType } | null>(null);
+  const handleClose = useCallback(() => {
+    if (createChildMode) setCreateChildMode(null);
+    else onClose();
+  }, [createChildMode, onClose]);
+
+  const effectiveItemId = createChildMode ? null : itemId;
+  const effectiveParentId = createChildMode ? createChildMode.parentId : parentId;
+  const effectiveType = createChildMode ? createChildMode.childType : type;
+
   const { users, teams, loadTeams, currentTenantId, workItems, getAggregatedStoryPoints, setSelectedWorkItem, getTypeLabel, deleteWorkItem, canResetBacklog, updateWorkItem, planningContext } = useStore();
   const {
     formData,
@@ -63,11 +73,9 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
     isEditing,
     allowedTypes,
     handleSubmit,
-    handleAddTask,
-    handleAddBug,
     childTasksAndBugs,
     FEATURE_STATUSES,
-  } = useWorkItemForm({ itemId, onClose, parentId, type, allowedTypes: allowedTypesProp, defaultStatus, showLaneField, defaultTeamId, defaultSprintId });
+  } = useWorkItemForm({ itemId: effectiveItemId, onClose: handleClose, parentId: effectiveParentId, type: effectiveType, allowedTypes: allowedTypesProp, defaultStatus, showLaneField, defaultTeamId, defaultSprintId });
   const [showEpicHypothesis, setShowEpicHypothesis] = useState(false);
   const [showEpicHypothesisExample, setShowEpicHypothesisExample] = useState(false);
   const [copiedHint, setCopiedHint] = useState<'cursor' | 'description' | null>(null);
@@ -157,12 +165,44 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
     onClose();
   }, [item?.id, item?.title, canResetBacklog, deleteWorkItem, onClose]);
 
+  const parentItemForBack = createChildMode ? workItems.find((i) => i.id === createChildMode.parentId) : null;
+  const showParentContent = isEditing && item && !createChildMode;
+  const allowedChildTypes = showParentContent ? getAllowedChildTypes(item.type) : [];
+
   return (
     <Modal
-      title={isEditing ? 'Edit Work Item' : 'Create Work Item'}
-      onClose={onClose}
+      title={
+        createChildMode
+          ? `Create ${getTypeLabel(createChildMode.childType)}`
+          : isEditing
+            ? 'Edit Work Item'
+            : 'Create Work Item'
+      }
+      onClose={handleClose}
       maxWidth="600px"
     >
+      {createChildMode && parentItemForBack && (
+        <button
+          type="button"
+          onClick={() => setCreateChildMode(null)}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            marginBottom: '16px',
+            padding: '6px 0',
+            background: 'none',
+            border: 'none',
+            color: '#3b82f6',
+            fontSize: '14px',
+            fontWeight: '500',
+            cursor: 'pointer',
+          }}
+        >
+          <ArrowLeft size={18} />
+          Back to {parentItemForBack.title}
+        </button>
+      )}
       {submitError && (
           <div
             style={{
@@ -865,7 +905,37 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
             />
           )}
 
-          {isEditing && item?.type === 'user-story' && (
+          {showParentContent && item?.type === 'epic' && allowedChildTypes.length > 0 && (
+            <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>Features</span>
+                {allowedChildTypes.map((childType) => (
+                  <button
+                    key={childType}
+                    type="button"
+                    onClick={() => setCreateChildMode({ parentId: item.id, childType })}
+                    style={{
+                      padding: '6px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      backgroundColor: '#ffffff',
+                      color: '#374151',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <Plus size={14} />
+                    Add {getTypeLabel(childType)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {showParentContent && item?.type === 'user-story' && (
             <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>Tasks & bugs</span>
@@ -900,44 +970,28 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
                     {sequenceLoading ? 'Suggesting…' : 'Suggest sequence'}
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={handleAddTask}
-                  style={{
-                    padding: '6px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    backgroundColor: '#ffffff',
-                    color: '#374151',
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                  }}
-                >
-                  <Plus size={14} />
-                  Add task
-                </button>
-                <button
-                  type="button"
-                  onClick={handleAddBug}
-                  style={{
-                    padding: '6px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    backgroundColor: '#ffffff',
-                    color: '#374151',
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                  }}
-                >
-                  <Plus size={14} />
-                  Add bug
-                </button>
+                {allowedChildTypes.map((childType) => (
+                  <button
+                    key={childType}
+                    type="button"
+                    onClick={() => setCreateChildMode({ parentId: item.id, childType })}
+                    style={{
+                      padding: '6px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      backgroundColor: '#ffffff',
+                      color: '#374151',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <Plus size={14} />
+                    Add {getTypeLabel(childType)}
+                  </button>
+                ))}
               </div>
               {sequenceError && (
                 <div style={{ marginBottom: '8px', padding: '8px 12px', backgroundColor: '#fef2f2', borderRadius: '6px', fontSize: '13px', color: '#b91c1c' }}>
@@ -984,10 +1038,32 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
             </div>
           )}
 
-          {isEditing && item?.type === 'feature' && (
+          {showParentContent && item?.type === 'feature' && (
             <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>User stories</span>
+                {allowedChildTypes.map((childType) => (
+                  <button
+                    key={childType}
+                    type="button"
+                    onClick={() => setCreateChildMode({ parentId: item.id, childType })}
+                    style={{
+                      padding: '6px 12px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      backgroundColor: '#ffffff',
+                      color: '#374151',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <Plus size={14} />
+                    Add {getTypeLabel(childType)}
+                  </button>
+                ))}
                 {planningContext && item && onAddUserStoryForTeam && (
                   <button
                     type="button"
@@ -1091,7 +1167,7 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
 
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', gap: '12px' }}>
-              {isEditing && item && canResetBacklog() && (
+              {showParentContent && item && canResetBacklog() && (
                 <button
                   type="button"
                   onClick={handleDelete}
