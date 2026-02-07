@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { WorkItem, Sprint, KanbanBoard, User, WorkItemType, TenantCompany, AuthUser, Role, KanbanLane, Team, PlanningBoard, PlanningBoardPlacement } from '../types';
+import { WorkItem, Sprint, KanbanBoard, User, WorkItemType, TenantCompany, AuthUser, Role, KanbanLane, Team, PlanningBoard, PlanningBoardPlacement, BoardItem } from '../types';
 import { getAllowedChildTypes } from '../utils/hierarchy';
 import { getTypeLabel as getTypeLabelFromNomenclature, getRoleLabel as getRoleLabelFromNomenclature } from '../utils/nomenclature';
 import { getDataStore } from '../lib/adapters';
@@ -24,6 +24,10 @@ interface AppState {
   teams: Team[];
   planningBoards: PlanningBoard[];
   planningPlacements: PlanningBoardPlacement[];
+  /** Backlog features (type=feature) for Add Feature modal. */
+  backlogFeatures: WorkItem[];
+  /** Items on the current planning board (boards/{boardId}/items). */
+  boardItems: BoardItem[];
   /** Set when loadPlanningBoards fails with permission-denied; cleared on success. */
   planningBoardsLoadError: string | null;
   currentUser: User | null;
@@ -82,14 +86,20 @@ interface AppState {
   setPlanningContext: (ctx: { teamId: string; sprintId?: string } | null) => void;
   setPlanningBoards: (boards: PlanningBoard[]) => void;
   setPlanningPlacements: (placements: PlanningBoardPlacement[]) => void;
+  setBacklogFeatures: (features: WorkItem[]) => void;
+  setBoardItems: (items: BoardItem[]) => void;
   loadPlanningBoards: (companyId: string) => Promise<void>;
   loadPlanningPlacements: (boardId: string) => Promise<void>;
+  loadBacklogFeatures: (companyId: string) => Promise<void>;
+  loadBoardItems: (boardId: string) => Promise<void>;
   addPlanningBoard: (board: PlanningBoard) => Promise<void>;
   updatePlanningBoard: (id: string, updates: Partial<Pick<PlanningBoard, 'name' | 'teamIds'>>) => Promise<void>;
   deletePlanningBoard: (id: string) => Promise<void>;
   addPlanningPlacement: (placement: PlanningBoardPlacement) => Promise<void>;
   updatePlanningPlacement: (id: string, updates: Partial<Pick<PlanningBoardPlacement, 'teamId' | 'iterationColumn'>>) => Promise<void>;
   deletePlanningPlacement: (id: string) => Promise<void>;
+  addFeatureToPlanningBoard: (params: { boardId: string; companyId: string; workItemId: string; laneId: string; columnId: string }) => Promise<void>;
+  removeFeatureFromPlanningBoard: (boardId: string, itemId: string) => Promise<void>;
   setViewMode: (mode: AppState['viewMode']) => void;
   setTenantCompanies: (companies: TenantCompany[]) => void;
   setCurrentTenantId: (id: string | null) => void;
@@ -155,6 +165,8 @@ export const useStore = create<AppState>((set, get) => ({
   teams: [],
   planningBoards: [],
   planningPlacements: [],
+  backlogFeatures: [],
+  boardItems: [],
   planningBoardsLoadError: null,
   currentUser: null,
   tenantCompanies: [],
@@ -308,6 +320,8 @@ export const useStore = create<AppState>((set, get) => ({
   setPlanningContext: (ctx) => set({ planningContext: ctx }),
   setPlanningBoards: (boards) => set({ planningBoards: boards }),
   setPlanningPlacements: (placements) => set({ planningPlacements: placements }),
+  setBacklogFeatures: (features) => set({ backlogFeatures: features }),
+  setBoardItems: (items) => set({ boardItems: items }),
   loadPlanningBoards: async (companyId) => {
     console.log("[loadPlanningBoards] invoked", { companyId });
     try {
@@ -329,6 +343,28 @@ export const useStore = create<AppState>((set, get) => ({
     const placements = await getDataStore().getPlanningPlacements(boardId);
     set({ planningPlacements: placements });
   },
+  loadBacklogFeatures: async (companyId) => {
+    const features = await getDataStore().listBacklogFeatures(companyId);
+    set({ backlogFeatures: features });
+  },
+  loadBoardItems: async (boardId) => {
+    const items = await getDataStore().listBoardItems(boardId);
+    set({ boardItems: items });
+  },
+  addFeatureToPlanningBoard: async ({ boardId, companyId, workItemId, laneId, columnId }) => {
+    const uid = get().firebaseUser?.uid ?? '';
+    await getDataStore().addFeatureToBoard(boardId, companyId, workItemId, {
+      laneId,
+      columnId,
+      addedBy: uid,
+    });
+    const items = await getDataStore().listBoardItems(boardId);
+    set({ boardItems: items });
+  },
+  removeFeatureFromPlanningBoard: async (boardId, itemId) => {
+    await getDataStore().deleteBoardItem(boardId, itemId);
+    set((state) => ({ boardItems: state.boardItems.filter((i) => i.id !== itemId) }));
+  },
   addPlanningBoard: async (board) => {
     const uid = get().firebaseUser?.uid;
     await getDataStore().addPlanningBoard(board, uid);
@@ -345,6 +381,7 @@ export const useStore = create<AppState>((set, get) => ({
     set((state) => ({
       planningBoards: state.planningBoards.filter((b) => b.id !== id),
       planningPlacements: state.planningPlacements.filter((p) => p.boardId !== id),
+      boardItems: state.selectedPlanningBoardId === id ? [] : state.boardItems,
       ...(state.selectedPlanningBoardId === id ? { selectedPlanningBoardId: null } : {}),
     }));
   },

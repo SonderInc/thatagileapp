@@ -2,10 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { ensureDefaultPlanningBoard } from '../services/boards/ensureDefaultBoard';
 import { ensureTenantAccess } from '../services/tenantMembershipService';
 import { useStore } from '../store/useStore';
-import type { PlanningBoard as PlanningBoardType, PlanningBoardPlacement } from '../types';
+import type { PlanningBoard as PlanningBoardType } from '../types';
 import WorkItemModal from '../components/WorkItemModal';
 import WorkItemCard from '../components/WorkItemCard';
 import Modal from '../components/Modal';
+import AddFeatureFromBacklogModal from '../components/planning/AddFeatureFromBacklogModal';
 import { ArrowLeft, Plus, X } from 'lucide-react';
 import { spacing } from '../styles/theme';
 
@@ -21,19 +22,18 @@ const PlanningBoardPage: React.FC = () => {
     loadTeams,
     loadPlanningBoards,
     planningBoards,
-    planningPlacements,
     selectedPlanningBoardId,
     setSelectedPlanningBoardId,
-    loadPlanningPlacements,
+    loadBoardItems,
     addPlanningBoard,
-    addPlanningPlacement,
-    deletePlanningPlacement,
+    boardItems,
     workItems,
-    getWorkItemsByType,
+    backlogFeatures,
     setSelectedWorkItem,
     setPlanningContext,
     selectedWorkItem,
     canEditPlanningBoard,
+    removeFeatureFromPlanningBoard,
   } = useStore();
 
   const canEdit = canEditPlanningBoard();
@@ -45,12 +45,12 @@ const PlanningBoardPage: React.FC = () => {
   const [createError, setCreateError] = useState<string | null>(null);
   const [isProvisioning, setIsProvisioning] = useState(false);
   const [provisionError, setProvisionError] = useState<string | null>(null);
-  const [showFeaturePicker, setShowFeaturePicker] = useState<{ teamId: string; iterationColumn: 1 | 2 | 3 | 4 | 5 } | null>(null);
+  const [showAddFeatureModal, setShowAddFeatureModal] = useState(false);
+  const [addFeatureCell, setAddFeatureCell] = useState<{ laneId: string; columnId: string } | null>(null);
   const [showCardModal, setShowCardModal] = useState(false);
   const [addStoryContext, setAddStoryContext] = useState<{ parentId: string; defaultTeamId: string; defaultSprintId?: string } | null>(null);
 
   const board = selectedPlanningBoardId ? planningBoards.find((b) => b.id === selectedPlanningBoardId) : null;
-  const features = getWorkItemsByType('feature');
 
   const runProvisioning = useCallback(
     async (getCancelled?: () => boolean) => {
@@ -104,8 +104,8 @@ const PlanningBoardPage: React.FC = () => {
   }, [firebaseUser?.uid, currentTenantId, runProvisioning]);
 
   useEffect(() => {
-    if (selectedPlanningBoardId) loadPlanningPlacements(selectedPlanningBoardId);
-  }, [selectedPlanningBoardId, loadPlanningPlacements]);
+    if (selectedPlanningBoardId) loadBoardItems(selectedPlanningBoardId);
+  }, [selectedPlanningBoardId, loadBoardItems]);
 
   const handleCreateBoard = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,21 +166,8 @@ const PlanningBoardPage: React.FC = () => {
     );
   };
 
-  const handleAddPlacement = (workItemId: string) => {
-    if (!board || !showFeaturePicker) return;
-    const placement: PlanningBoardPlacement = {
-      id: `placement-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-      boardId: board.id,
-      workItemId,
-      teamId: showFeaturePicker.teamId,
-      iterationColumn: showFeaturePicker.iterationColumn,
-    };
-    addPlanningPlacement(placement);
-    setShowFeaturePicker(null);
-  };
-
-  const getPlacementsForCell = (teamId: string, iterationColumn: 1 | 2 | 3 | 4 | 5) =>
-    planningPlacements.filter((p) => p.boardId === board?.id && p.teamId === teamId && p.iterationColumn === iterationColumn);
+  const getBoardItemsForCell = (teamId: string, iterationColumn: 1 | 2 | 3 | 4 | 5) =>
+    boardItems.filter((i) => i.laneId === teamId && i.columnId === String(iterationColumn));
 
   const handleCardClick = (workItemId: string, teamId: string) => {
     setSelectedWorkItem(workItemId);
@@ -510,9 +497,7 @@ const PlanningBoardPage: React.FC = () => {
               {team.name}
             </div>
             {([1, 2, 3, 4, 5] as const).map((iter) => {
-              const placements = getPlacementsForCell(team.id, iter);
-              const isPickerOpen =
-                showFeaturePicker?.teamId === team.id && showFeaturePicker?.iterationColumn === iter;
+              const cellItems = getBoardItemsForCell(team.id, iter);
               return (
                 <div
                   key={iter}
@@ -526,13 +511,15 @@ const PlanningBoardPage: React.FC = () => {
                     gap: 6,
                   }}
                 >
-                  {placements.map((p) => {
-                    const feature = workItems.find((i) => i.id === p.workItemId && i.type === 'feature');
+                  {cellItems.map((item) => {
+                    const feature =
+                      workItems.find((i) => i.id === item.workItemId && i.type === 'feature') ??
+                      backlogFeatures.find((i) => i.id === item.workItemId);
                     if (!feature) return null;
                     return (
-                      <div key={p.id} style={{ position: 'relative' }}>
+                      <div key={item.id} style={{ position: 'relative' }}>
                         <div
-                          onClick={() => handleCardClick(p.workItemId, team.id)}
+                          onClick={() => handleCardClick(item.workItemId, team.id)}
                           style={{ cursor: 'pointer' }}
                         >
                           <WorkItemCard item={feature} compact />
@@ -542,7 +529,7 @@ const PlanningBoardPage: React.FC = () => {
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              deletePlanningPlacement(p.id);
+                              removeFeatureFromPlanningBoard(board!.id, item.id);
                             }}
                             title="Remove from cell"
                             style={{
@@ -570,62 +557,25 @@ const PlanningBoardPage: React.FC = () => {
                     );
                   })}
                   {canEdit && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => setShowFeaturePicker(isPickerOpen ? null : { teamId: team.id, iterationColumn: iter })}
-                        style={{
-                          padding: '6px',
-                          border: '1px dashed #d1d5db',
-                          borderRadius: 6,
-                          background: 'transparent',
-                          color: '#6b7280',
-                          cursor: 'pointer',
-                          fontSize: 12,
-                          marginTop: 'auto',
-                        }}
-                      >
-                        + Add feature
-                      </button>
-                      {isPickerOpen && (
-                    <div
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAddFeatureCell({ laneId: team.id, columnId: String(iter) });
+                        setShowAddFeatureModal(true);
+                      }}
                       style={{
-                        marginTop: 8,
-                        padding: 8,
-                        border: '1px solid #e5e7eb',
+                        padding: '6px',
+                        border: '1px dashed #d1d5db',
                         borderRadius: 6,
-                        backgroundColor: '#fff',
-                        maxHeight: 200,
-                        overflowY: 'auto',
+                        background: 'transparent',
+                        color: '#6b7280',
+                        cursor: 'pointer',
+                        fontSize: 12,
+                        marginTop: 'auto',
                       }}
                     >
-                      {features.length === 0 ? (
-                        <p style={{ margin: 0, fontSize: 12, color: '#6b7280' }}>No features. Add features from Feature Board.</p>
-                      ) : (
-                        features.slice(0, 20).map((f) => (
-                          <button
-                            key={f.id}
-                            type="button"
-                            onClick={() => handleAddPlacement(f.id)}
-                            style={{
-                              display: 'block',
-                              width: '100%',
-                              padding: '6px 8px',
-                              textAlign: 'left',
-                              border: 'none',
-                              borderRadius: 4,
-                              background: 'transparent',
-                              cursor: 'pointer',
-                              fontSize: 13,
-                            }}
-                          >
-                            {f.title}
-                          </button>
-                        ))
-                      )}
-                    </div>
-                      )}
-                    </>
+                      + Add feature
+                    </button>
                   )}
                 </div>
               );
@@ -656,11 +606,17 @@ const PlanningBoardPage: React.FC = () => {
         />
       )}
 
-      {showFeaturePicker && (
-        <div
-          style={{ position: 'fixed', inset: 0, zIndex: 998 }}
-          aria-hidden
-          onClick={() => setShowFeaturePicker(null)}
+      {currentTenantId && board && (
+        <AddFeatureFromBacklogModal
+          isOpen={showAddFeatureModal}
+          onClose={() => {
+            setShowAddFeatureModal(false);
+            setAddFeatureCell(null);
+          }}
+          companyId={currentTenantId}
+          boardId={board.id}
+          defaultLaneId={addFeatureCell?.laneId}
+          defaultColumnId={addFeatureCell?.columnId}
         />
       )}
     </div>

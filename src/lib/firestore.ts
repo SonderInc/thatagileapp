@@ -10,11 +10,12 @@ import {
   writeBatch,
   query,
   where,
+  orderBy,
   Timestamp,
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import type { WorkItem, TenantCompany, UserProfile, Role, Team, PlanningBoard, PlanningBoardPlacement } from '../types';
+import type { WorkItem, TenantCompany, UserProfile, Role, Team, PlanningBoard, PlanningBoardPlacement, BoardItem } from '../types';
 
 const WORK_ITEMS_COLLECTION = 'workItems';
 const COMPANIES_COLLECTION = 'companies';
@@ -98,6 +99,81 @@ export async function getWorkItems(companyId: string): Promise<WorkItem[]> {
   );
   const snapshot = await getDocs(q);
   return snapshot.docs.map((d) => deserializeWorkItem(d.data() as WorkItemData));
+}
+
+const BOARD_ITEMS_SUBCOLLECTION = 'items';
+
+/** List backlog features (work items with type feature) for a company. */
+export async function listBacklogFeatures(companyId: string): Promise<WorkItem[]> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const q = query(
+    collection(db, WORK_ITEMS_COLLECTION),
+    where('companyId', '==', companyId),
+    where('type', '==', 'feature')
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => deserializeWorkItem(d.data() as WorkItemData));
+}
+
+/** List items in a board's items subcollection, ordered by order. */
+export async function listBoardItems(boardId: string): Promise<BoardItem[]> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const itemsRef = collection(db, BOARDS_COLLECTION, boardId, BOARD_ITEMS_SUBCOLLECTION);
+  const q = query(itemsRef, orderBy('order'));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => {
+    const data = d.data();
+    const addedAt = data.addedAt;
+    return {
+      id: d.id,
+      companyId: (data.companyId as string) ?? '',
+      workItemId: (data.workItemId as string) ?? '',
+      workItemType: 'feature',
+      laneId: (data.laneId as string) ?? '',
+      columnId: (data.columnId as string) ?? '',
+      order: typeof data.order === 'number' ? data.order : 0,
+      addedBy: (data.addedBy as string) ?? '',
+      addedAt:
+        addedAt && typeof (addedAt as Timestamp).toDate === 'function'
+          ? (addedAt as Timestamp).toDate()
+          : addedAt instanceof Date
+            ? addedAt
+            : new Date(addedAt as string),
+    } as BoardItem;
+  });
+}
+
+/** Add a feature to a board (creates document in boards/{boardId}/items). Rejects if workItemId already on board. */
+export async function addFeatureToBoard(
+  boardId: string,
+  companyId: string,
+  workItemId: string,
+  placement: { laneId: string; columnId: string; addedBy: string }
+): Promise<string> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const itemsRef = collection(db, BOARDS_COLLECTION, boardId, BOARD_ITEMS_SUBCOLLECTION);
+  const existing = await listBoardItems(boardId);
+  if (existing.some((i) => i.workItemId === workItemId)) {
+    return Promise.reject(new Error('Feature is already on this board'));
+  }
+  const ref = await addDoc(itemsRef, {
+    companyId,
+    workItemId,
+    workItemType: 'feature',
+    laneId: placement.laneId,
+    columnId: placement.columnId,
+    order: Date.now(),
+    addedBy: placement.addedBy,
+    addedAt: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+/** Delete a board item (remove feature from board). */
+export async function deleteBoardItem(boardId: string, itemId: string): Promise<void> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = doc(db, BOARDS_COLLECTION, boardId, BOARD_ITEMS_SUBCOLLECTION, itemId);
+  await deleteDoc(ref);
 }
 
 function docToTenantCompany(docId: string, data: Record<string, unknown>): TenantCompany {

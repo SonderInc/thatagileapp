@@ -69,6 +69,24 @@ service cloud.firestore {
         && exists(userDoc())
         && resource.data.get('companyId', null) is string
         && resource.data.companyId in adminCompanyIds();
+
+      match /items/{itemId} {
+        allow read: if request.auth != null
+          && exists(userDoc())
+          && get(/databases/$(database)/documents/boards/$(boardId)).data.get('companyId', null) is string
+          && get(/databases/$(database)/documents/boards/$(boardId)).data.companyId in companyIds();
+        allow create: if request.auth != null
+          && exists(userDoc())
+          && get(/databases/$(database)/documents/boards/$(boardId)).data.get('companyId', null) is string
+          && get(/databases/$(database)/documents/boards/$(boardId)).data.companyId in companyIds()
+          && request.resource.data.get('companyId', null) is string
+          && request.resource.data.companyId == get(/databases/$(database)/documents/boards/$(boardId)).data.companyId
+          && request.resource.data.get('workItemId', null) is string;
+        allow update, delete: if request.auth != null
+          && exists(userDoc())
+          && resource.data.get('companyId', null) is string
+          && resource.data.companyId in adminCompanyIds();
+      }
     }
     match /planningPlacements/{placementId} {
       allow read: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)) != null && exists(/databases/$(database)/documents/planningBoards/$(resource.data.boardId)) && get(/databases/$(database)/documents/planningBoards/$(resource.data.boardId)).data.get('companyId', null) in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('companyIds', []);

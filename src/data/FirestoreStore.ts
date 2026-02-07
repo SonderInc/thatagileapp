@@ -41,4 +41,8 @@ export const FirestoreStore: IDataStore = {
   addPlanningPlacement: firestore.addPlanningPlacement,
   updatePlanningPlacement: firestore.updatePlanningPlacement,
   deletePlanningPlacement: firestore.deletePlanningPlacement,
+  listBacklogFeatures: firestore.listBacklogFeatures,
+  listBoardItems: firestore.listBoardItems,
+  addFeatureToBoard: firestore.addFeatureToBoard,
+  deleteBoardItem: firestore.deleteBoardItem,
 };

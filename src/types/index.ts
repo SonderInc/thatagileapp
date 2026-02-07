@@ -199,6 +199,19 @@ export interface PlanningBoardPlacement {
   iterationColumn: 1 | 2 | 3 | 4 | 5;
 }
 
+/** Item on a planning board (boards/{boardId}/items subcollection). References an existing work item. */
+export interface BoardItem {
+  id: string;
+  companyId: string;
+  workItemId: string;
+  workItemType: 'feature';
+  laneId: string;
+  columnId: string;
+  order: number;
+  addedBy: string;
+  addedAt: Date;
+}
+
 /** Auth user (provider-agnostic). Use this in UI/store; do not import firebase/auth types. */
 export interface AuthUser {
   uid: string;
