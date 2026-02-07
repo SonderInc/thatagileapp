@@ -63,18 +63,21 @@ export async function ensureTenantAccess(
       err && typeof err === "object" && "code" in err
         ? String((err as { code: string }).code)
         : "UNKNOWN";
-    const message =
+    const rawMessage =
       err && typeof err === "object" && "message" in err
         ? String((err as { message: string }).message)
         : err instanceof Error
           ? err.message
           : "Failed to grant tenant access";
+    const message =
+      code === "functions/permission-denied"
+        ? "You don't have access to this company"
+        : code === "functions/internal" || rawMessage === "internal"
+          ? "Server error while checking access. Please try again or contact support."
+          : rawMessage;
     throw {
       code: code === "functions/permission-denied" ? "PERMISSION_DENIED" : code,
-      message:
-        code === "functions/permission-denied"
-          ? "You don't have access to this company"
-          : message,
+      message,
       details: err,
     } as TenantMembershipError;
   }

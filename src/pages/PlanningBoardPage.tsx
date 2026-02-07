@@ -68,15 +68,19 @@ const PlanningBoardPage: React.FC = () => {
           err && typeof err === 'object' && 'code' in err
             ? String((err as { code: string }).code)
             : undefined;
-        const message =
+        const rawMessage =
           err && typeof err === 'object' && 'message' in err
             ? String((err as { message: string }).message)
             : err instanceof Error
               ? err.message
               : 'You don\'t have access to this company';
-        setProvisionError(
-          code === 'PERMISSION_DENIED' ? 'You don\'t have access to this company' : message
-        );
+        const message =
+          code === 'PERMISSION_DENIED'
+            ? 'You don\'t have access to this company'
+            : rawMessage === 'internal' || code === 'functions/internal'
+              ? 'Server error while loading. Please try again or contact support.'
+              : rawMessage;
+        setProvisionError(message);
       } finally {
         if (!getCancelled?.()) setIsProvisioning(false);
       }
