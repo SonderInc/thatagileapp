@@ -682,8 +682,8 @@ const PlanningBoardPage: React.FC = () => {
         </div>
       )}
 
-      <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: 8, backgroundColor: '#fff' }}>
-        <DragDropContext onDragEnd={handleDragEnd}>
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: 8, backgroundColor: '#fff' }}>
           <div style={{ display: 'flex', flexShrink: 0, borderBottom: '2px solid #e5e7eb' }}>
             {columnLabels.map((colLabel, idx) => (
               <div
@@ -767,7 +767,9 @@ const PlanningBoardPage: React.FC = () => {
                                   {...draggableProvided.dragHandleProps}
                                   style={{
                                     ...draggableProvided.draggableProps.style,
-                                    position: 'relative',
+                                    ...(draggableProvided.draggableProps.style?.position == null
+                                      ? { position: 'relative' as const }
+                                      : {}),
                                   }}
                                 >
                                   <div
@@ -839,8 +841,8 @@ const PlanningBoardPage: React.FC = () => {
               })}
             </div>
           ))}
-        </DragDropContext>
-      </div>
+        </div>
+      </DragDropContext>
 
       {showCardModal && selectedWorkItem && (
         <WorkItemModal
