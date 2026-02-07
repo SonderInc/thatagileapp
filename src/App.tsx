@@ -22,6 +22,7 @@ import LicencePage from './pages/LicencePage';
 import CompanyProfilePage from './pages/CompanyProfilePage';
 import SettingsPage from './pages/SettingsPage';
 import NomenclaturePage from './pages/NomenclaturePage';
+import TeamBoardSettingsListPage from './pages/TeamBoardSettingsListPage';
 import ImportBacklogPage from './pages/ImportBacklogPage';
 import UserProfilePage from './pages/UserProfilePage';
 import NoCompanyPage from './pages/NoCompanyPage';
@@ -576,6 +577,8 @@ function App() {
         return <SettingsPage />;
       case 'nomenclature':
         return <NomenclaturePage />;
+      case 'team-board-settings':
+        return <TeamBoardSettingsListPage />;
       case 'import-backlog':
         return <ImportBacklogPage />;
       case 'user-profile':

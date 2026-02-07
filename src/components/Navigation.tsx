@@ -4,7 +4,7 @@ import { useStore } from '../store/useStore';
 import { LayoutDashboard, Layers, Package, List, ListOrdered, Home, LogOut, Shield, ClipboardList, ChevronDown } from 'lucide-react';
 
 const Navigation: React.FC = () => {
-  const { viewMode, setViewMode, setSelectedProductId, setSelectedTeamId, selectedTeamId, teams, loadTeams, currentTenantId, tenantCompanies, firebaseUser, setFirebaseUser, setCurrentUser, setCurrentTenantId, currentUser, getTypeLabel } = useStore();
+  const { viewMode, setViewMode, setSelectedProductId, setSelectedTeamId, selectedTeamId, teams, loadTeams, currentTenantId, tenantCompanies, firebaseUser, setFirebaseUser, setCurrentUser, setCurrentTenantId, currentUser, getTypeLabel, canAccessTeamBoardSettings } = useStore();
   const currentCompany = tenantCompanies.find((c) => c.id === currentTenantId) ?? null;
   const [adminMenuOpen, setAdminMenuOpen] = useState(false);
   const [boardsMenuOpen, setBoardsMenuOpen] = useState(false);
@@ -96,7 +96,7 @@ const Navigation: React.FC = () => {
     setAdminMenuOpen(false);
   };
 
-  const isAdminActive = visibleAdminItems.some((a) => viewMode === a.id) || viewMode === 'settings';
+  const isAdminActive = visibleAdminItems.some((a) => viewMode === a.id) || viewMode === 'settings' || viewMode === 'team-board-settings';
 
   const avatarInitials = (): string => {
     const name = currentUser?.name?.trim();
@@ -347,7 +347,7 @@ const Navigation: React.FC = () => {
                   {item.label}
                 </button>
               ))}
-              {isAdmin && (
+              {canAccessTeamBoardSettings() && (
                 <>
                   <div style={{ borderTop: '1px solid #e5e7eb', margin: '4px 0' }} />
                   <div style={{ padding: '6px 16px 4px', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>
@@ -356,7 +356,7 @@ const Navigation: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setViewMode('settings');
+                      setViewMode('team-board-settings');
                       setAdminMenuOpen(false);
                     }}
                     style={{
@@ -365,7 +365,7 @@ const Navigation: React.FC = () => {
                       padding: '10px 16px',
                       textAlign: 'left',
                       border: 'none',
-                      backgroundColor: viewMode === 'settings' ? '#eff6ff' : 'transparent',
+                      backgroundColor: viewMode === 'team-board-settings' ? '#eff6ff' : 'transparent',
                       color: '#374151',
                       cursor: 'pointer',
                       fontSize: '14px',

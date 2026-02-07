@@ -117,6 +117,11 @@ const SettingsPage: React.FC = () => {
 
   return (
     <div className="page-container">
+      <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+        <button type="button" className="btn-secondary" onClick={() => setViewMode('team-board-settings')}>
+          Back to team list
+        </button>
+      </div>
       <h1 className="page-title">Team Board Settings</h1>
       <p className="page-description">
         Configure where your data is stored. You can use ThatAgile Cloud or your own Firebase project.
