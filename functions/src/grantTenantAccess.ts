@@ -10,10 +10,16 @@ import * as admin from "firebase-admin";
 
 if (!admin.apps.length) admin.initializeApp();
 
-const ALLOWED_ORIGINS = new Set([
-  "https://thatagileapp.com",
-  "http://localhost:5173",
-]);
+function isAllowedOrigin(origin?: string): boolean {
+  if (!origin) return false;
+
+  if (origin === "https://thatagileapp.com") return true;
+  if (origin === "http://localhost:5173") return true;
+
+  if (/^https:\/\/[a-z0-9-]+\.thatagileapp\.com$/i.test(origin)) return true;
+
+  return false;
+}
 
 export const grantTenantAccess = onRequest(
   {
@@ -21,17 +27,26 @@ export const grantTenantAccess = onRequest(
     invoker: "public",
   },
   async (req, res) => {
-    const origin = req.get("origin") || "";
-    if (ALLOWED_ORIGINS.has(origin)) {
-      res.set("Access-Control-Allow-Origin", origin);
-      res.set("Vary", "Origin");
-    }
+    const origin = req.headers.origin;
+    const allowed = isAllowedOrigin(origin);
+
     res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
     res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
     res.set("Access-Control-Max-Age", "3600");
+    if (allowed) {
+      res.set("Access-Control-Allow-Origin", origin!);
+      res.set("Vary", "Origin");
+    }
+
+    console.log("[grantTenantAccess] origin:", origin);
+    console.log("[grantTenantAccess] allowed:", allowed);
 
     if (req.method === "OPTIONS") {
-      res.status(204).send("");
+      if (allowed) {
+        res.status(204).send("");
+      } else {
+        res.status(403).send("");
+      }
       return;
     }
 
