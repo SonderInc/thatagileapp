@@ -26,6 +26,8 @@ export interface ImportItemInput {
   importId: string;
   type: WorkItemType;
   title: string;
+  /** Description (optional). Can be at top level or in fields.description; both are accepted. */
+  description?: string;
   status?: string;
   parentImportId?: string | null;
   fields?: {
@@ -277,10 +279,12 @@ function buildWorkItem(
 
   const parentId = input.parentImportId ? importIdToWorkItemId.get(input.parentImportId) : undefined;
 
+  const descriptionSource = input.description ?? fields.description;
   const item: WorkItem = {
     id,
     type: input.type as WorkItemType,
     title: input.title.trim(),
+    description: descriptionSource != null ? String(descriptionSource) : '',
     status: status as WorkItemStatus,
     createdAt: now,
     updatedAt: now,
@@ -289,7 +293,6 @@ function buildWorkItem(
     childrenIds: [],
     metadata: { importId: input.importId, importKey },
   };
-  if (fields.description !== undefined) item.description = String(fields.description);
   if (fields.cursorInstruction !== undefined && typeof fields.cursorInstruction === 'string') {
     item.description = ensureCursorInstruction(item.description, fields.cursorInstruction);
   }

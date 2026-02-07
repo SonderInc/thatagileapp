@@ -67,6 +67,7 @@ const PublicLandingPage: React.FC = () => {
         name: displayName,
         email: resEmail,
         roles: ['admin'],
+        appAdmin: false,
       });
       setViewMode('landing');
       if (typeof window !== 'undefined') {

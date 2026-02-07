@@ -210,6 +210,7 @@ const ImportBacklogPage: React.FC = () => {
           name: profile?.displayName ?? firebaseUser.displayName ?? '',
           email: profile?.email ?? firebaseUser.email ?? '',
           roles: ['admin'],
+          appAdmin: profile?.appAdmin ?? false,
         });
       }
     } catch (err) {

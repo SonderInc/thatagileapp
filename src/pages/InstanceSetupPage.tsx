@@ -70,6 +70,7 @@ const InstanceSetupPage: React.FC = () => {
         name: displayName,
         email: profile.email,
         roles: ['admin'],
+        appAdmin: false,
       });
       setFirebaseUser(user);
       setViewMode('landing');

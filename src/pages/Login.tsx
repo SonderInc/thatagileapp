@@ -81,6 +81,7 @@ const Login: React.FC = () => {
           name: profile.displayName,
           email: profile.email,
           roles: finalRoles,
+          appAdmin: profile.appAdmin ?? false,
         });
         if (tenantId != null && tenantId !== SEED_TENANT_ID) {
           const merged = mergeProfileForBackfill(profile, tenantId, finalRoles);
@@ -98,6 +99,7 @@ const Login: React.FC = () => {
           name: displayName || email.split('@')[0],
           email,
           roles: [],
+          appAdmin: false,
         });
       }
     } catch {
@@ -111,6 +113,7 @@ const Login: React.FC = () => {
         name: displayName || email.split('@')[0],
         email,
         roles: [],
+        appAdmin: false,
       });
     }
   };

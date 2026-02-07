@@ -148,6 +148,8 @@ export interface User {
   email: string;
   roles: Role[];
   avatar?: string;
+  /** When true, user is an app-level administrator (can see all instances). */
+  appAdmin?: boolean;
 }
 
 /** User profile in Firestore users collection (per-company roles in Phase 3). */
@@ -163,6 +165,8 @@ export interface UserProfile {
   adminCompanyIds?: string[];
   /** When true, user must change password on next login (e.g. after invite with default password). */
   mustChangePassword?: boolean;
+  /** When true, user is an app-level administrator (can see all instances on App Admin page). */
+  appAdmin?: boolean;
   employeeNumber?: string;
   phone?: string;
 }

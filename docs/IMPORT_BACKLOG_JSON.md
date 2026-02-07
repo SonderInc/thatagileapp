@@ -57,11 +57,12 @@ Import a backlog from a JSON file or pasted JSON. The importer validates the **s
 | `title` | Yes | Display title. |
 | `status` | No | Default `backlog`. Any valid `WorkItemStatus` (e.g. `funnel`, `backlog`, `to-do`, `in-progress`, `done`). |
 | `parentImportId` | No | `importId` of the parent item. Omit or `null` for root. In create-company/add-to-company, root must be `type: "company"`. In add-to-product, root must be `type: "epic"`. In add-to-epic, root must be `type: "feature"`. |
+| `description` | No | Item description. Can be at **top level** (`"description": "string"`) or in **`fields.description`**; both are accepted and persisted for all work item types. |
 | `fields` | No | Optional fields (see below). |
 
 ### Optional `fields` (by type)
 
-- **All:** `description`, `priority`, `assignee`, `tags`, `sprintId`, `color`
+- **All:** `description` (or use top-level `description` — see above), `priority`, `assignee`, `tags`, `sprintId`, `color`
 - **Epic / Feature:** `size` (`small`, `medium`, `large`, `xlarge`, `xxlarge`, `?`)
 - **User Story:** `storyPoints`, `acceptanceCriteria`
 - **Task / Bug:** `estimatedDays`, `actualHours`

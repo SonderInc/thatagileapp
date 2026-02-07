@@ -25,6 +25,7 @@ import ImportBacklogPage from './pages/ImportBacklogPage';
 import UserProfilePage from './pages/UserProfilePage';
 import NoCompanyPage from './pages/NoCompanyPage';
 import PlanningBoardPage from './pages/PlanningBoardPage';
+import AppAdminPage from './pages/AppAdminPage';
 import ChangePasswordRequired from './components/ChangePasswordRequired';
 import type { Role } from './types';
 import './App.css';
@@ -133,6 +134,7 @@ function App() {
               name: profile.displayName,
               email: profile.email,
               roles: [],
+              appAdmin: profile.appAdmin ?? false,
             });
             setMustChangePassword(profile.mustChangePassword === true);
             setViewMode('no-company');
@@ -170,6 +172,7 @@ function App() {
               name: profile.displayName,
               email: profile.email,
               roles: finalRoles as Role[],
+              appAdmin: profile.appAdmin ?? false,
             });
             setMustChangePassword(profile.mustChangePassword === true);
             if (useStore.getState().viewMode === 'no-company') {
@@ -202,6 +205,7 @@ function App() {
               name: (firebaseUser.displayName ?? firebaseUser.email?.split('@')[0]) ?? 'User',
               email: firebaseUser.email ?? '',
               roles: [],
+              appAdmin: false,
             });
             if (import.meta.env.DEV) {
               console.warn('[App] Seed fallback active (profile null)', { uid: firebaseUser.uid });
@@ -213,6 +217,7 @@ function App() {
               name: (firebaseUser.displayName ?? firebaseUser.email?.split('@')[0]) ?? 'User',
               email: firebaseUser.email ?? '',
               roles: [],
+              appAdmin: false,
             });
             setViewMode('no-company');
           }
@@ -233,6 +238,7 @@ function App() {
             name: (firebaseUser.displayName ?? firebaseUser.email?.split('@')[0]) ?? 'User',
             email: firebaseUser.email ?? '',
             roles: [],
+            appAdmin: false,
           });
           if (import.meta.env.DEV) {
             console.warn('[App] Seed fallback active (profile load failed)', { uid: firebaseUser.uid });
@@ -244,6 +250,7 @@ function App() {
             name: (firebaseUser.displayName ?? firebaseUser.email?.split('@')[0]) ?? 'User',
             email: firebaseUser.email ?? '',
             roles: [],
+            appAdmin: false,
           });
           setViewMode('account-load-failed');
         }
@@ -263,7 +270,7 @@ function App() {
         setSprints(mockSprints);
         setBoards(mockBoards);
         setUsers(mockUsers);
-        setCurrentUser(mockUsers[0]);
+        setCurrentUser({ ...mockUsers[0], appAdmin: false });
         if (import.meta.env.DEV) console.warn('[App] Seed fallback active (auth not configured)');
       } else {
         setTenantCompanies([]);
@@ -370,6 +377,7 @@ function App() {
                     name: profile.displayName,
                     email: profile.email,
                     roles,
+                    appAdmin: profile.appAdmin ?? false,
                   });
                   if (useStore.getState().viewMode === 'no-company') {
                     setViewMode('landing');
@@ -411,7 +419,7 @@ function App() {
           setSprints(mockSprints);
           setBoards(mockBoards);
           setUsers(mockUsers);
-          setCurrentUser(mockUsers[0]);
+          setCurrentUser({ ...mockUsers[0], appAdmin: false });
           if (import.meta.env.DEV) console.warn('[App] Seed fallback active (load tenant companies failed)', { uid });
         } else {
           setTenantCompanies([]);
@@ -466,6 +474,7 @@ function App() {
                     name: profile.displayName,
                     email: profile.email,
                     roles,
+                    appAdmin: profile.appAdmin ?? false,
                   });
                   if (useStore.getState().viewMode === 'no-company') {
                     setViewMode('landing');
@@ -576,6 +585,8 @@ function App() {
         return <ImportBacklogPage />;
       case 'user-profile':
         return <UserProfilePage />;
+      case 'app-admin':
+        return <AppAdminPage />;
       default:
         return <Landing />;
     }

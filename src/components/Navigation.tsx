@@ -13,6 +13,7 @@ const Navigation: React.FC = () => {
 
   const isAdmin = currentUser?.roles?.includes('admin') ?? false;
   const isHR = currentUser?.roles?.includes('hr') ?? false;
+  const isAppAdmin = currentUser?.appAdmin === true;
 
   useEffect(() => {
     if (currentTenantId) loadTeams(currentTenantId);
@@ -307,6 +308,24 @@ const Navigation: React.FC = () => {
             </div>
           )}
         </div>
+      )}
+      {isAppAdmin && (
+        <button
+          type="button"
+          onClick={() => setViewMode('app-admin')}
+          style={{
+            padding: '12px 16px',
+            border: 'none',
+            borderBottom: viewMode === 'app-admin' ? '3px solid #3b82f6' : '3px solid transparent',
+            backgroundColor: 'transparent',
+            color: viewMode === 'app-admin' ? '#3b82f6' : '#6b7280',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: viewMode === 'app-admin' ? '600' : '400',
+          }}
+        >
+          App Admin
+        </button>
       )}
       {firebaseUser && (
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '12px' }}>

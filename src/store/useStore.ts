@@ -49,7 +49,7 @@ interface AppState {
   selectedPlanningBoardId: string | null;
   /** When opening a feature from Planning Board, set so "Add user story" uses this team/sprint. */
   planningContext: { teamId: string; sprintId?: string } | null;
-  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing' | 'add-product' | 'add-company' | 'register-company' | 'invite-user' | 'licence' | 'company-profile' | 'settings' | 'import-backlog' | 'user-profile' | 'teams-list' | 'planning' | 'no-company' | 'account-load-failed';
+  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing' | 'add-product' | 'add-company' | 'register-company' | 'invite-user' | 'licence' | 'company-profile' | 'settings' | 'import-backlog' | 'user-profile' | 'teams-list' | 'planning' | 'app-admin' | 'no-company' | 'account-load-failed';
   
   // Actions
   setWorkItems: (items: WorkItem[]) => void;

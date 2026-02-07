@@ -106,3 +106,11 @@ The rules cover:
 ### Troubleshooting
 
 - **User Management: "Permission denied" or "Could not check seat limit"** — Deploy Firestore rules (see above). Ensure your user document in `users/<uid>` has `companyIds` and (if admin) `adminCompanyIds` containing your company id. Re-login so the app can backfill, or in Firebase Console → Firestore Database → Data → **users** → your document (uid), add fields **companyIds** (array with your company id) and **adminCompanyIds** (array with your company id), then reload the app.
+
+## App administrator
+
+**App administrators** can see all tenant companies (instances) on a dedicated **App Admin** page in the UI. This is separate from **company-level Admin** (User Management, Company profile, etc.), which is scoped to a single tenant.
+
+- **How to grant:** Set `appAdmin: true` on the user document in Firestore: **Firestore Database → users → &lt;uid&gt;** → add or edit field **appAdmin** (boolean) = **true**. There is no in-app UI to grant or revoke app admin; the first app admin is set manually in the Firebase Console (or via a script).
+- **What app admins see:** A nav entry **App Admin** and a page listing all instances (name, id, slug, created, trial end, seats, type) with an **Open** action to switch into that company.
+- **Security:** Firestore rules allow read access to the entire `companies` collection when the requesting user’s profile has `appAdmin == true`. Company create/update/delete remain restricted to company admins as before.

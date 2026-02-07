@@ -302,6 +302,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     companyIds: companyIds.length > 0 ? companyIds : undefined,
     adminCompanyIds: resolvedAdminCompanyIds.length > 0 ? resolvedAdminCompanyIds : undefined,
     mustChangePassword: data.mustChangePassword === true,
+    appAdmin: data.appAdmin === true,
     employeeNumber: typeof data.employeeNumber === 'string' ? data.employeeNumber : undefined,
     phone: typeof data.phone === 'string' ? data.phone : undefined,
   };
@@ -362,6 +363,7 @@ export async function setUserProfile(profile: UserProfile): Promise<void> {
     rteCompanyIds,
     ...(profile.companies && { companies: profile.companies }),
     ...(profile.mustChangePassword !== undefined && { mustChangePassword: profile.mustChangePassword }),
+    ...(profile.appAdmin !== undefined && { appAdmin: profile.appAdmin }),
     ...(profile.employeeNumber !== undefined && { employeeNumber: profile.employeeNumber }),
     ...(profile.phone !== undefined && { phone: profile.phone }),
   });

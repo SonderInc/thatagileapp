@@ -97,6 +97,7 @@ const RegisterCompanyPage: React.FC = () => {
         name: displayName,
         email,
         roles: ['admin'],
+        appAdmin: false,
       });
       setViewMode('landing');
       if (typeof window !== 'undefined') {

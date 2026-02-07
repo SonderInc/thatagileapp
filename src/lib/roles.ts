@@ -15,3 +15,11 @@ export function isAdminForCompany(
   const entry = profile.companies?.find((c) => c.companyId === companyId);
   return entry?.roles?.includes('admin') ?? false;
 }
+
+/**
+ * Canonical check: is this user an app-level administrator (can see all instances)?
+ * Use for gating the App Admin page and nav entry.
+ */
+export function isAppAdmin(profile: UserProfile | null | undefined): boolean {
+  return profile?.appAdmin === true;
+}
