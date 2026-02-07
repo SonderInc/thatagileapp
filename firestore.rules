@@ -42,10 +42,33 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)) != null && resource.data.get('companyId', null) != null && isPlanningEditor(resource.data.companyId);
     }
     match /boards/{boardId} {
-      allow read: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)) != null && resource.data.get('companyId', null) != null && resource.data.companyId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('companyIds', []);
-      allow create: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)) != null && request.resource.data.get('companyId', null) != null && request.resource.data.companyId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('adminCompanyIds', []) && request.resource.data.get('type', null) == 'planning' && request.resource.data.get('createdBy', null) == request.auth.uid && request.resource.data.get('name', null) is string;
-      allow update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)) != null && resource.data.get('companyId', null) != null && resource.data.companyId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('adminCompanyIds', []) && request.resource.data.get('companyId', null) == resource.data.get('companyId', null);
-      allow delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)) != null && resource.data.get('companyId', null) != null && resource.data.companyId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('adminCompanyIds', []);
+      function userDoc() { return /databases/$(database)/documents/users/$(request.auth.uid); }
+      function companyIds() { return get(userDoc()).data.get('companyIds', []); }
+      function adminCompanyIds() { return get(userDoc()).data.get('adminCompanyIds', []); }
+
+      allow read: if request.auth != null
+        && exists(userDoc())
+        && resource.data.get('companyId', null) is string
+        && resource.data.companyId in companyIds();
+
+      allow create: if request.auth != null
+        && exists(userDoc())
+        && request.resource.data.get('companyId', null) is string
+        && request.resource.data.companyId in adminCompanyIds()
+        && request.resource.data.get('type', null) == 'planning'
+        && request.resource.data.get('createdBy', null) == request.auth.uid
+        && request.resource.data.get('name', null) is string;
+
+      allow update: if request.auth != null
+        && exists(userDoc())
+        && resource.data.get('companyId', null) is string
+        && resource.data.companyId in adminCompanyIds()
+        && request.resource.data.companyId == resource.data.companyId;
+
+      allow delete: if request.auth != null
+        && exists(userDoc())
+        && resource.data.get('companyId', null) is string
+        && resource.data.companyId in adminCompanyIds();
     }
     match /planningPlacements/{placementId} {
       allow read: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)) != null && exists(/databases/$(database)/documents/planningBoards/$(resource.data.boardId)) && get(/databases/$(database)/documents/planningBoards/$(resource.data.boardId)).data.get('companyId', null) in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('companyIds', []);
