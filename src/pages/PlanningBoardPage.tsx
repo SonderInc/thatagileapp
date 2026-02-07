@@ -69,13 +69,13 @@ const PlanningBoardPage: React.FC = () => {
     if (!currentTenantId || !createName.trim()) return;
     setCreating(true);
     setCreateError(null);
+    const newBoard: PlanningBoardType = {
+      id: `planning-${Date.now()}`,
+      name: createName.trim(),
+      companyId: currentTenantId,
+      teamIds: createTeamIds,
+    };
     try {
-      const newBoard: PlanningBoardType = {
-        id: `planning-${Date.now()}`,
-        name: createName.trim(),
-        companyId: currentTenantId,
-        teamIds: createTeamIds,
-      };
       await addPlanningBoard(newBoard);
       setSelectedPlanningBoardId(newBoard.id);
       setShowCreateModal(false);
@@ -99,11 +99,20 @@ const PlanningBoardPage: React.FC = () => {
         } catch (syncErr) {
           console.warn('[PlanningBoardPage] Sync admin status failed:', syncErr);
         }
-        setCreateError(
-          syncSucceeded
-            ? "We've synced your admin status. Please try again."
-            : "We couldn't sync your admin status. Please refresh and try again."
-        );
+        if (syncSucceeded) {
+          try {
+            await addPlanningBoard(newBoard);
+            setSelectedPlanningBoardId(newBoard.id);
+            setShowCreateModal(false);
+            setCreateName('');
+            setCreateTeamIds([]);
+            setCreateError(null);
+          } catch (retryErr) {
+            setCreateError("We've synced your admin status. Please try again.");
+          }
+        } else {
+          setCreateError("We couldn't sync your admin status. Please refresh and try again.");
+        }
       } else {
         setCreateError(
           isPermissionError
