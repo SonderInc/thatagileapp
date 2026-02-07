@@ -38,6 +38,9 @@ const TerminologySettingsPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [addingCustomForKey, setAddingCustomForKey] = useState<GlossaryKey | null>(null);
+  const [addCustomInputValue, setAddCustomInputValue] = useState('');
+  const ADD_CUSTOM_SENTINEL = '__add__';
 
   const filteredTerms = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -197,7 +200,7 @@ const TerminologySettingsPage: React.FC = () => {
       </div>
 
       <p style={{ marginBottom: '8px', fontSize: '13px', color: '#6b7280' }}>
-        Custom label: type any text; suggestions are from framework packs.
+        Custom label: choose a suggestion or use Add to create your own.
       </p>
       <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
@@ -228,26 +231,72 @@ const TerminologySettingsPage: React.FC = () => {
                   </td>
                   <td style={{ padding: '10px 12px', color: '#6b7280' }}>{packLabel}</td>
                   <td style={{ padding: '10px 12px' }}>
-                    <input
-                      type="text"
-                      list={`choices-${term.key}`}
-                      value={customValue}
-                      onChange={(e) => handleOverrideChange(term.key, e.target.value)}
-                      placeholder="Custom…"
-                      style={{
-                        width: '100%',
-                        maxWidth: '200px',
-                        padding: '6px 10px',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                      }}
-                    />
-                    <datalist id={`choices-${term.key}`}>
-                      {choices.map((c) => (
-                        <option key={c} value={c} />
-                      ))}
-                    </datalist>
+                    {addingCustomForKey === term.key ? (
+                      <input
+                        type="text"
+                        value={addCustomInputValue}
+                        onChange={(e) => setAddCustomInputValue(e.target.value)}
+                        onBlur={() => {
+                          const v = addCustomInputValue.trim();
+                          if (v) handleOverrideChange(term.key, v);
+                          setAddingCustomForKey(null);
+                          setAddCustomInputValue('');
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') {
+                            setAddingCustomForKey(null);
+                            setAddCustomInputValue('');
+                          } else if (e.key === 'Enter') {
+                            const v = addCustomInputValue.trim();
+                            if (v) handleOverrideChange(term.key, v);
+                            setAddingCustomForKey(null);
+                            setAddCustomInputValue('');
+                          }
+                        }}
+                        placeholder="Type custom label…"
+                        autoFocus
+                        style={{
+                          width: '100%',
+                          maxWidth: '200px',
+                          padding: '6px 10px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                        }}
+                      />
+                    ) : (
+                      <select
+                        value={customValue}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (v === ADD_CUSTOM_SENTINEL) {
+                            setAddingCustomForKey(term.key);
+                            setAddCustomInputValue('');
+                          } else {
+                            handleOverrideChange(term.key, v);
+                          }
+                        }}
+                        style={{
+                          width: '100%',
+                          maxWidth: '200px',
+                          padding: '6px 10px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                        }}
+                      >
+                        <option value="">Use framework</option>
+                        {choices.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                        {customValue && !choices.includes(customValue) && (
+                          <option value={customValue}>{customValue}</option>
+                        )}
+                        <option value={ADD_CUSTOM_SENTINEL}>Add custom label…</option>
+                      </select>
+                    )}
                   </td>
                   <td style={{ padding: '10px 12px', fontWeight: '500', color: '#111827' }}>{effective}</td>
                 </tr>
