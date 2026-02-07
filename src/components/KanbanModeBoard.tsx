@@ -34,9 +34,9 @@ const KanbanModeBoard: React.FC<KanbanModeBoardProps> = ({
 
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
-    const columnId = result.destination.droppableId.split('::')[0];
+    const [columnId, laneId] = result.destination.droppableId.split('::');
     const newStatus = getStatusForKanbanColumn(columnId);
-    moveWorkItem(result.draggableId, newStatus, columnId);
+    moveWorkItem(result.draggableId, newStatus, columnId, laneId as KanbanLane);
   };
 
   const getItemsInCell = (laneId: string, columnId: string): WorkItem[] =>

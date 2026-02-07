@@ -56,7 +56,7 @@ interface AppState {
   addWorkItem: (item: WorkItem) => Promise<void>;
   updateWorkItem: (id: string, updates: Partial<WorkItem>) => void;
   deleteWorkItem: (id: string) => void;
-  moveWorkItem: (itemId: string, newStatus: WorkItem['status'], newColumnId?: string) => void;
+  moveWorkItem: (itemId: string, newStatus: WorkItem['status'], newColumnId?: string, newLane?: KanbanLane) => void;
   
   setSprints: (sprints: Sprint[]) => void;
   addSprint: (sprint: Sprint) => void;
@@ -241,12 +241,14 @@ export const useStore = create<AppState>((set, get) => ({
     };
   }),
   
-  moveWorkItem: (itemId, newStatus, _newColumnId) => set((state) => {
+  moveWorkItem: (itemId, newStatus, _newColumnId, newLane) => set((state) => {
     const updatedAt = new Date();
-    getDataStore().updateWorkItem(itemId, { status: newStatus, updatedAt }).catch(() => {});
+    const updates: Partial<WorkItem> = { status: newStatus, updatedAt };
+    if (newLane !== undefined) updates.lane = newLane;
+    getDataStore().updateWorkItem(itemId, updates).catch(() => {});
     return {
       workItems: state.workItems.map((item) =>
-        item.id === itemId ? { ...item, status: newStatus, updatedAt } : item
+        item.id === itemId ? { ...item, ...updates } : item
       ),
     };
   }),
