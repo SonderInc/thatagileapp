@@ -18,6 +18,10 @@ export const ALL_WORK_ITEM_TYPES: WorkItemType[] = [
   'user-story',
   'task',
   'bug',
+  'initiative',
+  'capability',
+  'strategic-theme',
+  'solution',
 ];
 
 const ALL_KNOWN_TYPES = ALL_WORK_ITEM_TYPES;
@@ -49,22 +53,30 @@ export function ensureValidHierarchy(
 
 const CHILD_TYPES: Record<WorkItemType, WorkItemType[]> = {
   company: ['product'],
-  product: ['epic'],
-  epic: ['feature'],
+  product: ['epic', 'feature'],
+  epic: ['feature', 'user-story'],
   feature: ['user-story'],
   'user-story': ['task', 'bug'],
   task: [],
   bug: [],
+  initiative: ['epic', 'feature'],
+  capability: ['feature'],
+  'strategic-theme': ['initiative'],
+  solution: ['capability'],
 };
 
 const PARENT_TYPES: Record<WorkItemType, WorkItemType[]> = {
   company: [],
   product: ['company'],
   epic: ['product'],
-  feature: ['epic'],
-  'user-story': ['feature'],
+  feature: ['epic', 'initiative', 'capability'],
+  'user-story': ['feature', 'epic'],
   task: ['user-story'],
   bug: ['user-story'],
+  initiative: ['product', 'strategic-theme'],
+  capability: ['product', 'solution'],
+  'strategic-theme': ['product'],
+  solution: ['product'],
 };
 
 export function getAllowedChildTypes(parentType: WorkItemType): WorkItemType[] {
@@ -87,6 +99,10 @@ const TYPE_LABELS: Record<WorkItemType, string> = {
   'user-story': 'User Story',
   task: 'Task',
   bug: 'Bug',
+  initiative: 'Initiative',
+  capability: 'Capability',
+  'strategic-theme': 'Strategic Theme',
+  solution: 'Solution',
 };
 
 export function getTypeLabel(type: WorkItemType): string {

@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "enabledWorkItemTypes": ["company", "product", "feature", "user-story", "task", "bug"],
+  "enabledWorkItemTypes": ["company", "product", "strategic-theme", "initiative", "epic", "feature", "user-story", "task", "bug"],
   "workItemLabels": {
     "company": "Company",
     "product": "Product",
@@ -16,16 +16,16 @@
   },
   "hierarchy": {
     "company": ["product"],
-    "product": ["feature"],
-    "epic": [],
+    "product": ["strategic-theme", "initiative", "epic", "feature"],
+    "strategic-theme": ["initiative"],
+    "initiative": ["epic", "feature"],
+    "epic": ["feature", "user-story"],
     "feature": ["user-story"],
     "user-story": ["task", "bug"],
     "task": [],
     "bug": [],
-    "initiative": [],
     "capability": [],
-    "strategic-theme": [],
     "solution": []
   },
-  "workItemTypeOrder": ["company", "product", "feature", "user-story", "task", "bug"]
+  "workItemTypeOrder": ["company", "product", "strategic-theme", "initiative", "epic", "feature", "user-story", "task", "bug"]
 }

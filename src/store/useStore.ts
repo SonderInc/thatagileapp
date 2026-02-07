@@ -21,6 +21,10 @@ const TYPE_ORDER: Record<WorkItemType, number> = {
   'user-story': 4,
   task: 5,
   bug: 6,
+  initiative: 7,
+  capability: 8,
+  'strategic-theme': 9,
+  solution: 10,
 };
 
 interface AppState {

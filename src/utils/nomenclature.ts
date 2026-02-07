@@ -9,6 +9,10 @@ const SOFTWARE_LABELS: Record<WorkItemType, string> = {
   'user-story': 'User Story',
   task: 'Task',
   bug: 'Bug',
+  initiative: 'Initiative',
+  capability: 'Capability',
+  'strategic-theme': 'Strategic Theme',
+  solution: 'Solution',
 };
 
 const TRAINING_LABELS: Record<WorkItemType, string> = {

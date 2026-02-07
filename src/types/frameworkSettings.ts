@@ -21,6 +21,10 @@ const CANONICAL_TYPES: WorkItemType[] = [
   'user-story',
   'task',
   'bug',
+  'initiative',
+  'capability',
+  'strategic-theme',
+  'solution',
 ];
 
 const DEFAULT_LABELS: Record<WorkItemType, string> = {
@@ -31,6 +35,10 @@ const DEFAULT_LABELS: Record<WorkItemType, string> = {
   'user-story': 'User Story',
   task: 'Task',
   bug: 'Bug',
+  initiative: 'Initiative',
+  capability: 'Capability',
+  'strategic-theme': 'Strategic Theme',
+  solution: 'Solution',
 };
 
 const DEFAULT_HIERARCHY: Record<WorkItemType, WorkItemType[]> = {
@@ -41,11 +49,26 @@ const DEFAULT_HIERARCHY: Record<WorkItemType, WorkItemType[]> = {
   'user-story': ['task', 'bug'],
   task: [],
   bug: [],
+  initiative: ['epic', 'feature'],
+  capability: ['feature'],
+  'strategic-theme': ['initiative'],
+  solution: ['capability'],
 };
+
+/** Default enabled types (original set; SAFe extras are hierarchy-only until a preset enables them). */
+const DEFAULT_ENABLED_TYPES: WorkItemType[] = [
+  'company',
+  'product',
+  'epic',
+  'feature',
+  'user-story',
+  'task',
+  'bug',
+];
 
 export const DEFAULT_FRAMEWORK_SETTINGS: FrameworkSettings = {
   version: '1.0',
-  enabledWorkItemTypes: [...CANONICAL_TYPES],
+  enabledWorkItemTypes: [...DEFAULT_ENABLED_TYPES],
   workItemLabels: { ...DEFAULT_LABELS },
   hierarchy: { ...DEFAULT_HIERARCHY },
   workItemTypeOrder: [...CANONICAL_TYPES],

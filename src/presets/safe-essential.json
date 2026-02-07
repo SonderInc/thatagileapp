@@ -3,10 +3,10 @@
   "enabledWorkItemTypes": ["company", "product", "epic", "feature", "user-story", "task", "bug"],
   "workItemLabels": {
     "company": "Company",
-    "product": "Solution",
+    "product": "Product",
     "epic": "Epic",
     "feature": "Feature",
-    "user-story": "User Story",
+    "user-story": "Story",
     "task": "Task",
     "bug": "Bug",
     "initiative": "Initiative",
@@ -17,7 +17,7 @@
   "hierarchy": {
     "company": ["product"],
     "product": ["epic", "feature"],
-    "epic": ["feature"],
+    "epic": ["feature", "user-story"],
     "feature": ["user-story"],
     "user-story": ["task", "bug"],
     "task": [],

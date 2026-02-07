@@ -8,7 +8,11 @@
     "feature": "Project",
     "user-story": "Story",
     "task": "Task",
-    "bug": "Bug"
+    "bug": "Bug",
+    "initiative": "Initiative",
+    "capability": "Capability",
+    "strategic-theme": "Strategic Theme",
+    "solution": "Solution"
   },
   "hierarchy": {
     "company": ["product"],
@@ -17,7 +21,11 @@
     "feature": ["user-story"],
     "user-story": ["task", "bug"],
     "task": [],
-    "bug": []
+    "bug": [],
+    "initiative": [],
+    "capability": [],
+    "strategic-theme": [],
+    "solution": []
   },
   "workItemTypeOrder": ["company", "product", "epic", "feature", "user-story", "task", "bug"]
 }

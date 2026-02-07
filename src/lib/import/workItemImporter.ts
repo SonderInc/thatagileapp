@@ -17,7 +17,19 @@ function isValidStatus(s: string): s is WorkItemStatus {
   return VALID_STATUSES.includes(s as WorkItemStatus);
 }
 
-const VALID_TYPES: WorkItemType[] = ['company', 'product', 'epic', 'feature', 'user-story', 'task', 'bug'];
+const VALID_TYPES: WorkItemType[] = [
+  'company',
+  'product',
+  'epic',
+  'feature',
+  'user-story',
+  'task',
+  'bug',
+  'initiative',
+  'capability',
+  'strategic-theme',
+  'solution',
+];
 function isValidType(s: string): s is WorkItemType {
   return VALID_TYPES.includes(s as WorkItemType);
 }
@@ -102,6 +114,10 @@ export function validateImportPayload(payload: unknown): ValidationResult {
     'user-story': 0,
     task: 0,
     bug: 0,
+    initiative: 0,
+    capability: 0,
+    'strategic-theme': 0,
+    solution: 0,
   };
   const previewTitles: string[] = [];
 

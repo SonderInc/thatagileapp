@@ -1,5 +1,16 @@
 // Work Item Types
-export type WorkItemType = 'company' | 'product' | 'epic' | 'feature' | 'user-story' | 'task' | 'bug';
+export type WorkItemType =
+  | 'company'
+  | 'product'
+  | 'epic'
+  | 'feature'
+  | 'user-story'
+  | 'task'
+  | 'bug'
+  | 'initiative'
+  | 'capability'
+  | 'strategic-theme'
+  | 'solution';
 
 /** Per-product hierarchy: which work item types are enabled and their display order. */
 export interface ProductHierarchyConfig {

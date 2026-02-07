@@ -1,0 +1,31 @@
+{
+  "version": "1.0",
+  "enabledWorkItemTypes": ["company", "product", "strategic-theme", "initiative", "solution", "capability", "epic", "feature", "user-story", "task", "bug"],
+  "workItemLabels": {
+    "company": "Company",
+    "product": "Product",
+    "epic": "Epic",
+    "feature": "Feature",
+    "user-story": "Story",
+    "task": "Task",
+    "bug": "Bug",
+    "initiative": "Initiative",
+    "capability": "Capability",
+    "strategic-theme": "Strategic Theme",
+    "solution": "Solution"
+  },
+  "hierarchy": {
+    "company": ["product"],
+    "product": ["strategic-theme", "initiative", "solution", "capability", "epic", "feature"],
+    "strategic-theme": ["initiative"],
+    "initiative": ["epic", "feature"],
+    "solution": ["capability"],
+    "capability": ["feature"],
+    "epic": ["feature", "user-story"],
+    "feature": ["user-story"],
+    "user-story": ["task", "bug"],
+    "task": [],
+    "bug": []
+  },
+  "workItemTypeOrder": ["company", "product", "strategic-theme", "initiative", "solution", "capability", "epic", "feature", "user-story", "task", "bug"]
+}

@@ -5,7 +5,19 @@ import { getSizeLabel, formatStoryPoints, formatDays } from '../utils/estimates'
 import { WorkItem, WorkItemType } from '../types';
 import { Filter } from 'lucide-react';
 
-const ALL_TYPES: WorkItemType[] = ['company', 'product', 'epic', 'feature', 'user-story', 'task', 'bug'];
+const ALL_TYPES: WorkItemType[] = [
+  'company',
+  'product',
+  'epic',
+  'feature',
+  'user-story',
+  'task',
+  'bug',
+  'initiative',
+  'capability',
+  'strategic-theme',
+  'solution',
+];
 
 export interface ListViewFilters {
   types: WorkItemType[];
