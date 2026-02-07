@@ -63,7 +63,6 @@ const PlanningBoardPage: React.FC = () => {
         await loadPlanningBoards(currentTenantId);
       } catch (err: unknown) {
         if (getCancelled?.()) return;
-        console.error('[PLANNING BOARD PERMS]', err);
         const code =
           err && typeof err === 'object' && 'code' in err
             ? String((err as { code: string }).code)
@@ -73,44 +72,16 @@ const PlanningBoardPage: React.FC = () => {
             ? String((err as { message: string }).message)
             : err instanceof Error
               ? err.message
-              : 'You don\'t have access to this company';
-        const isServerError =
-          code === 'functions/internal' ||
-          rawMessage === 'internal' ||
-          rawMessage.includes('Server error while checking access');
-        if (isServerError) {
-          try {
-            await loadTeams(currentTenantId);
-            await loadPlanningBoards(currentTenantId);
-          } catch (loadErr: unknown) {
-            if (getCancelled?.()) return;
-            const loadCode =
-              loadErr && typeof loadErr === 'object' && 'code' in loadErr
-                ? String((loadErr as { code: string }).code)
-                : undefined;
-            const loadMessage =
-              loadErr && typeof loadErr === 'object' && 'message' in loadErr
-                ? String((loadErr as { message: string }).message)
-                : loadErr instanceof Error
-                  ? loadErr.message
-                  : 'Server error while loading. Please try again or contact support.';
-            setProvisionError(
-              loadCode === 'PERMISSION_DENIED'
-                ? 'You don\'t have access to this company'
-                : loadMessage === 'internal' || loadCode === 'functions/internal'
-                  ? 'Server error while loading. Please try again or contact support.'
-                  : loadMessage
-            );
-          }
-        } else {
-          const message =
-            code === 'PERMISSION_DENIED'
-              ? 'You don\'t have access to this company'
-              : rawMessage === 'internal' || code === 'functions/internal'
-                ? 'Server error while loading. Please try again or contact support.'
-                : rawMessage;
-          setProvisionError(message);
-        }
+              : 'Access not provisioned.';
+        const message =
+          code === 'PERMISSION_DENIED'
+            ? 'Access not provisioned. You don\'t have access to this company.'
+            : rawMessage === 'internal' || code === 'functions/internal'
+              ? 'Access not provisioned. Please try again or contact support.'
+              : rawMessage.startsWith('Access not provisioned')
+                ? rawMessage
+                : `Access not provisioned. ${rawMessage}`;
+        setProvisionError(message);
       } finally {
         if (!getCancelled?.()) setIsProvisioning(false);
       }

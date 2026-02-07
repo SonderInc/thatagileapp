@@ -69,12 +69,15 @@ export async function ensureTenantAccess(
         : err instanceof Error
           ? err.message
           : "Failed to grant tenant access";
+    console.error("[ensureTenantAccess] grantTenantAccess failed", { code, message: rawMessage });
     const message =
       code === "functions/permission-denied"
-        ? "You don't have access to this company"
+        ? "Access not provisioned. You don't have access to this company."
         : code === "functions/internal" || rawMessage === "internal"
-          ? "Server error while checking access. Please try again or contact support."
-          : rawMessage;
+          ? "Access not provisioned. Please try again or contact support."
+          : rawMessage.startsWith("Access not provisioned")
+            ? rawMessage
+            : `Access not provisioned. ${rawMessage}`;
     throw {
       code: code === "functions/permission-denied" ? "PERMISSION_DENIED" : code,
       message,
