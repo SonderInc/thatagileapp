@@ -518,17 +518,16 @@ function App() {
 
   useEffect(() => {
     if (!currentTenantId || !getAuth().isConfigured()) return;
+    if (!firebaseUser || !currentUser) return;
     const run = async () => {
-      if (firebaseUser && currentUser) {
-        try {
-          const profile = await getDataStore().getUserProfile(firebaseUser.uid);
-          if (profile) {
-            const merged = mergeProfileForBackfill(profile, currentTenantId, currentUser.roles ?? []);
-            await getDataStore().setUserProfile(merged);
-          }
-        } catch (syncErr) {
-          console.warn('[App] Planning board profile sync failed:', syncErr);
+      try {
+        const profile = await getDataStore().getUserProfile(firebaseUser.uid);
+        if (profile) {
+          const merged = mergeProfileForBackfill(profile, currentTenantId, currentUser.roles ?? []);
+          await getDataStore().setUserProfile(merged);
         }
+      } catch (syncErr) {
+        console.warn('[App] Planning board profile sync failed:', syncErr);
       }
       loadPlanningBoards(currentTenantId).catch((err) =>
         console.error('[App] Load planning boards failed:', err?.message || err)
