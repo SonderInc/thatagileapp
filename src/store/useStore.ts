@@ -406,9 +406,20 @@ export const useStore = create<AppState>((set, get) => ({
     set({ boardItems: items });
   },
   moveBoardItem: async (boardId, itemId, placement) => {
-    await getDataStore().updateBoardItem(boardId, itemId, placement);
-    const items = await getDataStore().listBoardItems(boardId);
-    set({ boardItems: items });
+    set((state) => ({
+      boardItems: state.boardItems.map((i) =>
+        i.id === itemId ? { ...i, laneId: placement.laneId, columnId: placement.columnId } : i
+      ),
+    }));
+    try {
+      await getDataStore().updateBoardItem(boardId, itemId, placement);
+      const items = await getDataStore().listBoardItems(boardId);
+      set({ boardItems: items });
+    } catch (err) {
+      const items = await getDataStore().listBoardItems(boardId);
+      set({ boardItems: items });
+      throw err;
+    }
   },
   removeFeatureFromPlanningBoard: async (boardId, itemId) => {
     await getDataStore().deleteBoardItem(boardId, itemId);

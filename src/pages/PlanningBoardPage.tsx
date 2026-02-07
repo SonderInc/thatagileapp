@@ -79,6 +79,7 @@ const PlanningBoardPage: React.FC = () => {
   const [addFeatureCell, setAddFeatureCell] = useState<{ teamId: string; laneId: string; columnId: string } | null>(null);
   const [showCardModal, setShowCardModal] = useState(false);
   const [addStoryContext, setAddStoryContext] = useState<{ parentId: string; defaultTeamId: string; defaultSprintId?: string } | null>(null);
+  const [moveError, setMoveError] = useState<string | null>(null);
 
   const board = selectedPlanningBoardId ? planningBoards.find((b) => b.id === selectedPlanningBoardId) : null;
 
@@ -229,13 +230,19 @@ const PlanningBoardPage: React.FC = () => {
     boardItems.filter((i) => i.laneId === teamId && i.columnId === String(iterationColumn));
 
   const handleDragEnd = useCallback(
-    (result: DropResult) => {
+    async (result: DropResult) => {
       if (!board || !result.destination) return;
       const { draggableId, source, destination } = result;
       if (source.droppableId === destination.droppableId) return;
       const parsed = parseCellId(destination.droppableId);
       if (!parsed) return;
-      moveBoardItem(board.id, draggableId, { laneId: parsed.laneId, columnId: parsed.columnId });
+      setMoveError(null);
+      try {
+        await moveBoardItem(board.id, draggableId, { laneId: parsed.laneId, columnId: parsed.columnId });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Could not move feature.';
+        setMoveError(message);
+      }
     },
     [board, moveBoardItem]
   );
@@ -640,6 +647,40 @@ const PlanningBoardPage: React.FC = () => {
         </button>
         <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: '#111827' }}>{board.name}</h1>
       </div>
+
+      {moveError && (
+        <div
+          style={{
+            marginBottom: 16,
+            padding: '12px 16px',
+            backgroundColor: '#fef2f2',
+            color: '#b91c1c',
+            borderRadius: 6,
+            fontSize: 14,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          <span style={{ flex: 1 }}>{moveError}</span>
+          <button
+            type="button"
+            onClick={() => setMoveError(null)}
+            style={{
+              padding: '6px 12px',
+              backgroundColor: '#b91c1c',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 6,
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: 8, backgroundColor: '#fff' }}>
         <DragDropContext onDragEnd={handleDragEnd}>
