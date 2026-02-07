@@ -119,8 +119,10 @@ const PlanningBoardPage: React.FC = () => {
       const msg = err instanceof Error ? err.message : String(err);
       const isPermissionError = /permission|forbidden|denied/i.test(msg);
       if (isPermissionError && firebaseUser && currentTenantId) {
+        let accessGranted = false;
         try {
-          await ensureTenantAccess(currentTenantId);
+          await ensureTenantAccess(currentTenantId, canEdit ? { role: 'admin' } : undefined);
+          accessGranted = true;
           await addPlanningBoard(newBoard);
           setSelectedPlanningBoardId(newBoard.id);
           setShowCreateModal(false);
@@ -130,7 +132,9 @@ const PlanningBoardPage: React.FC = () => {
         } catch (syncErr) {
           console.warn('[PlanningBoardPage] ensureTenantAccess or retry failed:', syncErr);
           setCreateError(
-            'You don\'t have access to this company or could not create the board. Try the Retry button on the page.'
+            accessGranted
+              ? "You don't have permission to create boards for this company. You need admin or RTE access."
+              : "You don't have access to this company."
           );
         }
       } else {

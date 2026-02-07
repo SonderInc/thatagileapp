@@ -18,9 +18,14 @@ export interface TenantMembershipError {
  * selection and before loading planning boards. Idempotent; safe to call when
  * user already has access.
  *
+ * @param options.role - When 'admin', the callable also adds tenantId to adminCompanyIds (required for creating planning boards).
+ *
  * @throws {TenantMembershipError} If Firebase not configured, or server returns permission-denied / other error.
  */
-export async function ensureTenantAccess(tenantId: string): Promise<void> {
+export async function ensureTenantAccess(
+  tenantId: string,
+  options?: { role?: "member" | "admin" }
+): Promise<void> {
   if (!tenantId?.trim()) {
     throw {
       code: "INVALID_ARGUMENT",
@@ -49,8 +54,10 @@ export async function ensureTenantAccess(tenantId: string): Promise<void> {
     { ok: boolean }
   >(functions, "grantTenantAccess");
 
+  const role = options?.role === "admin" ? "admin" : undefined;
+
   try {
-    await grantTenantAccessFn({ tenantId: tenantId.trim() });
+    await grantTenantAccessFn({ tenantId: tenantId.trim(), ...(role && { role }) });
   } catch (err: unknown) {
     const code =
       err && typeof err === "object" && "code" in err
