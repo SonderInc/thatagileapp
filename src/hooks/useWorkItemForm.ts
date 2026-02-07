@@ -116,11 +116,12 @@ export function useWorkItemForm({
       onClose();
       return;
     }
+    const resolvedType = (formData.type && allowedTypes.includes(formData.type) ? formData.type : allowedTypes[0]) ?? 'user-story';
     const newItem: WorkItem = {
       id: `item-${Date.now()}`,
       title: formData.title || '',
       description: formData.description,
-      type: formData.type || 'user-story',
+      type: resolvedType,
       status: isProduct ? 'backlog' : (formData.status || 'backlog'),
       priority: isProduct ? undefined : (formData.priority || 'medium'),
       assignee: formData.assignee,
@@ -131,14 +132,14 @@ export function useWorkItemForm({
       estimatedDays: formData.estimatedDays,
       estimatedHours: formData.estimatedHours,
       parentId: formData.parentId,
-      lane: (formData.type === 'task' || formData.type === 'bug') ? (formData.lane ?? 'standard') : undefined,
+      lane: (resolvedType === 'task' || resolvedType === 'bug') ? (formData.lane ?? 'standard') : undefined,
       createdAt: new Date(),
       updatedAt: new Date(),
       color: formData.color,
       companyId: currentTenantId ?? undefined,
       teamId: formData.teamId,
       sprintId: formData.sprintId,
-      teamIds: formData.type === 'feature' ? (formData.teamIds ?? []) : undefined,
+      teamIds: resolvedType === 'feature' ? (formData.teamIds ?? []) : undefined,
       ...(isFeature && {
         wsjfBusinessValue: formData.wsjfBusinessValue ?? null,
         wsjfTimeCriticality: formData.wsjfTimeCriticality ?? null,

@@ -4,7 +4,7 @@ import TeamKanbanBoard from '../components/TeamKanbanBoard';
 import KanbanModeBoard from '../components/KanbanModeBoard';
 import WorkItemModal from '../components/WorkItemModal';
 import SprintBurndownModal from '../components/SprintBurndownModal';
-import { TEAM_BOARD_COLUMNS, KANBAN_BOARD_COLUMNS } from '../utils/boardConfig';
+import { TEAM_BOARD_COLUMNS, KANBAN_BOARD_COLUMNS, getStatusForKanbanColumn } from '../utils/boardConfig';
 import { Settings, TrendingDown, ArrowLeft } from 'lucide-react';
 import Button from '../components/Button';
 
@@ -244,21 +244,23 @@ const TeamBoard: React.FC = () => {
           itemId={selectedWorkItem}
           onClose={handleCloseModal}
           type={
-            teamBoardMode === 'kanban' && modalColumnId === 'backlog'
+            teamBoardMode === 'kanban'
               ? 'task'
               : modalColumnId === 'backlog'
                 ? 'user-story'
                 : undefined
           }
           allowedTypes={
-            teamBoardMode === 'kanban' && modalColumnId === 'backlog'
+            teamBoardMode === 'kanban'
               ? ['task']
               : modalColumnId === 'backlog'
                 ? ['user-story', 'task', 'bug']
                 : undefined
           }
           defaultStatus={
-            teamBoardMode === 'kanban' && modalColumnId === 'backlog' ? 'backlog' : undefined
+            teamBoardMode === 'kanban' && modalColumnId
+              ? getStatusForKanbanColumn(modalColumnId)
+              : undefined
           }
           showLaneField={teamBoardMode === 'kanban'}
         />
