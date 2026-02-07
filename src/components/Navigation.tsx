@@ -1,13 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { getAuth } from '../lib/adapters';
 import { useStore } from '../store/useStore';
-import { LayoutDashboard, Layers, Package, List, ListOrdered, Home, LogOut, Shield, ClipboardList, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, Layers, Package, List, ListOrdered, Home, LogOut, Shield, ClipboardList, ChevronDown, Users } from 'lucide-react';
+
+type BoardsModalType = 'planning' | 'epic' | 'feature' | 'team';
 
 const Navigation: React.FC = () => {
-  const { viewMode, setViewMode, setSelectedProductId, setSelectedTeamId, selectedTeamId, teams, loadTeams, currentTenantId, tenantCompanies, firebaseUser, setFirebaseUser, setCurrentUser, setCurrentTenantId, currentUser, getTypeLabel, canAccessTeamBoardSettings } = useStore();
+  const { viewMode, setViewMode, setSelectedProductId, setSelectedTeamId, selectedTeamId, teams, loadTeams, currentTenantId, tenantCompanies, firebaseUser, setFirebaseUser, setCurrentUser, setCurrentTenantId, currentUser, getTypeLabel, canAccessTeamBoardSettings, planningBoards, loadPlanningBoards, setSelectedPlanningBoardId } = useStore();
   const currentCompany = tenantCompanies.find((c) => c.id === currentTenantId) ?? null;
   const [adminMenuOpen, setAdminMenuOpen] = useState(false);
   const [boardsMenuOpen, setBoardsMenuOpen] = useState(false);
+  const [boardsModalType, setBoardsModalType] = useState<BoardsModalType | null>(null);
   const adminMenuRef = useRef<HTMLDivElement>(null);
   const boardsMenuRef = useRef<HTMLDivElement>(null);
 
@@ -18,6 +21,10 @@ const Navigation: React.FC = () => {
   useEffect(() => {
     if (currentTenantId) loadTeams(currentTenantId);
   }, [currentTenantId, loadTeams]);
+
+  useEffect(() => {
+    if (boardsModalType === 'planning' && currentTenantId) loadPlanningBoards(currentTenantId);
+  }, [boardsModalType, currentTenantId, loadPlanningBoards]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -47,10 +54,11 @@ const Navigation: React.FC = () => {
     { id: 'list', label: 'Work Items', icon: ListOrdered },
   ];
 
-  const boardItems = [
-    { id: 'epic', label: `${getTypeLabel('epic')} Board`, icon: Layers },
-    { id: 'feature', label: `${getTypeLabel('feature')} Board`, icon: Package },
-    { id: 'planning', label: 'Planning Board', icon: ClipboardList },
+  const boardsMenuItems: { type: BoardsModalType; label: string; icon: typeof ClipboardList }[] = [
+    { type: 'planning', label: 'Planning Boards', icon: ClipboardList },
+    { type: 'epic', label: 'Epic Boards', icon: Layers },
+    { type: 'feature', label: 'Feature Boards', icon: Package },
+    { type: 'team', label: 'Team Boards', icon: Users },
   ];
 
   const isBoardView = viewMode === 'epic' || viewMode === 'feature' || viewMode === 'planning' || viewMode === 'team' || viewMode === 'teams-list';
@@ -61,20 +69,8 @@ const Navigation: React.FC = () => {
     if (id === 'backlog') setSelectedProductId(null);
   };
 
-  const handleBoardItem = (id: string) => {
-    setViewMode(id as 'epic' | 'feature' | 'planning');
-    setBoardsMenuOpen(false);
-  };
-
-  const handleTeamBoardTeam = (teamId: string) => {
-    setSelectedTeamId(teamId);
-    setViewMode('team');
-    setBoardsMenuOpen(false);
-  };
-
-  const handleManageTeams = () => {
-    setSelectedTeamId(null);
-    setViewMode('teams-list');
+  const openBoardsModal = (type: BoardsModalType) => {
+    setBoardsModalType(type);
     setBoardsMenuOpen(false);
   };
 
@@ -212,13 +208,13 @@ const Navigation: React.FC = () => {
               padding: '4px 0',
             }}
           >
-            {boardItems.map((item) => {
+            {boardsMenuItems.map((item) => {
               const Icon = item.icon;
               return (
                 <button
-                  key={item.id}
+                  key={item.type}
                   type="button"
-                  onClick={() => handleBoardItem(item.id)}
+                  onClick={() => openBoardsModal(item.type)}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -227,7 +223,7 @@ const Navigation: React.FC = () => {
                     padding: '10px 16px',
                     textAlign: 'left',
                     border: 'none',
-                    backgroundColor: viewMode === item.id ? '#eff6ff' : 'transparent',
+                    backgroundColor: 'transparent',
                     color: '#374151',
                     cursor: 'pointer',
                     fontSize: '14px',
@@ -238,54 +234,176 @@ const Navigation: React.FC = () => {
                 </button>
               );
             })}
-            <div style={{ borderTop: '1px solid #e5e7eb', margin: '4px 0' }} />
-            <div style={{ padding: '6px 16px 4px', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>
-              Team Board
-            </div>
-            {teams.length === 0 ? (
-              <div style={{ padding: '10px 16px', fontSize: '14px', color: '#6b7280' }}>
-                No teams yet
-              </div>
-            ) : (
-              teams.map((team) => (
-                <button
-                  key={team.id}
-                  type="button"
-                  onClick={() => handleTeamBoardTeam(team.id)}
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    padding: '10px 16px',
-                    textAlign: 'left',
-                    border: 'none',
-                    backgroundColor: viewMode === 'team' && team.id === selectedTeamId ? '#eff6ff' : 'transparent',
-                    color: '#374151',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                  }}
-                >
-                  {team.name}
-                </button>
-              ))
-            )}
-            <button
-              type="button"
-              onClick={handleManageTeams}
+          </div>
+        )}
+
+        {boardsModalType !== null && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(0,0,0,0.4)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1100,
+            }}
+            onClick={() => setBoardsModalType(null)}
+          >
+            <div
               style={{
-                display: 'block',
-                width: '100%',
-                padding: '10px 16px',
-                textAlign: 'left',
-                border: 'none',
-                borderTop: '1px solid #e5e7eb',
-                backgroundColor: viewMode === 'teams-list' ? '#eff6ff' : 'transparent',
-                color: '#374151',
-                cursor: 'pointer',
-                fontSize: '14px',
+                backgroundColor: '#fff',
+                borderRadius: '8px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                minWidth: '320px',
+                maxWidth: '90vw',
+                maxHeight: '80vh',
+                overflow: 'auto',
+                padding: '24px',
               }}
+              onClick={(e) => e.stopPropagation()}
             >
-              Manage teams
-            </button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+                  {boardsModalType === 'planning' && 'Planning Boards'}
+                  {boardsModalType === 'epic' && 'Epic Boards'}
+                  {boardsModalType === 'feature' && 'Feature Boards'}
+                  {boardsModalType === 'team' && 'Team Boards'}
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setBoardsModalType(null)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#6b7280', padding: '0 4px' }}
+                  aria-label="Close"
+                >
+                  ×
+                </button>
+              </div>
+
+              {boardsModalType === 'planning' && (
+                <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                  {planningBoards.length === 0 ? (
+                    <li style={{ padding: '12px 0', color: '#6b7280', fontSize: '14px' }}>No planning boards yet.</li>
+                  ) : (
+                    planningBoards.map((b) => (
+                      <li
+                        key={b.id}
+                        onClick={() => {
+                          setSelectedPlanningBoardId(b.id);
+                          setViewMode('planning');
+                          setBoardsModalType(null);
+                        }}
+                        style={{
+                          padding: '12px 16px',
+                          marginBottom: '4px',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          backgroundColor: selectedPlanningBoardId === b.id ? '#eff6ff' : '#fff',
+                        }}
+                      >
+                        <span style={{ fontWeight: '600', color: '#111827' }}>{b.name}</span>
+                        <span style={{ marginLeft: '8px', fontSize: '12px', color: '#6b7280' }}>{b.teamIds.length} teams</span>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              )}
+
+              {boardsModalType === 'epic' && (
+                <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                  <li
+                    onClick={() => {
+                      setViewMode('epic');
+                      setBoardsModalType(null);
+                    }}
+                    style={{
+                      padding: '12px 16px',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      backgroundColor: viewMode === 'epic' ? '#eff6ff' : '#fff',
+                    }}
+                  >
+                    {getTypeLabel('epic')} Board
+                  </li>
+                </ul>
+              )}
+
+              {boardsModalType === 'feature' && (
+                <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                  <li
+                    onClick={() => {
+                      setViewMode('feature');
+                      setBoardsModalType(null);
+                    }}
+                    style={{
+                      padding: '12px 16px',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      backgroundColor: viewMode === 'feature' ? '#eff6ff' : '#fff',
+                    }}
+                  >
+                    {getTypeLabel('feature')} Board
+                  </li>
+                </ul>
+              )}
+
+              {boardsModalType === 'team' && (
+                <>
+                  <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                    {teams.length === 0 ? (
+                      <li style={{ padding: '12px 0', color: '#6b7280', fontSize: '14px' }}>No teams yet.</li>
+                    ) : (
+                      teams.map((team) => (
+                        <li
+                          key={team.id}
+                          onClick={() => {
+                            setSelectedTeamId(team.id);
+                            setViewMode('team');
+                            setBoardsModalType(null);
+                          }}
+                          style={{
+                            padding: '12px 16px',
+                            marginBottom: '4px',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            backgroundColor: viewMode === 'team' && team.id === selectedTeamId ? '#eff6ff' : '#fff',
+                          }}
+                        >
+                          {team.name}
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedTeamId(null);
+                      setViewMode('teams-list');
+                      setBoardsModalType(null);
+                    }}
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      marginTop: '16px',
+                      padding: '10px 16px',
+                      textAlign: 'left',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px',
+                      backgroundColor: viewMode === 'teams-list' ? '#eff6ff' : '#fff',
+                      color: '#374151',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                    }}
+                  >
+                    Manage teams
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         )}
       </div>
