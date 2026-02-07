@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
+import type { DraggingStyle } from 'react-beautiful-dnd';
 import { ensureDefaultPlanningBoard } from '../services/boards/ensureDefaultBoard';
 import { ensureTenantAccess } from '../services/tenantMembershipService';
 import { useStore } from '../store/useStore';
@@ -19,6 +20,10 @@ function parseCellId(id: string): { laneId: string; columnId: string } | null {
   const idx = id.lastIndexOf(CELL_ID_SEP);
   if (idx === -1) return null;
   return { laneId: id.slice(0, idx), columnId: id.slice(idx + 1) };
+}
+
+function isDraggingStyle(s: unknown): s is DraggingStyle {
+  return typeof s === 'object' && s != null && 'position' in s;
 }
 
 const LANE_LABEL_WIDTH = 180;
@@ -767,9 +772,9 @@ const PlanningBoardPage: React.FC = () => {
                                   {...draggableProvided.dragHandleProps}
                                   style={{
                                     ...draggableProvided.draggableProps.style,
-                                    ...(draggableProvided.draggableProps.style?.position == null
-                                      ? { position: 'relative' as const }
-                                      : {}),
+                                    ...(isDraggingStyle(draggableProvided.draggableProps.style)
+                                      ? {}
+                                      : { position: 'relative' as const }),
                                   }}
                                 >
                                   <div
