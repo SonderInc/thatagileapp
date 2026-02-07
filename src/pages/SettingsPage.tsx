@@ -38,6 +38,7 @@ const SettingsPage: React.FC = () => {
     setKanbanLanesEnabled,
     canConfigureSprintStart,
     kanbanLanesEnabled,
+    setViewMode,
   } = useStore();
   const [override, setOverride] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -274,6 +275,22 @@ const SettingsPage: React.FC = () => {
             <span style={{ fontSize: '14px', color: '#059669', fontWeight: '500' }}>{teamBoardSaveMessage}</span>
           )}
         </div>
+      </section>
+
+      <section style={{ marginBottom: '24px' }}>
+        <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px', color: '#374151' }}>
+          Nomenclature
+        </h2>
+        <p style={{ marginBottom: '12px', fontSize: '14px', color: '#6b7280' }}>
+          Set work item type labels and terminology (e.g. Epic, Feature, User Story). Can be wired up later.
+        </p>
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={() => setViewMode('nomenclature')}
+        >
+          Set nomenclature
+        </button>
       </section>
 
       <section style={{ marginBottom: '24px' }}>

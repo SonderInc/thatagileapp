@@ -21,6 +21,7 @@ import InviteUserPage from './pages/InviteUserPage';
 import LicencePage from './pages/LicencePage';
 import CompanyProfilePage from './pages/CompanyProfilePage';
 import SettingsPage from './pages/SettingsPage';
+import NomenclaturePage from './pages/NomenclaturePage';
 import ImportBacklogPage from './pages/ImportBacklogPage';
 import UserProfilePage from './pages/UserProfilePage';
 import NoCompanyPage from './pages/NoCompanyPage';
@@ -573,6 +574,8 @@ function App() {
         return <CompanyProfilePage />;
       case 'settings':
         return <SettingsPage />;
+      case 'nomenclature':
+        return <NomenclaturePage />;
       case 'import-backlog':
         return <ImportBacklogPage />;
       case 'user-profile':
