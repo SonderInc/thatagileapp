@@ -115,6 +115,28 @@ export async function listBacklogFeatures(companyId: string): Promise<WorkItem[]
   return snapshot.docs.map((d) => deserializeWorkItem(d.data() as WorkItemData));
 }
 
+/** List backlog features assigned to a team (feature.teamIds contains teamId). Requires composite index on workItems (companyId, type, teamIds). */
+export async function listBacklogFeaturesForTeam(companyId: string, teamId: string): Promise<WorkItem[]> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const q = query(
+    collection(db, WORK_ITEMS_COLLECTION),
+    where('companyId', '==', companyId),
+    where('type', '==', 'feature'),
+    where('teamIds', 'array-contains', teamId)
+  );
+  try {
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((d) => deserializeWorkItem(d.data() as WorkItemData));
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/index|composite/i.test(msg)) {
+      const urlMatch = msg.match(/https:\/\/[^\s)]+/);
+      if (urlMatch?.[0]) console.error('[firestore] Composite index required for listBacklogFeaturesForTeam. Create index:', urlMatch[0]);
+    }
+    throw err;
+  }
+}
+
 /** List items in a board's items subcollection, ordered by order. */
 export async function listBoardItems(boardId: string): Promise<BoardItem[]> {
   if (!db) return Promise.reject(new Error('Firebase not configured'));

@@ -9,7 +9,8 @@ export interface AddFeatureFromBacklogModalProps {
   onClose: () => void;
   companyId: string;
   boardId: string;
-  defaultLaneId?: string;
+  teamId: string;
+  laneId: string;
   defaultColumnId?: string;
 }
 
@@ -18,50 +19,46 @@ const AddFeatureFromBacklogModal: React.FC<AddFeatureFromBacklogModalProps> = ({
   onClose,
   companyId,
   boardId,
-  defaultLaneId,
+  teamId,
+  laneId,
   defaultColumnId = '1',
 }) => {
   const {
-    loadBacklogFeatures,
+    loadBacklogFeaturesForTeam,
     loadBoardItems,
-    backlogFeatures,
+    backlogFeaturesByTeam,
     boardItems,
     addFeatureToPlanningBoard,
-    planningBoards,
   } = useStore();
 
   const [search, setSearch] = useState('');
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const features = backlogFeaturesByTeam[teamId] ?? [];
+  const columnId = defaultColumnId;
+
   useEffect(() => {
-    if (!isOpen || !companyId || !boardId) return;
+    if (!isOpen || !companyId || !boardId || !teamId) return;
     setSearch('');
     setError(null);
-    loadBacklogFeatures(companyId).catch((err) => {
+    loadBacklogFeaturesForTeam(companyId, teamId).catch((err) => {
       setError(err instanceof Error ? err.message : String(err));
     });
     loadBoardItems(boardId).catch(() => {});
-  }, [isOpen, companyId, boardId, loadBacklogFeatures, loadBoardItems]);
+  }, [isOpen, companyId, boardId, teamId, loadBacklogFeaturesForTeam, loadBoardItems]);
 
-  const board = useMemo(
-    () => planningBoards.find((b) => b.id === boardId),
-    [planningBoards, boardId]
-  );
   const placedWorkItemIds = useMemo(
     () => new Set(boardItems.map((i) => i.workItemId)),
     [boardItems]
   );
-  const laneId = defaultLaneId ?? board?.teamIds?.[0] ?? '';
-  const columnId = defaultColumnId;
-
   const availableFeatures = useMemo(() => {
-    return backlogFeatures.filter(
+    return features.filter(
       (f) =>
         !placedWorkItemIds.has(f.id) &&
         (search.trim() === '' || (f.title ?? '').toLowerCase().includes(search.trim().toLowerCase()))
     );
-  }, [backlogFeatures, placedWorkItemIds, search]);
+  }, [features, placedWorkItemIds, search]);
 
   const handleSelect = async (feature: WorkItem) => {
     if (!laneId || adding) return;
@@ -126,10 +123,10 @@ const AddFeatureFromBacklogModal: React.FC<AddFeatureFromBacklogModalProps> = ({
       >
         {availableFeatures.length === 0 ? (
           <p style={{ margin: 16, color: '#6b7280', fontSize: 14 }}>
-            {backlogFeatures.length === 0
-              ? 'No backlog features. Add features from Feature Board.'
+            {features.length === 0
+              ? 'No features assigned to this team.'
               : placedWorkItemIds.size > 0 && search.trim() === ''
-                ? 'All features are already on this board.'
+                ? 'All features for this team are already on this board.'
                 : 'No matching features.'}
           </p>
         ) : (

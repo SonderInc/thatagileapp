@@ -45,6 +45,7 @@ export interface IDataStore {
   updatePlanningPlacement(id: string, updates: Partial<Pick<PlanningBoardPlacement, 'teamId' | 'iterationColumn'>>): Promise<void>;
   deletePlanningPlacement(id: string): Promise<void>;
   listBacklogFeatures(companyId: string): Promise<WorkItem[]>;
+  listBacklogFeaturesForTeam(companyId: string, teamId: string): Promise<WorkItem[]>;
   listBoardItems(boardId: string): Promise<BoardItem[]>;
   addFeatureToBoard(
     boardId: string,

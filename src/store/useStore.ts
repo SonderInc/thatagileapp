@@ -26,6 +26,8 @@ interface AppState {
   planningPlacements: PlanningBoardPlacement[];
   /** Backlog features (type=feature) for Add Feature modal. */
   backlogFeatures: WorkItem[];
+  /** Backlog features per team (teamId -> features with teamIds containing that team). */
+  backlogFeaturesByTeam: Record<string, WorkItem[]>;
   /** Items on the current planning board (boards/{boardId}/items). */
   boardItems: BoardItem[];
   /** Set when loadPlanningBoards fails with permission-denied; cleared on success. */
@@ -91,6 +93,7 @@ interface AppState {
   loadPlanningBoards: (companyId: string) => Promise<void>;
   loadPlanningPlacements: (boardId: string) => Promise<void>;
   loadBacklogFeatures: (companyId: string) => Promise<void>;
+  loadBacklogFeaturesForTeam: (companyId: string, teamId: string) => Promise<void>;
   loadBoardItems: (boardId: string) => Promise<void>;
   addPlanningBoard: (board: PlanningBoard) => Promise<void>;
   updatePlanningBoard: (id: string, updates: Partial<Pick<PlanningBoard, 'name' | 'teamIds'>>) => Promise<void>;
@@ -166,6 +169,7 @@ export const useStore = create<AppState>((set, get) => ({
   planningBoards: [],
   planningPlacements: [],
   backlogFeatures: [],
+  backlogFeaturesByTeam: {},
   boardItems: [],
   planningBoardsLoadError: null,
   currentUser: null,
@@ -346,6 +350,10 @@ export const useStore = create<AppState>((set, get) => ({
   loadBacklogFeatures: async (companyId) => {
     const features = await getDataStore().listBacklogFeatures(companyId);
     set({ backlogFeatures: features });
+  },
+  loadBacklogFeaturesForTeam: async (companyId, teamId) => {
+    const features = await getDataStore().listBacklogFeaturesForTeam(companyId, teamId);
+    set((state) => ({ backlogFeaturesByTeam: { ...state.backlogFeaturesByTeam, [teamId]: features } }));
   },
   loadBoardItems: async (boardId) => {
     const items = await getDataStore().listBoardItems(boardId);

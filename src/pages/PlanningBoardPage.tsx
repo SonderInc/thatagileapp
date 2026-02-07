@@ -46,7 +46,7 @@ const PlanningBoardPage: React.FC = () => {
   const [isProvisioning, setIsProvisioning] = useState(false);
   const [provisionError, setProvisionError] = useState<string | null>(null);
   const [showAddFeatureModal, setShowAddFeatureModal] = useState(false);
-  const [addFeatureCell, setAddFeatureCell] = useState<{ laneId: string; columnId: string } | null>(null);
+  const [addFeatureCell, setAddFeatureCell] = useState<{ teamId: string; laneId: string; columnId: string } | null>(null);
   const [showCardModal, setShowCardModal] = useState(false);
   const [addStoryContext, setAddStoryContext] = useState<{ parentId: string; defaultTeamId: string; defaultSprintId?: string } | null>(null);
 
@@ -560,7 +560,7 @@ const PlanningBoardPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => {
-                        setAddFeatureCell({ laneId: team.id, columnId: String(iter) });
+                        setAddFeatureCell({ teamId: team.id, laneId: team.id, columnId: String(iter) });
                         setShowAddFeatureModal(true);
                       }}
                       style={{
@@ -606,7 +606,7 @@ const PlanningBoardPage: React.FC = () => {
         />
       )}
 
-      {currentTenantId && board && (
+      {currentTenantId && board && addFeatureCell && (
         <AddFeatureFromBacklogModal
           isOpen={showAddFeatureModal}
           onClose={() => {
@@ -615,8 +615,9 @@ const PlanningBoardPage: React.FC = () => {
           }}
           companyId={currentTenantId}
           boardId={board.id}
-          defaultLaneId={addFeatureCell?.laneId}
-          defaultColumnId={addFeatureCell?.columnId}
+          teamId={addFeatureCell.teamId}
+          laneId={addFeatureCell.laneId}
+          defaultColumnId={addFeatureCell.columnId}
         />
       )}
     </div>
