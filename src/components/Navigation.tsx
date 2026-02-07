@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { getAuth } from '../lib/adapters';
 import { useStore } from '../store/useStore';
-import { LayoutDashboard, Layers, Package, Users, List, ListOrdered, Home, LogOut, Shield, ClipboardList, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, Layers, Package, List, ListOrdered, Home, LogOut, Shield, ClipboardList, ChevronDown } from 'lucide-react';
 
 const Navigation: React.FC = () => {
   const { viewMode, setViewMode, setSelectedProductId, setSelectedTeamId, selectedTeamId, teams, loadTeams, currentTenantId, tenantCompanies, firebaseUser, setFirebaseUser, setCurrentUser, setCurrentTenantId, currentUser, getTypeLabel } = useStore();
