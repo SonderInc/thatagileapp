@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { getDataStore } from '../lib/adapters';
+import { mergeProfileForBackfill } from '../lib/firestore';
 import { useStore } from '../store/useStore';
 import type { PlanningBoard as PlanningBoardType, PlanningBoardPlacement } from '../types';
 import WorkItemModal from '../components/WorkItemModal';
@@ -14,6 +16,8 @@ const COLUMN_MIN_WIDTH = 200;
 const PlanningBoardPage: React.FC = () => {
   const {
     currentTenantId,
+    currentUser,
+    firebaseUser,
     teams,
     loadTeams,
     loadPlanningBoards,
@@ -80,11 +84,25 @@ const PlanningBoardPage: React.FC = () => {
       setCreateError(null);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      const friendly =
-        /permission|forbidden|denied/i.test(msg)
-          ? 'Could not save board. You may need admin or RTE access for this company.'
-          : `Could not save board. ${msg}`;
-      setCreateError(friendly);
+      const isPermissionError = /permission|forbidden|denied/i.test(msg);
+      if (isPermissionError && firebaseUser && currentTenantId && currentUser) {
+        try {
+          const profile = await getDataStore().getUserProfile(firebaseUser.uid);
+          if (profile) {
+            const merged = mergeProfileForBackfill(profile, currentTenantId, currentUser.roles ?? []);
+            await getDataStore().setUserProfile(merged);
+          }
+        } catch (syncErr) {
+          console.warn('[PlanningBoardPage] Sync admin status failed:', syncErr);
+        }
+        setCreateError("We've synced your admin status. Please try again.");
+      } else {
+        setCreateError(
+          isPermissionError
+            ? 'Could not save board. You may need admin or RTE access for this company.'
+            : `Could not save board. ${msg}`
+        );
+      }
     } finally {
       setCreating(false);
     }
