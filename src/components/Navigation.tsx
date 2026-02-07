@@ -1,15 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { getAuth } from '../lib/adapters';
 import { useStore } from '../store/useStore';
-import { LayoutDashboard, Layers, Package, Users, List, ListOrdered, Home, LogOut, Shield, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, Layers, Package, Users, List, ListOrdered, Home, LogOut, Shield, ClipboardList, ChevronDown } from 'lucide-react';
 
 const Navigation: React.FC = () => {
   const { viewMode, setViewMode, setSelectedProductId, setSelectedTeamId, selectedTeamId, teams, loadTeams, currentTenantId, tenantCompanies, firebaseUser, setFirebaseUser, setCurrentUser, setCurrentTenantId, currentUser, getTypeLabel } = useStore();
   const currentCompany = tenantCompanies.find((c) => c.id === currentTenantId) ?? null;
   const [adminMenuOpen, setAdminMenuOpen] = useState(false);
-  const [teamBoardMenuOpen, setTeamBoardMenuOpen] = useState(false);
+  const [boardsMenuOpen, setBoardsMenuOpen] = useState(false);
   const adminMenuRef = useRef<HTMLDivElement>(null);
-  const teamBoardMenuRef = useRef<HTMLDivElement>(null);
+  const boardsMenuRef = useRef<HTMLDivElement>(null);
 
   const isAdmin = currentUser?.roles?.includes('admin') ?? false;
   const isHR = currentUser?.roles?.includes('hr') ?? false;
@@ -24,8 +24,8 @@ const Navigation: React.FC = () => {
       if (adminMenuRef.current && !adminMenuRef.current.contains(e.target as Node)) {
         setAdminMenuOpen(false);
       }
-      if (teamBoardMenuRef.current && !teamBoardMenuRef.current.contains(e.target as Node)) {
-        setTeamBoardMenuOpen(false);
+      if (boardsMenuRef.current && !boardsMenuRef.current.contains(e.target as Node)) {
+        setBoardsMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -45,10 +45,15 @@ const Navigation: React.FC = () => {
     { id: 'landing', label: 'Home', icon: Home },
     { id: 'backlog', label: `${getTypeLabel('product')} Backlog`, icon: List },
     { id: 'list', label: 'Work Items', icon: ListOrdered },
+  ];
+
+  const boardItems = [
     { id: 'epic', label: `${getTypeLabel('epic')} Board`, icon: Layers },
     { id: 'feature', label: `${getTypeLabel('feature')} Board`, icon: Package },
     { id: 'planning', label: 'Planning Board', icon: ClipboardList },
   ];
+
+  const isBoardView = viewMode === 'epic' || viewMode === 'feature' || viewMode === 'planning' || viewMode === 'team' || viewMode === 'teams-list';
 
   const handleNavClick = (id: string) => {
     setViewMode(id as typeof viewMode);
@@ -56,16 +61,21 @@ const Navigation: React.FC = () => {
     if (id === 'backlog') setSelectedProductId(null);
   };
 
+  const handleBoardItem = (id: string) => {
+    setViewMode(id as 'epic' | 'feature' | 'planning');
+    setBoardsMenuOpen(false);
+  };
+
   const handleTeamBoardTeam = (teamId: string) => {
     setSelectedTeamId(teamId);
     setViewMode('team');
-    setTeamBoardMenuOpen(false);
+    setBoardsMenuOpen(false);
   };
 
   const handleManageTeams = () => {
     setSelectedTeamId(null);
     setViewMode('teams-list');
-    setTeamBoardMenuOpen(false);
+    setBoardsMenuOpen(false);
   };
 
   const adminItems = [
@@ -163,35 +173,36 @@ const Navigation: React.FC = () => {
           </button>
         );
       })}
-      <div ref={teamBoardMenuRef} style={{ position: 'relative' }}>
+      <div ref={boardsMenuRef} style={{ position: 'relative' }}>
         <button
           type="button"
-          onClick={() => setTeamBoardMenuOpen((o) => !o)}
+          onClick={() => setBoardsMenuOpen((o) => !o)}
           style={{
             padding: '12px 16px',
             border: 'none',
-            borderBottom: viewMode === 'team' || viewMode === 'teams-list' ? '3px solid #3b82f6' : '3px solid transparent',
+            borderBottom: isBoardView ? '3px solid #3b82f6' : '3px solid transparent',
             backgroundColor: 'transparent',
-            color: viewMode === 'team' || viewMode === 'teams-list' ? '#3b82f6' : '#6b7280',
+            color: isBoardView ? '#3b82f6' : '#6b7280',
             cursor: 'pointer',
             fontSize: '14px',
-            fontWeight: viewMode === 'team' || viewMode === 'teams-list' ? '600' : '400',
+            fontWeight: isBoardView ? '600' : '400',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
           }}
         >
-          <Users size={18} />
-          Team Board
+          <LayoutDashboard size={18} />
+          Boards
+          <ChevronDown size={16} style={{ opacity: boardsMenuOpen ? 1 : 0.7 }} />
         </button>
-        {teamBoardMenuOpen && (
+        {boardsMenuOpen && (
           <div
             style={{
               position: 'absolute',
               top: '100%',
               left: 0,
               marginTop: 0,
-              minWidth: '200px',
+              minWidth: '220px',
               backgroundColor: '#fff',
               border: '1px solid #e5e7eb',
               borderRadius: '8px',
@@ -200,6 +211,36 @@ const Navigation: React.FC = () => {
               padding: '4px 0',
             }}
           >
+            {boardItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => handleBoardItem(item.id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    width: '100%',
+                    padding: '10px 16px',
+                    textAlign: 'left',
+                    border: 'none',
+                    backgroundColor: viewMode === item.id ? '#eff6ff' : 'transparent',
+                    color: '#374151',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                  }}
+                >
+                  <Icon size={18} style={{ flexShrink: 0 }} />
+                  {item.label}
+                </button>
+              );
+            })}
+            <div style={{ borderTop: '1px solid #e5e7eb', margin: '4px 0' }} />
+            <div style={{ padding: '6px 16px 4px', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>
+              Team Board
+            </div>
             {teams.length === 0 ? (
               <div style={{ padding: '10px 16px', fontSize: '14px', color: '#6b7280' }}>
                 No teams yet
