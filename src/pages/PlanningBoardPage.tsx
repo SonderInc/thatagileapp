@@ -37,6 +37,7 @@ const PlanningBoardPage: React.FC = () => {
     setSelectedPlanningBoardId,
     loadBoardItems,
     addPlanningBoard,
+    updatePlanningBoard,
     boardItems,
     workItems,
     backlogFeatures,
@@ -55,6 +56,11 @@ const PlanningBoardPage: React.FC = () => {
   const [createTeamIds, setCreateTeamIds] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [editingBoard, setEditingBoard] = useState<PlanningBoardType | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editTeamIds, setEditTeamIds] = useState<string[]>([]);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
   const [isProvisioning, setIsProvisioning] = useState(false);
   const [provisionError, setProvisionError] = useState<string | null>(null);
   const [showAddFeatureModal, setShowAddFeatureModal] = useState(false);
@@ -178,6 +184,35 @@ const PlanningBoardPage: React.FC = () => {
     );
   };
 
+  const openEditBoard = (board: PlanningBoardType) => {
+    setEditingBoard(board);
+    setEditName(board.name);
+    setEditTeamIds([...board.teamIds]);
+    setEditError(null);
+  };
+
+  const toggleEditTeam = (teamId: string) => {
+    setEditError(null);
+    setEditTeamIds((prev) =>
+      prev.includes(teamId) ? prev.filter((id) => id !== teamId) : [...prev, teamId]
+    );
+  };
+
+  const handleEditBoard = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingBoard || !editName.trim()) return;
+    setEditSaving(true);
+    setEditError(null);
+    try {
+      await updatePlanningBoard(editingBoard.id, { name: editName.trim(), teamIds: editTeamIds });
+      setEditingBoard(null);
+    } catch (err: unknown) {
+      setEditError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   const getBoardItemsForCell = (teamId: string, iterationColumn: 1 | 2 | 3 | 4 | 5) =>
     boardItems.filter((i) => i.laneId === teamId && i.columnId === String(iterationColumn));
 
@@ -240,7 +275,7 @@ const PlanningBoardPage: React.FC = () => {
     return (
       <div style={{ padding: spacing.xxl }}>
         <h1 style={{ margin: '0 0 8px 0', fontSize: '32px', fontWeight: 700, color: '#111827' }}>
-          Planning Board
+          Planning Boards
         </h1>
         <p style={{ margin: '0 0 24px 0', color: '#6b7280', fontSize: '14px' }}>
           Create a board with a name and teams (swimlanes). Then add features to iteration columns.
@@ -324,10 +359,30 @@ const PlanningBoardPage: React.FC = () => {
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
+                gap: '12px',
               }}
             >
-              <span style={{ fontWeight: 600, color: '#111827' }}>{b.name}</span>
+              <span style={{ flex: 1, fontWeight: 600, color: '#111827' }}>{b.name}</span>
               <span style={{ fontSize: '12px', color: '#6b7280' }}>{b.teamIds.length} teams</span>
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openEditBoard(b);
+                  }}
+                  style={{
+                    padding: '6px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    background: '#fff',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                  }}
+                >
+                  Edit
+                </button>
+              )}
             </li>
           ))}
         </ul>
@@ -426,6 +481,106 @@ const PlanningBoardPage: React.FC = () => {
                   }}
                 >
                   {creating ? 'Creating…' : 'Create'}
+                </button>
+              </div>
+            </form>
+          </Modal>
+        )}
+        {editingBoard && (
+          <Modal
+            title="Edit Planning Board"
+            onClose={() => {
+              setEditError(null);
+              setEditingBoard(null);
+            }}
+          >
+            <form onSubmit={handleEditBoard}>
+              {editError && (
+                <p
+                  style={{
+                    margin: '0 0 16px 0',
+                    padding: '10px 12px',
+                    backgroundColor: '#fef2f2',
+                    color: '#b91c1c',
+                    borderRadius: 6,
+                    fontSize: 14,
+                  }}
+                >
+                  {editError}
+                </p>
+              )}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Board name *</label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => {
+                    setEditName(e.target.value);
+                    setEditError(null);
+                  }}
+                  placeholder="e.g. Q1 Planning"
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: 14,
+                  }}
+                />
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Teams (swimlanes)</label>
+                <p style={{ margin: '0 0 8px 0', fontSize: 12, color: '#6b7280' }}>Select teams to add as rows on the board.</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {teams.map((t) => (
+                    <label
+                      key={t.id}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '6px 12px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: 6,
+                        cursor: 'pointer',
+                        fontSize: 14,
+                        backgroundColor: editTeamIds.includes(t.id) ? '#eff6ff' : '#fff',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={editTeamIds.includes(t.id)}
+                        onChange={() => toggleEditTeam(t.id)}
+                      />
+                      {t.name}
+                    </label>
+                  ))}
+                  {teams.length === 0 && (
+                    <span style={{ fontSize: 14, color: '#6b7280' }}>No teams yet. Create teams from Teams in the nav.</span>
+                  )}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditingBoard(null)}
+                  style={{ padding: '8px 16px', border: '1px solid #d1d5db', borderRadius: 6, background: '#fff', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editSaving || !editName.trim()}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#3b82f6',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 6,
+                    cursor: editSaving || !editName.trim() ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {editSaving ? 'Saving…' : 'Save'}
                 </button>
               </div>
             </form>
