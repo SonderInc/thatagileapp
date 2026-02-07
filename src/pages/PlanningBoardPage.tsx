@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { getDataStore } from '../lib/adapters';
 import { mergeProfileForBackfill } from '../lib/firestore';
 import { ensureUserTenantMembership } from '../services/tenantMembershipService';
+import { getUserProfile } from '../services/userProfileService';
 import { useStore } from '../store/useStore';
 import type { PlanningBoard as PlanningBoardType, PlanningBoardPlacement } from '../types';
 import WorkItemModal from '../components/WorkItemModal';
@@ -54,39 +55,75 @@ const PlanningBoardPage: React.FC = () => {
   const board = selectedPlanningBoardId ? planningBoards.find((b) => b.id === selectedPlanningBoardId) : null;
   const features = getWorkItemsByType('feature');
 
-  useEffect(() => {
-    if (!currentTenantId) return;
-    if (!firebaseUser || !currentUser) return;
-    let cancelled = false;
-    setProvisionError(null);
-    setIsProvisioning(true);
-    (async () => {
+  const runProvisioning = useCallback(
+    async (getCancelled?: () => boolean) => {
+      if (!firebaseUser || !currentTenantId) return;
+      setProvisionError(null);
+      setIsProvisioning(true);
       try {
         await ensureUserTenantMembership({
           uid: firebaseUser.uid,
           tenantId: currentTenantId,
-          roles: currentUser.roles ?? [],
+          roles: currentUser?.roles ?? [],
         });
-        if (cancelled) return;
+        if (getCancelled?.()) return;
+
+        const profile = await getUserProfile(firebaseUser.uid);
+        console.log('[PERMS CHECK]', {
+          uid: firebaseUser.uid,
+          tenantId: currentTenantId,
+          companyIds: profile?.companyIds,
+        });
+        const ok =
+          Array.isArray(profile?.companyIds) && profile.companyIds.includes(currentTenantId);
+        if (!ok) {
+          throw new Error(
+            'MEMBERSHIP_MISSING: users/{uid}.companyIds does not include tenantId'
+          );
+        }
+        if (getCancelled?.()) return;
+
         await loadTeams(currentTenantId);
         await loadPlanningBoards(currentTenantId);
-      } catch (err) {
-        if (cancelled) return;
+      } catch (err: unknown) {
+        if (getCancelled?.()) return;
+        console.error('[PLANNING BOARD PERMS]', err);
+        const code =
+          err && typeof err === 'object' && 'code' in err
+            ? String((err as { code: string }).code)
+            : undefined;
+        const originalCode =
+          err && typeof err === 'object' && 'originalCode' in err
+            ? String((err as { originalCode: string }).originalCode)
+            : undefined;
         const message =
           err && typeof err === 'object' && 'message' in err
             ? String((err as { message: string }).message)
             : err instanceof Error
               ? err.message
-              : 'Failed to provision access';
-        setProvisionError(message);
+              : 'permission error';
+        setProvisionError(originalCode ?? code ?? message);
       } finally {
-        if (!cancelled) setIsProvisioning(false);
+        if (!getCancelled?.()) setIsProvisioning(false);
       }
-    })();
+    },
+    [
+      firebaseUser,
+      currentTenantId,
+      currentUser?.roles,
+      loadTeams,
+      loadPlanningBoards,
+    ]
+  );
+
+  useEffect(() => {
+    if (!firebaseUser || !currentTenantId) return;
+    let cancelled = false;
+    runProvisioning(() => cancelled);
     return () => {
       cancelled = true;
     };
-  }, [currentTenantId, firebaseUser, currentUser, loadTeams, loadPlanningBoards]);
+  }, [firebaseUser?.uid, currentTenantId, runProvisioning]);
 
   useEffect(() => {
     if (selectedPlanningBoardId) loadPlanningPlacements(selectedPlanningBoardId);
@@ -226,7 +263,7 @@ const PlanningBoardPage: React.FC = () => {
           </p>
         )}
         {provisionError && (
-          <p
+          <div
             style={{
               margin: '0 0 16px 0',
               padding: '12px 16px',
@@ -234,10 +271,30 @@ const PlanningBoardPage: React.FC = () => {
               color: '#b91c1c',
               borderRadius: '6px',
               fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              flexWrap: 'wrap',
             }}
           >
-            {provisionError}
-          </p>
+            <span style={{ flex: 1 }}>{provisionError}</span>
+            <button
+              type="button"
+              onClick={() => runProvisioning()}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: '#b91c1c',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Retry
+            </button>
+          </div>
         )}
         {canEdit && (
           <button

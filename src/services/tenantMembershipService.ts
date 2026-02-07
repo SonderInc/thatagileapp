@@ -9,6 +9,8 @@ export interface TenantMembershipError {
   code: string;
   message: string;
   details?: unknown;
+  /** When setUserProfile fails, the underlying error code (e.g. permission-denied). */
+  originalCode?: string;
 }
 
 export async function ensureUserTenantMembership(params: {
@@ -39,11 +41,24 @@ export async function ensureUserTenantMembership(params: {
   try {
     await store.setUserProfile(merged);
   } catch (err) {
-    throw {
+    const originalCode =
+      err && typeof err === 'object' && 'code' in err
+        ? String((err as { code: string }).code)
+        : undefined;
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[tenantMembershipService] setUserProfile failed', {
+      code: originalCode,
+      message,
+      uid,
+      tenantId,
+    });
+    const typed: TenantMembershipError = {
       code: 'PROFILE_WRITE_FAILED',
-      message: err instanceof Error ? err.message : 'Failed to update user profile',
+      message: message || 'Failed to update user profile',
       details: err,
-    } as TenantMembershipError;
+      originalCode,
+    };
+    throw typed;
   }
 
   const reread = await store.getUserProfile(uid);
