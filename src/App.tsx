@@ -93,6 +93,7 @@ function App() {
     setViewMode,
     setFirebaseUser,
     currentTenantId,
+    currentUser,
     firebaseUser,
     tenantCompanies,
     mustChangePassword,
@@ -517,10 +518,24 @@ function App() {
 
   useEffect(() => {
     if (!currentTenantId || !getAuth().isConfigured()) return;
-    loadPlanningBoards(currentTenantId).catch((err) =>
-      console.error('[App] Load planning boards failed:', err?.message || err)
-    );
-  }, [currentTenantId, loadPlanningBoards]);
+    const run = async () => {
+      if (firebaseUser && currentUser) {
+        try {
+          const profile = await getDataStore().getUserProfile(firebaseUser.uid);
+          if (profile) {
+            const merged = mergeProfileForBackfill(profile, currentTenantId, currentUser.roles ?? []);
+            await getDataStore().setUserProfile(merged);
+          }
+        } catch (syncErr) {
+          console.warn('[App] Planning board profile sync failed:', syncErr);
+        }
+      }
+      loadPlanningBoards(currentTenantId).catch((err) =>
+        console.error('[App] Load planning boards failed:', err?.message || err)
+      );
+    };
+    run();
+  }, [currentTenantId, firebaseUser, currentUser, loadPlanningBoards]);
 
   useEffect(() => {
     if (!firebaseUser || !tenantCompanies.length) return;
