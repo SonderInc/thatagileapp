@@ -12,6 +12,7 @@ import TeamBoard from './pages/TeamBoard';
 import TeamsListPage from './pages/TeamsListPage';
 import { getAuth, getDataStore } from './lib/adapters';
 import { mergeProfileForBackfill } from './lib/firestore';
+import { ensureUserTenantMembership } from './services/tenantMembershipService';
 import { isAdminForCompany } from './lib/roles';
 import { getFirebaseProjectId } from './lib/firebase';
 import { mockWorkItems, mockSprints, mockBoards, mockUsers, mockTenantCompanies, SEED_TENANT_ID, isSeedEnabled } from './utils/mockData';
@@ -521,13 +522,14 @@ function App() {
     if (!firebaseUser || !currentUser) return;
     const run = async () => {
       try {
-        const profile = await getDataStore().getUserProfile(firebaseUser.uid);
-        if (profile) {
-          const merged = mergeProfileForBackfill(profile, currentTenantId, currentUser.roles ?? []);
-          await getDataStore().setUserProfile(merged);
-        }
-      } catch (syncErr) {
-        console.warn('[App] Planning board profile sync failed:', syncErr);
+        await ensureUserTenantMembership({
+          uid: firebaseUser.uid,
+          tenantId: currentTenantId,
+          roles: currentUser.roles ?? [],
+        });
+      } catch (err) {
+        console.error('[App] ensureUserTenantMembership failed', err);
+        return;
       }
       loadPlanningBoards(currentTenantId).catch((err) =>
         console.error('[App] Load planning boards failed:', err?.message || err)

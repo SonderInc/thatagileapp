@@ -24,6 +24,8 @@ interface AppState {
   teams: Team[];
   planningBoards: PlanningBoard[];
   planningPlacements: PlanningBoardPlacement[];
+  /** Set when loadPlanningBoards fails with permission-denied; cleared on success. */
+  planningBoardsLoadError: string | null;
   currentUser: User | null;
   /** Tenant companies (from Firestore companies collection). */
   tenantCompanies: TenantCompany[];
@@ -142,6 +144,8 @@ const KANBAN_LANE_TITLES: Record<KanbanLane, string> = {
   intangible: 'Intangible',
 };
 
+const loggedPermissionDeniedForTenant = new Set<string>();
+
 export const useStore = create<AppState>((set, get) => ({
   // Initial state
   workItems: [],
@@ -151,6 +155,7 @@ export const useStore = create<AppState>((set, get) => ({
   teams: [],
   planningBoards: [],
   planningPlacements: [],
+  planningBoardsLoadError: null,
   currentUser: null,
   tenantCompanies: [],
   currentTenantId: null,
@@ -304,8 +309,20 @@ export const useStore = create<AppState>((set, get) => ({
   setPlanningBoards: (boards) => set({ planningBoards: boards }),
   setPlanningPlacements: (placements) => set({ planningPlacements: placements }),
   loadPlanningBoards: async (companyId) => {
-    const boards = await getDataStore().getPlanningBoards(companyId);
-    set({ planningBoards: boards });
+    try {
+      const boards = await getDataStore().getPlanningBoards(companyId);
+      set({ planningBoards: boards, planningBoardsLoadError: null });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (/permission|insufficient|denied/i.test(msg)) {
+        set({ planningBoardsLoadError: msg || 'Missing or insufficient permissions' });
+        if (!loggedPermissionDeniedForTenant.has(companyId)) {
+          console.error('[store] Load planning boards failed:', msg, companyId);
+          loggedPermissionDeniedForTenant.add(companyId);
+        }
+      }
+      throw err;
+    }
   },
   loadPlanningPlacements: async (boardId) => {
     const placements = await getDataStore().getPlanningPlacements(boardId);

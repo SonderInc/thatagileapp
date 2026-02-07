@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getDataStore } from '../lib/adapters';
 import { mergeProfileForBackfill } from '../lib/firestore';
+import { ensureUserTenantMembership } from '../services/tenantMembershipService';
 import { useStore } from '../store/useStore';
 import type { PlanningBoard as PlanningBoardType, PlanningBoardPlacement } from '../types';
 import WorkItemModal from '../components/WorkItemModal';
@@ -44,6 +45,8 @@ const PlanningBoardPage: React.FC = () => {
   const [createTeamIds, setCreateTeamIds] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [isProvisioning, setIsProvisioning] = useState(false);
+  const [provisionError, setProvisionError] = useState<string | null>(null);
   const [showFeaturePicker, setShowFeaturePicker] = useState<{ teamId: string; iterationColumn: 1 | 2 | 3 | 4 | 5 } | null>(null);
   const [showCardModal, setShowCardModal] = useState(false);
   const [addStoryContext, setAddStoryContext] = useState<{ parentId: string; defaultTeamId: string; defaultSprintId?: string } | null>(null);
@@ -52,13 +55,38 @@ const PlanningBoardPage: React.FC = () => {
   const features = getWorkItemsByType('feature');
 
   useEffect(() => {
-    if (currentTenantId) {
-      loadTeams(currentTenantId);
-      loadPlanningBoards(currentTenantId).catch((err) =>
-        console.error('[PlanningBoardPage] Load planning boards failed:', err?.message ?? err)
-      );
-    }
-  }, [currentTenantId, loadTeams, loadPlanningBoards]);
+    if (!currentTenantId) return;
+    if (!firebaseUser || !currentUser) return;
+    let cancelled = false;
+    setProvisionError(null);
+    setIsProvisioning(true);
+    (async () => {
+      try {
+        await ensureUserTenantMembership({
+          uid: firebaseUser.uid,
+          tenantId: currentTenantId,
+          roles: currentUser.roles ?? [],
+        });
+        if (cancelled) return;
+        await loadTeams(currentTenantId);
+        await loadPlanningBoards(currentTenantId);
+      } catch (err) {
+        if (cancelled) return;
+        const message =
+          err && typeof err === 'object' && 'message' in err
+            ? String((err as { message: string }).message)
+            : err instanceof Error
+              ? err.message
+              : 'Failed to provision access';
+        setProvisionError(message);
+      } finally {
+        if (!cancelled) setIsProvisioning(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentTenantId, firebaseUser, currentUser, loadTeams, loadPlanningBoards]);
 
   useEffect(() => {
     if (selectedPlanningBoardId) loadPlanningPlacements(selectedPlanningBoardId);
@@ -192,6 +220,25 @@ const PlanningBoardPage: React.FC = () => {
         <p style={{ margin: '0 0 24px 0', color: '#6b7280', fontSize: '14px' }}>
           Create a board with a name and teams (swimlanes). Then add features to iteration columns.
         </p>
+        {isProvisioning && (
+          <p style={{ margin: '0 0 16px 0', color: '#6b7280', fontSize: '14px' }}>
+            Provisioning access…
+          </p>
+        )}
+        {provisionError && (
+          <p
+            style={{
+              margin: '0 0 16px 0',
+              padding: '12px 16px',
+              backgroundColor: '#fef2f2',
+              color: '#b91c1c',
+              borderRadius: '6px',
+              fontSize: '14px',
+            }}
+          >
+            {provisionError}
+          </p>
+        )}
         {canEdit && (
           <button
             type="button"
