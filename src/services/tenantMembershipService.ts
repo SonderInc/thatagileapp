@@ -48,7 +48,7 @@ export async function ensureTenantAccess(
     } as TenantMembershipError;
   }
 
-  const functions = getFunctions(app);
+  const functions = getFunctions(app, "us-central1");
   const grantTenantAccessFn = httpsCallable<
     { tenantId: string; targetUid?: string; role?: "member" | "admin" },
     { ok: boolean }
