@@ -49,8 +49,8 @@ const AddFeatureFromBacklogModal: React.FC<AddFeatureFromBacklogModalProps> = ({
   }, [isOpen, companyId, boardId, teamId, loadBacklogFeaturesForTeam, loadBoardItems]);
 
   const placedWorkItemIds = useMemo(
-    () => new Set(boardItems.map((i) => i.workItemId)),
-    [boardItems]
+    () => new Set(boardItems.filter((i) => i.laneId === teamId).map((i) => i.workItemId)),
+    [boardItems, teamId]
   );
   const availableFeatures = useMemo(() => {
     return features.filter(
@@ -126,7 +126,7 @@ const AddFeatureFromBacklogModal: React.FC<AddFeatureFromBacklogModalProps> = ({
             {features.length === 0
               ? 'No features assigned to this team.'
               : placedWorkItemIds.size > 0 && search.trim() === ''
-                ? 'All features for this team are already on this board.'
+                ? 'All features for this team are already in this row.'
                 : 'No matching features.'}
           </p>
         ) : (

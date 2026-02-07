@@ -165,7 +165,7 @@ export async function listBoardItems(boardId: string): Promise<BoardItem[]> {
   });
 }
 
-/** Add a feature to a board (creates document in boards/{boardId}/items). Rejects if workItemId already on board. */
+/** Add a feature to a board (creates document in boards/{boardId}/items). Rejects if workItemId already in this lane. */
 export async function addFeatureToBoard(
   boardId: string,
   companyId: string,
@@ -175,8 +175,8 @@ export async function addFeatureToBoard(
   if (!db) return Promise.reject(new Error('Firebase not configured'));
   const itemsRef = collection(db, BOARDS_COLLECTION, boardId, BOARD_ITEMS_SUBCOLLECTION);
   const existing = await listBoardItems(boardId);
-  if (existing.some((i) => i.workItemId === workItemId)) {
-    return Promise.reject(new Error('Feature is already on this board'));
+  if (existing.some((i) => i.workItemId === workItemId && i.laneId === placement.laneId)) {
+    return Promise.reject(new Error('Feature is already in this swimlane'));
   }
   const ref = await addDoc(itemsRef, {
     companyId,

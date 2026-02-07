@@ -241,6 +241,11 @@ const PlanningBoardPage: React.FC = () => {
       if (source.droppableId === destination.droppableId) return;
       const parsed = parseCellId(destination.droppableId);
       if (!parsed) return;
+      const draggedItem = boardItems.find((i) => i.id === draggableId);
+      if (draggedItem && boardItems.some((i) => i.laneId === parsed.laneId && i.workItemId === draggedItem.workItemId && i.id !== draggableId)) {
+        setMoveError('Feature is already in this swimlane.');
+        return;
+      }
       setMoveError(null);
       try {
         await moveBoardItem(board.id, draggableId, { laneId: parsed.laneId, columnId: parsed.columnId });
@@ -249,7 +254,7 @@ const PlanningBoardPage: React.FC = () => {
         setMoveError(message);
       }
     },
-    [board, moveBoardItem]
+    [board, boardItems, moveBoardItem]
   );
 
   const handleCardClick = (workItemId: string, teamId: string) => {
