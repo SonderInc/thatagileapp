@@ -76,6 +76,7 @@ export function useWorkItemForm({
         wsjfRiskReduction: item.wsjfRiskReduction ?? undefined,
         wsjfJobSize: item.wsjfJobSize ?? undefined,
         wsjfScore: item.wsjfScore ?? undefined,
+        dependencyFeatureIds: item.dependencyFeatureIds ?? [],
       });
     } else {
       const defaultType = (type && (allowedTypes.includes(type) || type === 'user-story')) ? type : allowedTypes[0];
@@ -89,7 +90,7 @@ export function useWorkItemForm({
         ...(defaultStatus == null && defaultType === 'feature' && { status: 'funnel' }),
         ...(defaultType === 'product' && { status: 'backlog', priority: undefined }),
         ...(showLaneField && (defaultType === 'task' || defaultType === 'bug') && { lane: (prev.lane ?? 'standard') as KanbanLane }),
-        ...(defaultType === 'feature' && { teamIds: prev.teamIds ?? [] }),
+        ...(defaultType === 'feature' && { teamIds: prev.teamIds ?? [], dependencyFeatureIds: [] }),
         ...(defaultType === 'user-story' && defaultTeamId != null && { teamId: defaultTeamId }),
         ...(defaultType === 'user-story' && defaultSprintId != null && { sprintId: defaultSprintId }),
       }));
@@ -148,6 +149,7 @@ export function useWorkItemForm({
         wsjfRiskReduction: formData.wsjfRiskReduction ?? null,
         wsjfJobSize: formData.wsjfJobSize ?? null,
         wsjfScore: wsjfScore ?? null,
+        dependencyFeatureIds: formData.dependencyFeatureIds ?? [],
       }),
     };
     setSaving(true);

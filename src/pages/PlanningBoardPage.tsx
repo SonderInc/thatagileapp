@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useLayoutEffect, useMemo } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import type { DraggingStyle } from 'react-beautiful-dnd';
 import { ensureDefaultPlanningBoard } from '../services/boards/ensureDefaultBoard';
@@ -233,6 +233,59 @@ const PlanningBoardPage: React.FC = () => {
 
   const getBoardItemsForCell = (teamId: string, iterationColumn: 1 | 2 | 3 | 4 | 5) =>
     boardItems.filter((i) => i.laneId === teamId && i.columnId === String(iterationColumn));
+
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const gridContainerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [cardPositions, setCardPositions] = useState<Record<string, { x: number; y: number }>>({});
+  const [gridSize, setGridSize] = useState({ width: 0, height: 0 });
+
+  const dependencyEdges = useMemo(() => {
+    const edges: { fromBoardItemId: string; toBoardItemId: string }[] = [];
+    const workItemById = new Map<string, { dependencyFeatureIds?: string[]; type?: string }>();
+    for (const w of workItems) workItemById.set(w.id, w);
+    for (const w of backlogFeatures) workItemById.set(w.id, w);
+    for (const item of boardItems) {
+      const feature = workItemById.get(item.workItemId);
+      const depIds = feature?.type === 'feature' ? feature.dependencyFeatureIds ?? [] : [];
+      for (const depId of depIds) {
+        const targets = boardItems.filter((i) => i.workItemId === depId);
+        for (const t of targets) edges.push({ fromBoardItemId: item.id, toBoardItemId: t.id });
+      }
+    }
+    return edges;
+  }, [boardItems, workItems, backlogFeatures]);
+
+  const measureCardPositions = useCallback(() => {
+    const gridEl = gridContainerRef.current;
+    if (!gridEl) return;
+    const gridRect = gridEl.getBoundingClientRect();
+    setGridSize({ width: gridRect.width, height: gridRect.height });
+    const next: Record<string, { x: number; y: number }> = {};
+    for (const [id, el] of Object.entries(cardRefs.current)) {
+      if (!el) continue;
+      const rect = el.getBoundingClientRect();
+      next[id] = {
+        x: rect.left - gridRect.left + rect.width / 2,
+        y: rect.top - gridRect.top + rect.height / 2,
+      };
+    }
+    setCardPositions(next);
+  }, []);
+
+  useLayoutEffect(() => {
+    measureCardPositions();
+    const scrollEl = scrollContainerRef.current;
+    const gridEl = gridContainerRef.current;
+    if (!scrollEl || !gridEl) return;
+    const ro = new ResizeObserver(measureCardPositions);
+    ro.observe(gridEl);
+    scrollEl.addEventListener('scroll', measureCardPositions, { passive: true });
+    return () => {
+      ro.disconnect();
+      scrollEl.removeEventListener('scroll', measureCardPositions);
+    };
+  }, [boardItems, measureCardPositions]);
 
   const handleDragEnd = useCallback(
     async (result: DropResult) => {
@@ -693,7 +746,8 @@ const PlanningBoardPage: React.FC = () => {
       )}
 
       <DragDropContext onDragEnd={handleDragEnd}>
-        <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: 8, backgroundColor: '#fff' }}>
+        <div ref={scrollContainerRef} style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: 8, backgroundColor: '#fff' }}>
+          <div ref={gridContainerRef} style={{ position: 'relative', flexShrink: 0, display: 'inline-block' }}>
           <div style={{ display: 'flex', flexShrink: 0, borderBottom: '2px solid #e5e7eb' }}>
             {columnLabels.map((colLabel, idx) => (
               <div
@@ -772,7 +826,11 @@ const PlanningBoardPage: React.FC = () => {
                             >
                               {(draggableProvided) => (
                                 <div
-                                  ref={draggableProvided.innerRef}
+                                  ref={(el) => {
+                                    (draggableProvided.innerRef as (el: HTMLDivElement | null) => void)(el);
+                                    if (el) cardRefs.current[item.id] = el;
+                                    else delete cardRefs.current[item.id];
+                                  }}
                                   {...draggableProvided.draggableProps}
                                   {...draggableProvided.dragHandleProps}
                                   style={{
@@ -851,6 +909,40 @@ const PlanningBoardPage: React.FC = () => {
               })}
             </div>
           ))}
+          {gridSize.width > 0 && gridSize.height > 0 && (
+            <svg
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                width: gridSize.width,
+                height: gridSize.height,
+                pointerEvents: 'none',
+                overflow: 'visible',
+              }}
+              viewBox={`0 0 ${gridSize.width} ${gridSize.height}`}
+              preserveAspectRatio="none"
+            >
+              {dependencyEdges.map(({ fromBoardItemId, toBoardItemId }, idx) => {
+                const fromPos = cardPositions[fromBoardItemId];
+                const toPos = cardPositions[toBoardItemId];
+                if (!fromPos || !toPos) return null;
+                return (
+                  <line
+                    key={`${fromBoardItemId}-${toBoardItemId}-${idx}`}
+                    x1={fromPos.x}
+                    y1={fromPos.y}
+                    x2={toPos.x}
+                    y2={toPos.y}
+                    stroke="#94a3b8"
+                    strokeWidth={2}
+                    strokeDasharray="4 4"
+                  />
+                );
+              })}
+            </svg>
+          )}
+          </div>
         </div>
       </DragDropContext>
 

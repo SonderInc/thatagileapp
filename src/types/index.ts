@@ -115,6 +115,8 @@ export interface WorkItem {
   wsjfRiskReduction?: number | null;
   wsjfJobSize?: number | null;
   wsjfScore?: number | null;
+  /** Feature only: work item ids of features this feature depends on. */
+  dependencyFeatureIds?: string[];
 }
 
 export interface Sprint {

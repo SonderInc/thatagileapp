@@ -86,6 +86,9 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
   const [parentFilter, setParentFilter] = useState('');
   const [parentHighlightIndex, setParentHighlightIndex] = useState(0);
   const parentInputRef = useRef<HTMLInputElement>(null);
+  const [dependencyDropdownOpen, setDependencyDropdownOpen] = useState(false);
+  const [dependencyFilter, setDependencyFilter] = useState('');
+  const [dependencyHighlightIndex, setDependencyHighlightIndex] = useState(0);
 
   const allowedParentTypes = useMemo(() => getAllowedParentTypes(formData.type!), [formData.type]);
   const descendantIds = useMemo(() => (item?.id ? getDescendantIds(workItems, item.id) : new Set<string>()), [item?.id, workItems]);
@@ -105,6 +108,27 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
     return validParentOptions.filter((i) => i.title.toLowerCase().includes(q));
   }, [validParentOptions, parentFilter]);
   const selectedParent = formData.parentId ? workItems.find((i) => i.id === formData.parentId) : null;
+  const dependencyOptions = useMemo(() => {
+    if (!currentTenantId) return [];
+    return workItems
+      .filter(
+        (i) =>
+          i.type === 'feature' &&
+          i.companyId === currentTenantId &&
+          i.id !== item?.id &&
+          !(formData.dependencyFeatureIds ?? []).includes(i.id)
+      )
+      .sort((a, b) => (a.title ?? '').localeCompare(b.title ?? ''));
+  }, [workItems, currentTenantId, item?.id, formData.dependencyFeatureIds]);
+  const filteredDependencyOptions = useMemo(() => {
+    if (!dependencyFilter.trim()) return dependencyOptions;
+    const q = dependencyFilter.trim().toLowerCase();
+    return dependencyOptions.filter((i) => (i.title ?? '').toLowerCase().includes(q));
+  }, [dependencyOptions, dependencyFilter]);
+  const selectedDependencyFeatures = useMemo(
+    () => (formData.dependencyFeatureIds ?? []).map((id) => workItems.find((i) => i.id === id)).filter(Boolean) as WorkItem[],
+    [formData.dependencyFeatureIds, workItems]
+  );
   const childStoriesForFeature =
     item?.type === 'feature'
       ? workItems
@@ -947,6 +971,186 @@ const WorkItemModal: React.FC<WorkItemModalProps> = ({ itemId, onClose, parentId
               readOnly={false}
               onValidityChange={setWsjfValid}
             />
+          )}
+
+          {formData.type === 'feature' && (
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', fontSize: '14px' }}>
+                Dependency
+              </label>
+              <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#6b7280' }}>
+                Features this feature depends on. Type to search and select.
+              </p>
+              {selectedDependencyFeatures.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                  {selectedDependencyFeatures.map((f) => (
+                    <span
+                      key={f.id}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '4px 8px',
+                        backgroundColor: '#eff6ff',
+                        border: '1px solid #bfdbfe',
+                        borderRadius: '6px',
+                        fontSize: '13px',
+                        color: '#1d4ed8',
+                      }}
+                    >
+                      {f.title || 'Untitled'}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData({
+                            ...formData,
+                            dependencyFeatureIds: (formData.dependencyFeatureIds ?? []).filter((id) => id !== f.id),
+                          })
+                        }
+                        style={{
+                          padding: 0,
+                          border: 'none',
+                          background: 'none',
+                          cursor: 'pointer',
+                          color: '#1d4ed8',
+                          fontSize: '14px',
+                          lineHeight: 1,
+                        }}
+                        aria-label="Remove"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  value={dependencyDropdownOpen ? '' : ''}
+                  placeholder="Add dependency…"
+                  onFocus={() => setDependencyDropdownOpen(true)}
+                  onClick={() => setDependencyDropdownOpen(true)}
+                  readOnly
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    backgroundColor: '#fff',
+                    cursor: 'pointer',
+                  }}
+                />
+                {dependencyDropdownOpen && (
+                  <div
+                    role="listbox"
+                    aria-expanded={dependencyDropdownOpen}
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      marginTop: '4px',
+                      backgroundColor: '#fff',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                      maxHeight: '280px',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      zIndex: 1000,
+                    }}
+                  >
+                    <input
+                      type="text"
+                      value={dependencyFilter}
+                      onChange={(e) => {
+                        setDependencyFilter(e.target.value);
+                        setDependencyHighlightIndex(0);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'ArrowDown') {
+                          e.preventDefault();
+                          const opts = dependencyFilter.trim() ? filteredDependencyOptions : dependencyOptions;
+                          setDependencyHighlightIndex((i) => Math.min(i + 1, opts.length > 0 ? opts.length - 1 : 0));
+                        } else if (e.key === 'ArrowUp') {
+                          e.preventDefault();
+                          setDependencyHighlightIndex((i) => Math.max(i - 1, 0));
+                        } else if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const opts = dependencyFilter.trim() ? filteredDependencyOptions : dependencyOptions;
+                          const chosen = opts[dependencyHighlightIndex];
+                          if (chosen) {
+                            setFormData({
+                              ...formData,
+                              dependencyFeatureIds: [...(formData.dependencyFeatureIds ?? []), chosen.id],
+                            });
+                            setDependencyFilter('');
+                            setDependencyHighlightIndex(0);
+                          }
+                        } else if (e.key === 'Escape') {
+                          setDependencyDropdownOpen(false);
+                          setDependencyFilter('');
+                        }
+                      }}
+                      placeholder="Type to search…"
+                      autoFocus
+                      style={{
+                        padding: '8px 12px',
+                        border: 'none',
+                        borderBottom: '1px solid #e5e7eb',
+                        borderRadius: '6px 6px 0 0',
+                        fontSize: '14px',
+                        outline: 'none',
+                      }}
+                    />
+                    <div style={{ overflowY: 'auto', maxHeight: '220px' }}>
+                      {(dependencyFilter.trim() ? filteredDependencyOptions : dependencyOptions).map((f, idx) => (
+                        <div
+                          key={f.id}
+                          role="option"
+                          aria-selected={false}
+                          style={{
+                            padding: '8px 12px',
+                            cursor: 'pointer',
+                            backgroundColor: dependencyHighlightIndex === idx ? '#eff6ff' : 'transparent',
+                            fontSize: '14px',
+                          }}
+                          onClick={() => {
+                            setFormData({
+                              ...formData,
+                              dependencyFeatureIds: [...(formData.dependencyFeatureIds ?? []), f.id],
+                            });
+                            setDependencyFilter('');
+                            setDependencyHighlightIndex(0);
+                          }}
+                          onMouseEnter={() => setDependencyHighlightIndex(idx)}
+                        >
+                          {f.title || 'Untitled feature'}
+                        </div>
+                      ))}
+                      {dependencyOptions.length === 0 && (
+                        <div style={{ padding: '12px', fontSize: '14px', color: '#6b7280' }}>
+                          No other features to add.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {dependencyDropdownOpen && (
+                  <div
+                    style={{ position: 'fixed', inset: 0, zIndex: 999 }}
+                    aria-hidden
+                    onClick={() => {
+                      setDependencyDropdownOpen(false);
+                      setDependencyFilter('');
+                    }}
+                  />
+                )}
+              </div>
+            </div>
           )}
 
           {showParentContent && item?.type === 'epic' && allowedChildTypes.length > 0 && (

@@ -67,6 +67,7 @@ function serializeWorkItem(item: WorkItem | Partial<WorkItem>): WorkItemData {
   if (item.wsjfRiskReduction !== undefined) out.wsjfRiskReduction = item.wsjfRiskReduction;
   if (item.wsjfJobSize !== undefined) out.wsjfJobSize = item.wsjfJobSize;
   if (item.wsjfScore !== undefined) out.wsjfScore = item.wsjfScore;
+  if (item.dependencyFeatureIds !== undefined) out.dependencyFeatureIds = item.dependencyFeatureIds;
   return out as WorkItemData;
 }
 
