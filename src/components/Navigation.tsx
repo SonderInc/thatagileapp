@@ -83,7 +83,6 @@ const Navigation: React.FC = () => {
     { id: 'import-backlog', label: 'Import Backlog' },
     { id: 'licence', label: 'Licence' },
     { id: 'company-profile', label: 'Company profile' },
-    { id: 'settings', label: 'Settings' },
   ] as const;
 
   const visibleAdminItems = isAdmin
@@ -96,6 +95,8 @@ const Navigation: React.FC = () => {
     setViewMode(id);
     setAdminMenuOpen(false);
   };
+
+  const isAdminActive = visibleAdminItems.some((a) => viewMode === a.id) || viewMode === 'settings';
 
   const avatarInitials = (): string => {
     const name = currentUser?.name?.trim();
@@ -296,12 +297,12 @@ const Navigation: React.FC = () => {
             style={{
               padding: '12px 16px',
               border: 'none',
-              borderBottom: visibleAdminItems.some((a) => viewMode === a.id) ? '3px solid #3b82f6' : '3px solid transparent',
+              borderBottom: isAdminActive ? '3px solid #3b82f6' : '3px solid transparent',
               backgroundColor: 'transparent',
-              color: visibleAdminItems.some((a) => viewMode === a.id) ? '#3b82f6' : '#6b7280',
+              color: isAdminActive ? '#3b82f6' : '#6b7280',
               cursor: 'pointer',
               fontSize: '14px',
-              fontWeight: visibleAdminItems.some((a) => viewMode === a.id) ? '600' : '400',
+              fontWeight: isAdminActive ? '600' : '400',
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
@@ -346,6 +347,34 @@ const Navigation: React.FC = () => {
                   {item.label}
                 </button>
               ))}
+              {isAdmin && (
+                <>
+                  <div style={{ borderTop: '1px solid #e5e7eb', margin: '4px 0' }} />
+                  <div style={{ padding: '6px 16px 4px', fontSize: '12px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase' }}>
+                    Board Settings
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setViewMode('settings');
+                      setAdminMenuOpen(false);
+                    }}
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      padding: '10px 16px',
+                      textAlign: 'left',
+                      border: 'none',
+                      backgroundColor: viewMode === 'settings' ? '#eff6ff' : 'transparent',
+                      color: '#374151',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                    }}
+                  >
+                    Team Board Settings
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>

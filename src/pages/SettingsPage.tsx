@@ -117,7 +117,7 @@ const SettingsPage: React.FC = () => {
 
   return (
     <div className="page-container">
-      <h1 className="page-title">Settings</h1>
+      <h1 className="page-title">Team Board Settings</h1>
       <p className="page-description">
         Configure where your data is stored. You can use ThatAgile Cloud or your own Firebase project.
       </p>
