@@ -7,6 +7,7 @@ import { ROLE_LABELS } from '../types';
 import type { Role } from '../types';
 import type { UserProfile } from '../types';
 import type { Team } from '../types';
+import Modal from '../components/Modal';
 
 const ALL_ROLES = Object.keys(ROLE_LABELS) as Role[];
 
@@ -46,6 +47,9 @@ const InviteUserPage: React.FC = () => {
   const [newTeamName, setNewTeamName] = useState('');
   const [teamCreating, setTeamCreating] = useState(false);
   const [teamError, setTeamError] = useState<string | null>(null);
+  const [showCreateTeamOfTeamsModal, setShowCreateTeamOfTeamsModal] = useState(false);
+  const [createTeamOfTeamsName, setCreateTeamOfTeamsName] = useState('');
+  const [createTeamOfTeamsChildIds, setCreateTeamOfTeamsChildIds] = useState<string[]>([]);
   const [myProfile, setMyProfile] = useState<UserProfile | null>(null);
   const company = getCurrentCompany();
   const isAdminFromProfile = Boolean(myProfile && currentTenantId && isAdminForCompany(myProfile, currentTenantId));
@@ -367,7 +371,7 @@ const InviteUserPage: React.FC = () => {
     return entry?.roles ?? [];
   };
 
-  const handleCreateTeam = async (teamType: 'team' | 'team-of-teams') => {
+  const handleCreateTeam = async () => {
     if (!currentTenantId || !newTeamName.trim()) return;
     setTeamError(null);
     setTeamCreating(true);
@@ -381,8 +385,6 @@ const InviteUserPage: React.FC = () => {
         createdAt: now,
         updatedAt: now,
         createdBy: currentUser?.id,
-        teamType,
-        ...(teamType === 'team-of-teams' && { childTeamIds: [] }),
       };
       await addTeam(team);
       setNewTeamName('');
@@ -430,6 +432,49 @@ const InviteUserPage: React.FC = () => {
     const team = teams.find((t) => t.id === teamId);
     if (!team) return;
     await updateTeam(teamId, { childTeamIds: (team.childTeamIds ?? []).filter((id) => id !== childTeamId) });
+  };
+
+  const toggleCreateTeamOfTeamsChild = (teamId: string) => {
+    setCreateTeamOfTeamsChildIds((prev) =>
+      prev.includes(teamId) ? prev.filter((id) => id !== teamId) : [...prev, teamId]
+    );
+  };
+
+  const handleCreateTeamOfTeamsSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = createTeamOfTeamsName.trim();
+    if (!currentTenantId || !name) return;
+    setTeamError(null);
+    setTeamCreating(true);
+    try {
+      const now = new Date();
+      const team: Team = {
+        id: `team-${Date.now()}`,
+        name,
+        companyId: currentTenantId,
+        memberIds: [],
+        createdAt: now,
+        updatedAt: now,
+        createdBy: currentUser?.id,
+        teamType: 'team-of-teams',
+        childTeamIds: createTeamOfTeamsChildIds,
+      };
+      await addTeam(team);
+      setCreateTeamOfTeamsName('');
+      setCreateTeamOfTeamsChildIds([]);
+      setShowCreateTeamOfTeamsModal(false);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setTeamError(msg);
+    } finally {
+      setTeamCreating(false);
+    }
+  };
+
+  const closeCreateTeamOfTeamsModal = () => {
+    setShowCreateTeamOfTeamsModal(false);
+    setCreateTeamOfTeamsName('');
+    setCreateTeamOfTeamsChildIds([]);
   };
 
   const tabs: { id: UserManagementTab; label: string }[] = [
@@ -707,7 +752,7 @@ const InviteUserPage: React.FC = () => {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            handleCreateTeam('team');
+            handleCreateTeam();
           }}
           style={{ marginBottom: '24px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}
         >
@@ -724,12 +769,105 @@ const InviteUserPage: React.FC = () => {
           <button
             type="button"
             className="btn-secondary"
-            disabled={teamCreating || !newTeamName.trim()}
-            onClick={() => handleCreateTeam('team-of-teams')}
+            disabled={teamCreating}
+            onClick={() => {
+              setCreateTeamOfTeamsName('');
+              setCreateTeamOfTeamsChildIds([]);
+              setTeamError(null);
+              setShowCreateTeamOfTeamsModal(true);
+            }}
           >
-            {teamCreating ? 'Creating…' : 'Create Team of Teams'}
+            Create Team of Teams
           </button>
         </form>
+        {showCreateTeamOfTeamsModal && (
+          <Modal
+            title="Create Team of Teams"
+            onClose={closeCreateTeamOfTeamsModal}
+            maxWidth="480px"
+          >
+            <form onSubmit={handleCreateTeamOfTeamsSubmit}>
+              {teamError && (
+                <p style={{ margin: '0 0 16px 0', padding: '10px 12px', backgroundColor: '#fef2f2', color: '#b91c1c', borderRadius: 6, fontSize: 14 }}>
+                  {teamError}
+                </p>
+              )}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Name *</label>
+                <input
+                  type="text"
+                  value={createTeamOfTeamsName}
+                  onChange={(e) => setCreateTeamOfTeamsName(e.target.value)}
+                  placeholder="Team of teams name"
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: 14,
+                  }}
+                />
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Teams to include</label>
+                <p style={{ margin: '0 0 8px 0', fontSize: 12, color: '#6b7280' }}>Select teams that belong to this group.</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {teams
+                    .filter((t) => t.teamType !== 'team-of-teams' || !t.teamType)
+                    .map((t) => (
+                      <label
+                        key={t.id}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '6px 12px',
+                          border: '1px solid #d1d5db',
+                          borderRadius: 6,
+                          cursor: 'pointer',
+                          fontSize: 14,
+                          backgroundColor: createTeamOfTeamsChildIds.includes(t.id) ? '#eff6ff' : '#fff',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={createTeamOfTeamsChildIds.includes(t.id)}
+                          onChange={() => toggleCreateTeamOfTeamsChild(t.id)}
+                        />
+                        {t.name}
+                      </label>
+                    ))}
+                  {teams.filter((t) => t.teamType !== 'team-of-teams' || !t.teamType).length === 0 && (
+                    <span style={{ fontSize: 14, color: '#6b7280' }}>No teams available. Create a team first.</span>
+                  )}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={closeCreateTeamOfTeamsModal}
+                  style={{ padding: '8px 16px', border: '1px solid #d1d5db', borderRadius: 6, background: '#fff', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={teamCreating || !createTeamOfTeamsName.trim()}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#3b82f6',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 6,
+                    cursor: teamCreating || !createTeamOfTeamsName.trim() ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {teamCreating ? 'Creating…' : 'Create'}
+                </button>
+              </div>
+            </form>
+          </Modal>
+        )}
         {teams.length === 0 ? (
           <p style={{ color: '#6b7280', fontSize: '14px' }}>No teams yet. Create one above.</p>
         ) : (
