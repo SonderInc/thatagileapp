@@ -163,6 +163,8 @@ export interface UserProfile {
   companyIds?: string[];
   /** Company IDs for which the user has admin (mirrors Firestore adminCompanyIds; used for permission checks). */
   adminCompanyIds?: string[];
+  /** Company IDs for which the user is RTE (Release Train Engineer); can edit planning boards. */
+  rteCompanyIds?: string[];
   /** When true, user must change password on next login (e.g. after invite with default password). */
   mustChangePassword?: boolean;
   /** When true, user is an app-level administrator (can see all instances on App Admin page). */

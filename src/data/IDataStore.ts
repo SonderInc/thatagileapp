@@ -53,6 +53,7 @@ export interface IDataStore {
     workItemId: string,
     placement: { laneId: string; columnId: string; addedBy: string }
   ): Promise<string>;
+  updateBoardItem(boardId: string, itemId: string, updates: { laneId?: string; columnId?: string }): Promise<void>;
   deleteBoardItem(boardId: string, itemId: string): Promise<void>;
 }
 

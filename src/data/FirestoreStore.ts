@@ -45,5 +45,6 @@ export const FirestoreStore: IDataStore = {
   listBacklogFeaturesForTeam: firestore.listBacklogFeaturesForTeam,
   listBoardItems: firestore.listBoardItems,
   addFeatureToBoard: firestore.addFeatureToBoard,
+  updateBoardItem: firestore.updateBoardItem,
   deleteBoardItem: firestore.deleteBoardItem,
 };

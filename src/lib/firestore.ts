@@ -191,6 +191,21 @@ export async function addFeatureToBoard(
   return ref.id;
 }
 
+/** Update a board item's placement (laneId and/or columnId). */
+export async function updateBoardItem(
+  boardId: string,
+  itemId: string,
+  updates: { laneId?: string; columnId?: string }
+): Promise<void> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = doc(db, BOARDS_COLLECTION, boardId, BOARD_ITEMS_SUBCOLLECTION, itemId);
+  const data: Record<string, string> = {};
+  if (updates.laneId !== undefined) data.laneId = updates.laneId;
+  if (updates.columnId !== undefined) data.columnId = updates.columnId;
+  if (Object.keys(data).length === 0) return;
+  await updateDoc(ref, data);
+}
+
 /** Delete a board item (remove feature from board). */
 export async function deleteBoardItem(boardId: string, itemId: string): Promise<void> {
   if (!db) return Promise.reject(new Error('Firebase not configured'));
@@ -368,22 +383,27 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const rawCompanies = data.companies as { companyId: string; roles: string[] }[] | undefined;
   const companyIds = (data.companyIds as string[] | undefined) ?? (data.companyId ? [data.companyId] : []);
   const adminCompanyIds = (data.adminCompanyIds as string[] | undefined) ?? [];
+  const rteCompanyIds = (data.rteCompanyIds as string[] | undefined) ?? [];
+  const rteRole = 'rte-team-of-teams-coach' as const;
   let companies: { companyId: string; roles: Role[] }[] | undefined;
   if (!rawCompanies?.length && companyIds.length > 0) {
-    companies = companyIds.map((cid) => ({
-      companyId: cid,
-      roles: adminCompanyIds.includes(cid) ? (['admin'] as Role[]) : ([] as Role[]),
-    }));
+    companies = companyIds.map((cid) => {
+      const roles: Role[] = [];
+      if (adminCompanyIds.includes(cid)) roles.push('admin');
+      if (rteCompanyIds.includes(cid)) roles.push(rteRole);
+      return { companyId: cid, roles };
+    });
   } else if (rawCompanies?.length) {
-    // Use companies array but ensure adminCompanyIds is reflected (rules use adminCompanyIds; app uses companies).
+    // Use companies array but ensure adminCompanyIds and rteCompanyIds are reflected (rules use these; app uses companies).
     companies = rawCompanies.map((c) => {
       const roles = (c.roles as Role[]) ?? [];
       const isAdminByRules = adminCompanyIds.includes(c.companyId);
+      const isRteByRules = rteCompanyIds.includes(c.companyId);
       const hasAdmin = roles.includes('admin');
-      return {
-        companyId: c.companyId,
-        roles: isAdminByRules && !hasAdmin ? (['admin', ...roles] as Role[]) : roles,
-      };
+      const hasRte = roles.includes(rteRole);
+      let next = isAdminByRules && !hasAdmin ? (['admin', ...roles] as Role[]) : roles;
+      if (isRteByRules && !hasRte) next = [...next, rteRole] as Role[];
+      return { companyId: c.companyId, roles: next };
     });
   } else {
     companies = rawCompanies?.map((c) => ({ companyId: c.companyId, roles: c.roles as Role[] })) ?? undefined;
@@ -402,6 +422,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     companies,
     companyIds: companyIds.length > 0 ? companyIds : undefined,
     adminCompanyIds: resolvedAdminCompanyIds.length > 0 ? resolvedAdminCompanyIds : undefined,
+    rteCompanyIds: rteCompanyIds.length > 0 ? rteCompanyIds : undefined,
     mustChangePassword: data.mustChangePassword === true,
     appAdmin: data.appAdmin === true,
     employeeNumber: typeof data.employeeNumber === 'string' ? data.employeeNumber : undefined,

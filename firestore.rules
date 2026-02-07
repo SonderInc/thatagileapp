@@ -42,50 +42,75 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)) != null && resource.data.get('companyId', null) != null && isPlanningEditor(resource.data.companyId);
     }
     match /boards/{boardId} {
-      function userDoc() { return /databases/$(database)/documents/users/$(request.auth.uid); }
-      function companyIds() { return get(userDoc()).data.get('companyIds', []); }
-      function adminCompanyIds() { return get(userDoc()).data.get('adminCompanyIds', []); }
+      function userDocPath() {
+        return /databases/$(database)/documents/users/$(request.auth.uid);
+      }
+      function userExists() {
+        return request.auth != null && exists(userDocPath());
+      }
+      function companyIds() {
+        return userExists() ? get(userDocPath()).data.get('companyIds', []) : [];
+      }
+      function adminCompanyIds() {
+        return userExists() ? get(userDocPath()).data.get('adminCompanyIds', []) : [];
+      }
+      function rteCompanyIds() {
+        return userExists() ? get(userDocPath()).data.get('rteCompanyIds', []) : [];
+      }
+      function canReadBoard() {
+        return userExists()
+          && resource.data.get('companyId', null) is string
+          && resource.data.companyId in companyIds();
+      }
+      function canWriteBoard() {
+        return userExists()
+          && resource.data.get('companyId', null) is string
+          && (
+            resource.data.companyId in adminCompanyIds()
+            || resource.data.companyId in rteCompanyIds()
+          );
+      }
+      function canCreateBoard() {
+        return userExists()
+          && request.resource.data.get('companyId', null) is string
+          && (
+            request.resource.data.companyId in adminCompanyIds()
+            || request.resource.data.companyId in rteCompanyIds()
+          );
+      }
 
-      allow read: if request.auth != null
-        && exists(userDoc())
-        && resource.data.get('companyId', null) is string
-        && resource.data.companyId in companyIds();
+      allow read: if canReadBoard();
 
-      allow create: if request.auth != null
-        && exists(userDoc())
-        && request.resource.data.get('companyId', null) is string
-        && request.resource.data.companyId in adminCompanyIds()
+      // Only allow creating planning boards (optional guard)
+      allow create: if canCreateBoard()
         && request.resource.data.get('type', null) == 'planning'
-        && request.resource.data.get('createdBy', null) == request.auth.uid
         && request.resource.data.get('name', null) is string;
 
-      allow update: if request.auth != null
-        && exists(userDoc())
-        && resource.data.get('companyId', null) is string
-        && resource.data.companyId in adminCompanyIds()
-        && request.resource.data.companyId == resource.data.companyId;
-
-      allow delete: if request.auth != null
-        && exists(userDoc())
-        && resource.data.get('companyId', null) is string
-        && resource.data.companyId in adminCompanyIds();
+      allow update, delete: if canWriteBoard();
 
       match /items/{itemId} {
-        allow read: if request.auth != null
-          && exists(userDoc())
-          && get(/databases/$(database)/documents/boards/$(boardId)).data.get('companyId', null) is string
-          && get(/databases/$(database)/documents/boards/$(boardId)).data.companyId in companyIds();
-        allow create: if request.auth != null
-          && exists(userDoc())
-          && get(/databases/$(database)/documents/boards/$(boardId)).data.get('companyId', null) is string
-          && get(/databases/$(database)/documents/boards/$(boardId)).data.companyId in companyIds()
-          && request.resource.data.get('companyId', null) is string
-          && request.resource.data.companyId == get(/databases/$(database)/documents/boards/$(boardId)).data.companyId
-          && request.resource.data.get('workItemId', null) is string;
-        allow update, delete: if request.auth != null
-          && exists(userDoc())
-          && resource.data.get('companyId', null) is string
-          && resource.data.companyId in adminCompanyIds();
+        function userDocPath() { return /databases/$(database)/documents/users/$(request.auth.uid); }
+        function userExists() { return request.auth != null && exists(userDocPath()); }
+        function adminCompanyIds() { return userExists() ? get(userDocPath()).data.get('adminCompanyIds', []) : []; }
+        function rteCompanyIds() { return userExists() ? get(userDocPath()).data.get('rteCompanyIds', []) : []; }
+
+        // board companyId is on the parent doc; read it safely via get()
+        function parentCompanyId() {
+          return get(/databases/$(database)/documents/boards/$(boardId)).data.get('companyId', null);
+        }
+        function canWriteItems() {
+          return userExists()
+            && parentCompanyId() is string
+            && (parentCompanyId() in adminCompanyIds() || parentCompanyId() in rteCompanyIds());
+        }
+        function canReadItems() {
+          return userExists()
+            && parentCompanyId() is string
+            && parentCompanyId() in get(userDocPath()).data.get('companyIds', []);
+        }
+
+        allow read: if canReadItems();
+        allow create, update, delete: if canWriteItems();
       }
     }
     match /planningPlacements/{placementId} {

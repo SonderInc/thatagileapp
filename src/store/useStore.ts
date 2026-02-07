@@ -102,6 +102,7 @@ interface AppState {
   updatePlanningPlacement: (id: string, updates: Partial<Pick<PlanningBoardPlacement, 'teamId' | 'iterationColumn'>>) => Promise<void>;
   deletePlanningPlacement: (id: string) => Promise<void>;
   addFeatureToPlanningBoard: (params: { boardId: string; companyId: string; workItemId: string; laneId: string; columnId: string }) => Promise<void>;
+  moveBoardItem: (boardId: string, itemId: string, placement: { laneId: string; columnId: string }) => Promise<void>;
   removeFeatureFromPlanningBoard: (boardId: string, itemId: string) => Promise<void>;
   setViewMode: (mode: AppState['viewMode']) => void;
   setTenantCompanies: (companies: TenantCompany[]) => void;
@@ -366,6 +367,11 @@ export const useStore = create<AppState>((set, get) => ({
       columnId,
       addedBy: uid,
     });
+    const items = await getDataStore().listBoardItems(boardId);
+    set({ boardItems: items });
+  },
+  moveBoardItem: async (boardId, itemId, placement) => {
+    await getDataStore().updateBoardItem(boardId, itemId, placement);
     const items = await getDataStore().listBoardItems(boardId);
     set({ boardItems: items });
   },

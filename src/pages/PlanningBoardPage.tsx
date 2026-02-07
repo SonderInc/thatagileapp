@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { ensureDefaultPlanningBoard } from '../services/boards/ensureDefaultBoard';
 import { ensureTenantAccess } from '../services/tenantMembershipService';
 import { useStore } from '../store/useStore';
@@ -9,6 +10,16 @@ import Modal from '../components/Modal';
 import AddFeatureFromBacklogModal from '../components/planning/AddFeatureFromBacklogModal';
 import { ArrowLeft, Plus, X } from 'lucide-react';
 import { spacing } from '../styles/theme';
+
+const CELL_ID_SEP = '|';
+function cellId(teamId: string, iter: number): string {
+  return `${teamId}${CELL_ID_SEP}${iter}`;
+}
+function parseCellId(id: string): { laneId: string; columnId: string } | null {
+  const idx = id.lastIndexOf(CELL_ID_SEP);
+  if (idx === -1) return null;
+  return { laneId: id.slice(0, idx), columnId: id.slice(idx + 1) };
+}
 
 const COLUMN_LABELS = ['Teams', 'Iteration 1', 'Iteration 2', 'Iteration 3', 'Iteration 4', 'Iteration 5'];
 const LANE_LABEL_WIDTH = 180;
@@ -33,6 +44,7 @@ const PlanningBoardPage: React.FC = () => {
     setPlanningContext,
     selectedWorkItem,
     canEditPlanningBoard,
+    moveBoardItem,
     removeFeatureFromPlanningBoard,
   } = useStore();
 
@@ -168,6 +180,18 @@ const PlanningBoardPage: React.FC = () => {
 
   const getBoardItemsForCell = (teamId: string, iterationColumn: 1 | 2 | 3 | 4 | 5) =>
     boardItems.filter((i) => i.laneId === teamId && i.columnId === String(iterationColumn));
+
+  const handleDragEnd = useCallback(
+    (result: DropResult) => {
+      if (!board || !result.destination) return;
+      const { draggableId, source, destination } = result;
+      if (source.droppableId === destination.droppableId) return;
+      const parsed = parseCellId(destination.droppableId);
+      if (!parsed) return;
+      moveBoardItem(board.id, draggableId, { laneId: parsed.laneId, columnId: parsed.columnId });
+    },
+    [board, moveBoardItem]
+  );
 
   const handleCardClick = (workItemId: string, teamId: string) => {
     setSelectedWorkItem(workItemId);
@@ -451,137 +475,162 @@ const PlanningBoardPage: React.FC = () => {
       </div>
 
       <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: 8, backgroundColor: '#fff' }}>
-        <div style={{ display: 'flex', flexShrink: 0, borderBottom: '2px solid #e5e7eb' }}>
-          {COLUMN_LABELS.map((label, idx) => (
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <div style={{ display: 'flex', flexShrink: 0, borderBottom: '2px solid #e5e7eb' }}>
+            {COLUMN_LABELS.map((label, idx) => (
+              <div
+                key={label}
+                style={{
+                  minWidth: idx === 0 ? LANE_LABEL_WIDTH : COLUMN_MIN_WIDTH,
+                  width: idx === 0 ? LANE_LABEL_WIDTH : COLUMN_MIN_WIDTH,
+                  padding: '12px 8px',
+                  borderRight: idx === 0 ? '1px solid #e5e7eb' : '1px solid #e5e7eb',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: '#6b7280',
+                  textTransform: idx === 0 ? 'uppercase' : 'none',
+                }}
+              >
+                {label}
+              </div>
+            ))}
+          </div>
+          {boardTeams.map((team, rowIdx) => (
             <div
-              key={label}
+              key={team.id}
               style={{
-                minWidth: idx === 0 ? LANE_LABEL_WIDTH : COLUMN_MIN_WIDTH,
-                width: idx === 0 ? LANE_LABEL_WIDTH : COLUMN_MIN_WIDTH,
-                padding: '12px 8px',
-                borderRight: idx === 0 ? '1px solid #e5e7eb' : '1px solid #e5e7eb',
-                fontSize: 12,
-                fontWeight: 600,
-                color: '#6b7280',
-                textTransform: idx === 0 ? 'uppercase' : 'none',
-              }}
-            >
-              {label}
-            </div>
-          ))}
-        </div>
-        {boardTeams.map((team, rowIdx) => (
-          <div
-            key={team.id}
-            style={{
-              display: 'flex',
-              alignItems: 'stretch',
-              borderBottom: '1px solid #e5e7eb',
-              minHeight: 100,
-              backgroundColor: rowIdx % 2 === 0 ? '#fafafa' : '#fff',
-            }}
-          >
-            <div
-              style={{
-                width: LANE_LABEL_WIDTH,
-                minWidth: LANE_LABEL_WIDTH,
-                padding: '8px',
-                borderRight: '1px solid #e5e7eb',
-                fontSize: 14,
-                fontWeight: 600,
-                color: '#111827',
                 display: 'flex',
-                alignItems: 'center',
+                alignItems: 'stretch',
+                borderBottom: '1px solid #e5e7eb',
+                minHeight: 100,
+                backgroundColor: rowIdx % 2 === 0 ? '#fafafa' : '#fff',
               }}
             >
-              {team.name}
-            </div>
-            {([1, 2, 3, 4, 5] as const).map((iter) => {
-              const cellItems = getBoardItemsForCell(team.id, iter);
-              return (
-                <div
-                  key={iter}
-                  style={{
-                    minWidth: COLUMN_MIN_WIDTH,
-                    width: COLUMN_MIN_WIDTH,
-                    padding: 8,
-                    borderRight: '1px solid #e5e7eb',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 6,
-                  }}
-                >
-                  {cellItems.map((item) => {
-                    const feature =
-                      workItems.find((i) => i.id === item.workItemId && i.type === 'feature') ??
-                      backlogFeatures.find((i) => i.id === item.workItemId);
-                    if (!feature) return null;
-                    return (
-                      <div key={item.id} style={{ position: 'relative' }}>
-                        <div
-                          onClick={() => handleCardClick(item.workItemId, team.id)}
-                          style={{ cursor: 'pointer' }}
-                        >
-                          <WorkItemCard item={feature} compact />
-                        </div>
+              <div
+                style={{
+                  width: LANE_LABEL_WIDTH,
+                  minWidth: LANE_LABEL_WIDTH,
+                  padding: '8px',
+                  borderRight: '1px solid #e5e7eb',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: '#111827',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                {team.name}
+              </div>
+              {([1, 2, 3, 4, 5] as const).map((iter) => {
+                const cellItems = getBoardItemsForCell(team.id, iter);
+                return (
+                  <Droppable key={iter} droppableId={cellId(team.id, iter)}>
+                    {(droppableProvided) => (
+                      <div
+                        ref={droppableProvided.innerRef}
+                        {...droppableProvided.droppableProps}
+                        style={{
+                          minWidth: COLUMN_MIN_WIDTH,
+                          width: COLUMN_MIN_WIDTH,
+                          padding: 8,
+                          borderRight: '1px solid #e5e7eb',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 6,
+                        }}
+                      >
+                        {cellItems.map((item, index) => {
+                          const feature =
+                            workItems.find((i) => i.id === item.workItemId && i.type === 'feature') ??
+                            backlogFeatures.find((i) => i.id === item.workItemId);
+                          if (!feature) return null;
+                          return (
+                            <Draggable
+                              key={item.id}
+                              draggableId={item.id}
+                              index={index}
+                              isDragDisabled={!canEdit}
+                            >
+                              {(draggableProvided) => (
+                                <div
+                                  ref={draggableProvided.innerRef}
+                                  {...draggableProvided.draggableProps}
+                                  {...draggableProvided.dragHandleProps}
+                                  style={{
+                                    ...draggableProvided.draggableProps.style,
+                                    position: 'relative',
+                                  }}
+                                >
+                                  <div
+                                    onClick={() => handleCardClick(item.workItemId, team.id)}
+                                    style={{ cursor: 'pointer' }}
+                                  >
+                                    <WorkItemCard item={feature} compact />
+                                  </div>
+                                  {canEdit && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        removeFeatureFromPlanningBoard(board!.id, item.id);
+                                      }}
+                                      title="Remove from cell"
+                                      style={{
+                                        position: 'absolute',
+                                        top: 4,
+                                        right: 4,
+                                        width: 20,
+                                        height: 20,
+                                        padding: 0,
+                                        border: 'none',
+                                        borderRadius: 4,
+                                        background: '#fef2f2',
+                                        color: '#b91c1c',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: 12,
+                                      }}
+                                    >
+                                      <X size={12} />
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </Draggable>
+                          );
+                        })}
+                        {droppableProvided.placeholder}
                         {canEdit && (
                           <button
                             type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeFeatureFromPlanningBoard(board!.id, item.id);
+                            onClick={() => {
+                              setAddFeatureCell({ teamId: team.id, laneId: team.id, columnId: String(iter) });
+                              setShowAddFeatureModal(true);
                             }}
-                            title="Remove from cell"
                             style={{
-                              position: 'absolute',
-                              top: 4,
-                              right: 4,
-                              width: 20,
-                              height: 20,
-                              padding: 0,
-                              border: 'none',
-                              borderRadius: 4,
-                              background: '#fef2f2',
-                              color: '#b91c1c',
+                              padding: '6px',
+                              border: '1px dashed #d1d5db',
+                              borderRadius: 6,
+                              background: 'transparent',
+                              color: '#6b7280',
                               cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
                               fontSize: 12,
+                              marginTop: 'auto',
                             }}
                           >
-                            <X size={12} />
+                            + Add feature
                           </button>
                         )}
                       </div>
-                    );
-                  })}
-                  {canEdit && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAddFeatureCell({ teamId: team.id, laneId: team.id, columnId: String(iter) });
-                        setShowAddFeatureModal(true);
-                      }}
-                      style={{
-                        padding: '6px',
-                        border: '1px dashed #d1d5db',
-                        borderRadius: 6,
-                        background: 'transparent',
-                        color: '#6b7280',
-                        cursor: 'pointer',
-                        fontSize: 12,
-                        marginTop: 'auto',
-                      }}
-                    >
-                      + Add feature
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ))}
+                    )}
+                  </Droppable>
+                );
+              })}
+            </div>
+          ))}
+        </DragDropContext>
       </div>
 
       {showCardModal && selectedWorkItem && (
