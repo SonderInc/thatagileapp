@@ -86,16 +86,24 @@ const PlanningBoardPage: React.FC = () => {
       const msg = err instanceof Error ? err.message : String(err);
       const isPermissionError = /permission|forbidden|denied/i.test(msg);
       if (isPermissionError && firebaseUser && currentTenantId && currentUser) {
+        const rolesForMerge =
+          (currentUser.roles?.length ? currentUser.roles : canEdit ? ['admin'] : []) ?? [];
+        let syncSucceeded = false;
         try {
           const profile = await getDataStore().getUserProfile(firebaseUser.uid);
           if (profile) {
-            const merged = mergeProfileForBackfill(profile, currentTenantId, currentUser.roles ?? []);
+            const merged = mergeProfileForBackfill(profile, currentTenantId, rolesForMerge);
             await getDataStore().setUserProfile(merged);
+            syncSucceeded = true;
           }
         } catch (syncErr) {
           console.warn('[PlanningBoardPage] Sync admin status failed:', syncErr);
         }
-        setCreateError("We've synced your admin status. Please try again.");
+        setCreateError(
+          syncSucceeded
+            ? "We've synced your admin status. Please try again."
+            : "We couldn't sync your admin status. Please refresh and try again."
+        );
       } else {
         setCreateError(
           isPermissionError
