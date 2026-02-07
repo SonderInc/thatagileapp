@@ -367,8 +367,7 @@ const InviteUserPage: React.FC = () => {
     return entry?.roles ?? [];
   };
 
-  const handleCreateTeam = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateTeam = async (teamType: 'team' | 'team-of-teams') => {
     if (!currentTenantId || !newTeamName.trim()) return;
     setTeamError(null);
     setTeamCreating(true);
@@ -382,6 +381,7 @@ const InviteUserPage: React.FC = () => {
         createdAt: now,
         updatedAt: now,
         createdBy: currentUser?.id,
+        teamType,
       };
       await addTeam(team);
       setNewTeamName('');
@@ -687,7 +687,13 @@ const InviteUserPage: React.FC = () => {
         {teamError && (
           <p style={{ color: '#b91c1c', fontSize: '14px', marginBottom: '12px' }}>{teamError}</p>
         )}
-        <form onSubmit={handleCreateTeam} style={{ marginBottom: '24px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleCreateTeam('team');
+          }}
+          style={{ marginBottom: '24px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}
+        >
           <input
             type="text"
             value={newTeamName}
@@ -697,6 +703,14 @@ const InviteUserPage: React.FC = () => {
           />
           <button type="submit" className="btn-primary" disabled={teamCreating || !newTeamName.trim()}>
             {teamCreating ? 'Creating…' : 'Create team'}
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={teamCreating || !newTeamName.trim()}
+            onClick={() => handleCreateTeam('team-of-teams')}
+          >
+            {teamCreating ? 'Creating…' : 'Create Team of Teams'}
           </button>
         </form>
         {teams.length === 0 ? (
@@ -714,8 +728,13 @@ const InviteUserPage: React.FC = () => {
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#111827' }}>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     {team.name}
+                    {team.teamType === 'team-of-teams' && (
+                      <span style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase', padding: '2px 8px', backgroundColor: '#e5e7eb', borderRadius: '4px' }}>
+                        Team of Teams
+                      </span>
+                    )}
                   </h3>
                   <button
                     type="button"

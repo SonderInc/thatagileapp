@@ -667,6 +667,7 @@ function parseTeamDoc(id: string, data: Record<string, unknown>): Team {
           ? updatedAt
           : new Date(String(updatedAt)),
     ...(data.createdBy != null ? { createdBy: data.createdBy as string } : {}),
+    ...(data.teamType === 'team' || data.teamType === 'team-of-teams' ? { teamType: data.teamType as 'team' | 'team-of-teams' } : {}),
   };
 }
 
@@ -690,6 +691,7 @@ export async function addTeam(team: Team): Promise<void> {
     createdAt: team.createdAt instanceof Date ? Timestamp.fromDate(team.createdAt) : team.createdAt,
     updatedAt: team.updatedAt instanceof Date ? Timestamp.fromDate(team.updatedAt) : team.updatedAt,
     ...(team.createdBy && { createdBy: team.createdBy }),
+    ...(team.teamType && { teamType: team.teamType }),
   });
 }
 
@@ -699,6 +701,7 @@ export async function updateTeam(id: string, updates: Partial<Team>): Promise<vo
   const data: Record<string, unknown> = { updatedAt: Timestamp.now() };
   if (updates.name !== undefined) data.name = updates.name;
   if (updates.memberIds !== undefined) data.memberIds = updates.memberIds;
+  if (updates.teamType !== undefined) data.teamType = updates.teamType;
   await updateDoc(ref, data);
 }
 
