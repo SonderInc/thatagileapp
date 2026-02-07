@@ -16,7 +16,7 @@ export interface TenantMembershipError {
 }
 
 const STABLE_ERROR_MESSAGE =
-  "Unable to provision access (CORS/permissions). Try again.";
+  "Unable to grant tenant access. Try again.";
 
 /** In-flight guard: one promise per tenantId; cleared on settle so user can retry manually. */
 const inFlightByTenant = new Map<string, Promise<void>>();
@@ -43,7 +43,7 @@ function getGrantTenantAccessUrl(): string {
  */
 export async function ensureTenantAccess(
   tenantId: string,
-  _options?: { role?: "member" | "admin" }
+  options?: { role?: "member" | "admin" }
 ): Promise<void> {
   const key = tenantId.trim();
   if (!key) {
@@ -82,7 +82,10 @@ export async function ensureTenantAccess(
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ tenantId: key }),
+        body: JSON.stringify({
+          tenantId: key,
+          ...(options?.role === "admin" && { role: "admin" }),
+        }),
       });
       const data = (await res.json().catch(() => ({}))) as {
         ok?: boolean;

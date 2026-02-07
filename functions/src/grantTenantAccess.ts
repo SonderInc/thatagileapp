@@ -55,17 +55,20 @@ export const grantTenantAccess = onRequest(
         return;
       }
 
+      const updates: Record<string, unknown> = {
+        companyIds: admin.firestore.FieldValue.arrayUnion(tenantId),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+      if (req.body?.role === "admin") {
+        updates.adminCompanyIds =
+          admin.firestore.FieldValue.arrayUnion(tenantId);
+      }
+
       await admin
         .firestore()
         .collection("users")
         .doc(decoded.uid)
-        .set(
-          {
-            companyIds: admin.firestore.FieldValue.arrayUnion(tenantId),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        );
+        .set(updates, { merge: true });
 
       res.status(200).json({ ok: true });
     } catch (e: unknown) {

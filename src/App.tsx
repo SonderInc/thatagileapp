@@ -499,6 +499,7 @@ function App() {
   useEffect(() => {
     if (!currentTenantId || !getAuth().isConfigured()) return;
     if (!firebaseUser || !currentUser) return;
+    if (viewMode === 'planning') return;
     const run = async () => {
       try {
         await ensureTenantAccess(currentTenantId);
@@ -511,7 +512,7 @@ function App() {
       );
     };
     run();
-  }, [currentTenantId, firebaseUser, currentUser, loadPlanningBoards]);
+  }, [currentTenantId, firebaseUser, currentUser, loadPlanningBoards, viewMode]);
 
   useEffect(() => {
     if (!firebaseUser || !tenantCompanies.length) return;
