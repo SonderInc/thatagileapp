@@ -2,7 +2,11 @@ import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { getDataStore } from '../lib/adapters';
 
-const LicencePage: React.FC = () => {
+interface LicencePageProps {
+  embedInCompanySettings?: boolean;
+}
+
+const LicencePage: React.FC<LicencePageProps> = ({ embedInCompanySettings = false }) => {
   const { getCurrentCompany, setViewMode, setTenantCompanies, currentTenantId } = useStore();
   const [licenceKey, setLicenceKey] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -42,8 +46,9 @@ const LicencePage: React.FC = () => {
 
   return (
     <div className="page-container">
-      <h1 className="page-title">Licence</h1>
-      <p className="page-description">
+      {!embedInCompanySettings && <h1 className="page-title">Licence</h1>}
+      {embedInCompanySettings && <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>Licence</h2>}
+      <p className="page-description" style={embedInCompanySettings ? { marginTop: 0, marginBottom: '16px' } : undefined}>
         Add a licence number to unlock more seats, or buy a licence.
       </p>
 
@@ -98,15 +103,17 @@ const LicencePage: React.FC = () => {
         {' '}(coming soon)
       </p>
 
-      <p style={{ marginTop: '24px' }}>
-        <button
-          type="button"
-          onClick={() => setViewMode('landing')}
-          style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: 0, fontSize: '14px' }}
-        >
-          Back to Home
-        </button>
-      </p>
+      {!embedInCompanySettings && (
+        <p style={{ marginTop: '24px' }}>
+          <button
+            type="button"
+            onClick={() => setViewMode('landing')}
+            style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: 0, fontSize: '14px' }}
+          >
+            Back to Home
+          </button>
+        </p>
+      )}
     </div>
   );
 };

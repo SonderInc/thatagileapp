@@ -2,7 +2,15 @@ import React, { useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import HierarchyToggleEditor from '../../components/settings/HierarchyToggleEditor';
 
-const ProductHierarchySettingsPage: React.FC = () => {
+interface ProductHierarchySettingsPageProps {
+  embedInCompanySettings?: boolean;
+  overrideProductId?: string;
+}
+
+const ProductHierarchySettingsPage: React.FC<ProductHierarchySettingsPageProps> = ({
+  embedInCompanySettings = false,
+  overrideProductId,
+}) => {
   const {
     selectedProductId,
     workItems,
@@ -14,40 +22,48 @@ const ProductHierarchySettingsPage: React.FC = () => {
     getTypeLabel,
   } = useStore();
 
-  const product = selectedProductId ? workItems.find((i) => i.id === selectedProductId) : null;
-  const config = selectedProductId ? getHierarchyConfigForProduct(selectedProductId) : null;
+  const productId = overrideProductId ?? selectedProductId;
+  const product = productId ? workItems.find((i) => i.id === productId) : null;
+  const config = productId ? getHierarchyConfigForProduct(productId) : null;
 
   useEffect(() => {
-    if (selectedProductId) loadHierarchyConfig(selectedProductId);
-  }, [selectedProductId, loadHierarchyConfig]);
+    if (productId) loadHierarchyConfig(productId);
+  }, [productId, loadHierarchyConfig]);
 
-  if (!selectedProductId || !product) {
+  if (!productId || !product) {
     return (
       <div className="page-container">
-        <button type="button" className="btn-secondary" onClick={() => setViewMode('backlog')}>
-          Back to Backlog
-        </button>
-        <p style={{ marginTop: '16px', color: '#6b7280' }}>Select a product from the backlog to configure its hierarchy.</p>
+        {!embedInCompanySettings && (
+          <button type="button" className="btn-secondary" onClick={() => setViewMode('backlog')}>
+            Back to Backlog
+          </button>
+        )}
+        <p style={{ marginTop: embedInCompanySettings ? 0 : '16px', color: '#6b7280' }}>
+          {embedInCompanySettings ? 'Select a product below to configure its hierarchy.' : 'Select a product from the backlog to configure its hierarchy.'}
+        </p>
       </div>
     );
   }
 
   return (
     <div className="page-container">
-      <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-        <button type="button" className="btn-secondary" onClick={() => setViewMode('backlog')}>
-          Back to Backlog
-        </button>
-      </div>
-      <h1 className="page-title">Hierarchy for {product.title}</h1>
+      {!embedInCompanySettings && (
+        <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <button type="button" className="btn-secondary" onClick={() => setViewMode('backlog')}>
+            Back to Backlog
+          </button>
+        </div>
+      )}
+      {!embedInCompanySettings && <h1 className="page-title">Hierarchy for {product.title}</h1>}
+      {embedInCompanySettings && <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>Hierarchy for {product.title}</h2>}
       <p className="page-description" style={{ marginBottom: '24px' }}>
         Choose which work item types are enabled for this product and their display order.
       </p>
       <HierarchyToggleEditor
-        productId={selectedProductId}
+        productId={productId}
         config={config}
-        canEdit={canEditProductHierarchy(selectedProductId)}
-        onSave={async (next) => setHierarchyConfig(selectedProductId, next)}
+        canEdit={canEditProductHierarchy(productId)}
+        onSave={async (next) => setHierarchyConfig(productId, next)}
         getTypeLabel={getTypeLabel}
       />
     </div>

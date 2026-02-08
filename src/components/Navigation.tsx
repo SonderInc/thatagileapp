@@ -73,7 +73,7 @@ const Navigation: React.FC = () => {
   const adminItems = [
     { id: 'invite-user', label: 'User Management' },
     { id: 'import-backlog', label: 'Import Backlog' },
-    { id: 'licence', label: 'Licence' },
+    { id: 'company-settings', label: 'Company Settings' },
     { id: 'company-profile', label: 'Company profile' },
   ] as const;
 
@@ -88,7 +88,7 @@ const Navigation: React.FC = () => {
     setAdminMenuOpen(false);
   };
 
-  const isAdminActive = visibleAdminItems.some((a) => viewMode === a.id) || viewMode === 'settings' || viewMode === 'team-board-settings' || viewMode === 'feature-board-settings' || viewMode === 'epic-board-settings' || viewMode === 'planning';
+  const isAdminActive = visibleAdminItems.some((a) => viewMode === a.id) || viewMode === 'settings' || viewMode === 'company-settings' || viewMode === 'team-board-settings' || viewMode === 'feature-board-settings' || viewMode === 'epic-board-settings' || viewMode === 'planning';
 
   const avatarInitials = (): string => {
     const name = currentUser?.name?.trim();

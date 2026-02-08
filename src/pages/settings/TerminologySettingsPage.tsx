@@ -8,7 +8,11 @@ import type { TerminologySettings } from '../../services/terminology/terminology
 import type { FrameworkId } from '../../glossary/packs/types';
 import { getDefaultTerminologySettings } from '../../services/terminology/terminologyService';
 
-const TerminologySettingsPage: React.FC = () => {
+interface TerminologySettingsPageProps {
+  embedInCompanySettings?: boolean;
+}
+
+const TerminologySettingsPage: React.FC<TerminologySettingsPageProps> = ({ embedInCompanySettings = false }) => {
   const {
     currentTenantId,
     terminologySettings,
@@ -233,19 +237,25 @@ const TerminologySettingsPage: React.FC = () => {
 
   return (
     <div className="page-container">
-      <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-        <button type="button" className="btn-secondary" onClick={handleBack}>
-          {isProductMode ? 'Back to Backlog' : 'Back to Settings'}
-        </button>
-        <h1 className="page-title" style={{ margin: 0 }}>
-          {isProductMode && product ? `Terminology for ${product.title}` : 'Terminology'}
-        </h1>
-      </div>
-      <p className="page-description" style={{ marginTop: 0, marginBottom: '24px' }}>
-        {isProductMode
-          ? 'Company terminology is the default for all products. You can optionally override it for this product only.'
-          : 'Company-wide default: choose a framework label pack and overrides. Labels apply to all products unless a product has its own override.'}
-      </p>
+      {!embedInCompanySettings && (
+        <>
+          <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <button type="button" className="btn-secondary" onClick={handleBack}>
+              {isProductMode ? 'Back to Backlog' : 'Back to Settings'}
+            </button>
+            <h1 className="page-title" style={{ margin: 0 }}>
+              {isProductMode && product ? `Terminology for ${product.title}` : 'Terminology'}
+            </h1>
+          </div>
+          <p className="page-description" style={{ marginTop: 0, marginBottom: '24px' }}>
+            {isProductMode
+              ? 'Company terminology is the default for all products. You can optionally override it for this product only.'
+              : 'Company-wide default: choose a framework label pack and overrides. Labels apply to all products unless a product has its own override.'}
+          </p>
+        </>
+      )}
+      {embedInCompanySettings && <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>Terminology</h2>}
+      {embedInCompanySettings && <p className="page-description" style={{ marginTop: 0, marginBottom: '16px' }}>Company-wide default: choose a framework label pack and overrides.</p>}
 
       {isProductMode && (
         <>

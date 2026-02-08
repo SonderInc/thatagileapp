@@ -20,6 +20,7 @@ import PublicLandingPage from './pages/PublicLandingPage';
 import InviteUserPage from './pages/InviteUserPage';
 import LicencePage from './pages/LicencePage';
 import CompanyProfilePage from './pages/CompanyProfilePage';
+import CompanySettingsPage from './pages/CompanySettingsPage';
 import SettingsPage from './pages/SettingsPage';
 import NomenclaturePage from './pages/NomenclaturePage';
 import TerminologySettingsPage from './pages/settings/TerminologySettingsPage';
@@ -586,6 +587,8 @@ function App() {
         return <LicencePage />;
       case 'company-profile':
         return <CompanyProfilePage />;
+      case 'company-settings':
+        return <CompanySettingsPage />;
       case 'settings':
         return <SettingsPage />;
       case 'nomenclature':

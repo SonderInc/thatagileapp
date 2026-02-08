@@ -452,19 +452,17 @@ const SettingsPage: React.FC = () => {
       </section>
 
       <section style={{ marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px', color: '#374151' }}>
-          Terminology
-        </h2>
         <p style={{ marginBottom: '12px', fontSize: '14px', color: '#6b7280' }}>
-          Choose a framework label pack (e.g. SAFe, LeSS) and override terms. Labels apply across Backlog, Planning Board, and forms.
+          Configure company terminology, licence, and hierarchy in{' '}
+          <button
+            type="button"
+            className="btn-secondary"
+            style={{ padding: '4px 8px', fontSize: '14px' }}
+            onClick={() => setViewMode('company-settings')}
+          >
+            Company Settings
+          </button>
         </p>
-        <button
-          type="button"
-          className="btn-secondary"
-          onClick={() => setViewMode('terminology')}
-        >
-          Configure terminology
-        </button>
       </section>
 
       <section style={{ marginBottom: '24px' }}>

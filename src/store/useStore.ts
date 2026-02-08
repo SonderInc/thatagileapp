@@ -95,7 +95,7 @@ interface AppState {
   planningContext: { teamId: string; sprintId?: string } | null;
   /** Board directory page: which type of boards we're listing (planning, epic, feature, team). */
   boardsDirectoryType: 'planning' | 'epic' | 'feature' | 'team' | null;
-  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing' | 'add-product' | 'add-company' | 'register-company' | 'invite-user' | 'licence' | 'company-profile' | 'settings' | 'team-board-settings' | 'feature-board-settings' | 'epic-board-settings' | 'nomenclature' | 'terminology' | 'product-hierarchy' | 'import-backlog' | 'user-profile' | 'teams-list' | 'planning' | 'boards-directory' | 'app-admin' | 'no-company' | 'account-load-failed';
+  viewMode: 'epic' | 'feature' | 'product' | 'team' | 'backlog' | 'list' | 'landing' | 'add-product' | 'add-company' | 'register-company' | 'invite-user' | 'licence' | 'company-profile' | 'company-settings' | 'settings' | 'team-board-settings' | 'feature-board-settings' | 'epic-board-settings' | 'nomenclature' | 'terminology' | 'product-hierarchy' | 'import-backlog' | 'user-profile' | 'teams-list' | 'planning' | 'boards-directory' | 'app-admin' | 'no-company' | 'account-load-failed';
   
   // Actions
   setWorkItems: (items: WorkItem[]) => void;
