@@ -314,8 +314,6 @@ const ProductBacklog: React.FC = () => {
     currentTenantId,
     updateWorkItem,
     loadProductTerminology,
-    setTerminologyProductId,
-    setViewMode,
   } = useStore();
   const [showModal, setShowModal] = useState(false);
   const [modalItemId, setModalItemId] = useState<string | null>(null);
@@ -453,27 +451,6 @@ const ProductBacklog: React.FC = () => {
               ? `Backlog for ${product.title}. ${getTypeLabel('epic')}s, ${getTypeLabel('feature')}s, User Stories, Tasks and Bugs.`
               : `Single source of truth for all work items. Products contain ${getTypeLabel('epic')}s, ${getTypeLabel('epic')}s contain ${getTypeLabel('feature')}s, ${getTypeLabel('feature')}s contain User Stories, User Stories contain Tasks and Bugs.`}
           </p>
-          {product && (
-            <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => {
-                  setTerminologyProductId(selectedProductId!);
-                  setViewMode('terminology');
-                }}
-              >
-                Configure terminology
-              </button>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => setViewMode('product-hierarchy')}
-              >
-                Hierarchy
-              </button>
-            </div>
-          )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           <div ref={typeFilterRef} style={{ position: 'relative' }}>

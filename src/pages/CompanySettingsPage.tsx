@@ -3,8 +3,9 @@ import { useStore } from '../store/useStore';
 import TerminologySettingsPage from './settings/TerminologySettingsPage';
 import LicencePage from './LicencePage';
 import ProductHierarchySettingsPage from './settings/ProductHierarchySettingsPage';
+import FrameworkPresetsSection from './settings/FrameworkPresetsSection';
 
-type Section = 'terminology' | 'licence' | 'hierarchy';
+type Section = 'terminology' | 'licence' | 'hierarchy' | 'framework';
 
 const CompanySettingsPage: React.FC = () => {
   const { setViewMode, setTerminologyProductId, workItems, currentTenantId } = useStore();
@@ -33,7 +34,7 @@ const CompanySettingsPage: React.FC = () => {
       </div>
 
       <div style={{ marginBottom: '24px', display: 'flex', gap: '4px', flexWrap: 'wrap', borderBottom: '1px solid #e5e7eb' }}>
-        {(['terminology', 'licence', 'hierarchy'] as const).map((s) => (
+        {(['terminology', 'licence', 'hierarchy', 'framework'] as const).map((s) => (
           <button
             key={s}
             type="button"
@@ -52,6 +53,7 @@ const CompanySettingsPage: React.FC = () => {
             {s === 'terminology' && 'Terminology'}
             {s === 'licence' && 'Licence'}
             {s === 'hierarchy' && 'Hierarchy'}
+            {s === 'framework' && 'Framework'}
           </button>
         ))}
       </div>
@@ -89,6 +91,7 @@ const CompanySettingsPage: React.FC = () => {
           />
         </>
       )}
+      {section === 'framework' && <FrameworkPresetsSection />}
     </div>
   );
 };
