@@ -23,3 +23,17 @@ export function isAdminForCompany(
 export function isAppAdmin(profile: UserProfile | null | undefined): boolean {
   return profile?.appAdmin === true;
 }
+
+/**
+ * Can this user edit other users in the directory (name, phone, roles) for the given company?
+ * True for Admin, RTE, or HR for that company. Use for InviteUserPage directory Actions column.
+ */
+export function canEditUserInDirectory(
+  profile: UserProfile | null | undefined,
+  companyId: string | null | undefined
+): boolean {
+  if (!profile || !companyId) return false;
+  if (isAdminForCompany(profile, companyId)) return true;
+  if (profile.rteCompanyIds?.includes(companyId)) return true;
+  return profile.companies?.some((c) => c.companyId === companyId && c.roles?.includes('hr')) ?? false;
+}

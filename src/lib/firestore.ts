@@ -388,6 +388,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const companyIds = (data.companyIds as string[] | undefined) ?? (data.companyId ? [data.companyId] : []);
   const adminCompanyIds = (data.adminCompanyIds as string[] | undefined) ?? [];
   const rteCompanyIds = (data.rteCompanyIds as string[] | undefined) ?? [];
+  const hrCompanyIds = (data.hrCompanyIds as string[] | undefined) ?? [];
   const rteRole = 'rte-team-of-teams-coach' as const;
   let companies: { companyId: string; roles: Role[] }[] | undefined;
   if (!rawCompanies?.length && companyIds.length > 0) {
@@ -427,6 +428,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     companyIds: companyIds.length > 0 ? companyIds : undefined,
     adminCompanyIds: resolvedAdminCompanyIds.length > 0 ? resolvedAdminCompanyIds : undefined,
     rteCompanyIds: rteCompanyIds.length > 0 ? rteCompanyIds : undefined,
+    hrCompanyIds: hrCompanyIds.length > 0 ? hrCompanyIds : undefined,
     mustChangePassword: data.mustChangePassword === true,
     appAdmin: data.appAdmin === true,
     employeeNumber: typeof data.employeeNumber === 'string' ? data.employeeNumber : undefined,
@@ -455,11 +457,16 @@ export function mergeProfileForBackfill(
     currentTenantId != null && roles.includes('admin')
       ? [...new Set([...(profile.adminCompanyIds ?? []), currentTenantId])]
       : undefined;
+  const hrCompanyIds =
+    currentTenantId != null && roles.includes('hr')
+      ? [...new Set([...(profile.hrCompanyIds ?? []), currentTenantId])]
+      : undefined;
   return {
     ...profile,
     companyId: profile.companyId ?? currentTenantId ?? null,
     companies,
     ...(adminCompanyIds !== undefined && { adminCompanyIds }),
+    ...(hrCompanyIds !== undefined && { hrCompanyIds }),
   };
 }
 
@@ -471,6 +478,7 @@ export async function setUserProfile(profile: UserProfile): Promise<void> {
   if (!db) return Promise.reject(new Error('Firebase not configured'));
   const ref = doc(db, USERS_COLLECTION, profile.uid);
   const rteCompanyIds = profile.companies?.filter((c) => c.roles?.includes('rte-team-of-teams-coach')).map((c) => c.companyId) ?? [];
+  const hrCompanyIds = profile.companies?.filter((c) => c.roles?.includes('hr')).map((c) => c.companyId) ?? [];
   await setDoc(
     ref,
     {
@@ -483,6 +491,7 @@ export async function setUserProfile(profile: UserProfile): Promise<void> {
       ...(profile.employeeNumber !== undefined && { employeeNumber: profile.employeeNumber }),
       ...(profile.phone !== undefined && { phone: profile.phone }),
       ...(rteCompanyIds.length > 0 && { rteCompanyIds }),
+      ...(hrCompanyIds.length > 0 && { hrCompanyIds }),
     },
     { merge: true }
   );

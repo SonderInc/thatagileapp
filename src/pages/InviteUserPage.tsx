@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { getAuth, getDataStore } from '../lib/adapters';
 import { mergeProfileForBackfill } from '../lib/firestore';
-import { isAdminForCompany } from '../lib/roles';
+import { isAdminForCompany, canEditUserInDirectory } from '../lib/roles';
 import { ROLE_LABELS } from '../types';
 import type { Role } from '../types';
 import type { UserProfile } from '../types';
@@ -44,6 +44,8 @@ const InviteUserPage: React.FC = () => {
   const [directoryError, setDirectoryError] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [editingRoles, setEditingRoles] = useState<Role[]>([]);
+  const [editingDisplayName, setEditingDisplayName] = useState('');
+  const [editingPhone, setEditingPhone] = useState('');
   const [roleSaveLoading, setRoleSaveLoading] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
   const [teamCreating, setTeamCreating] = useState(false);
@@ -55,6 +57,7 @@ const InviteUserPage: React.FC = () => {
   const company = getCurrentCompany();
   const isAdminFromProfile = Boolean(myProfile && currentTenantId && isAdminForCompany(myProfile, currentTenantId));
   const isAdmin = isAdminFromProfile || (currentUser?.roles?.includes('admin') ?? false);
+  const canEditDirectory = canEditUserInDirectory(myProfile, currentTenantId);
 
   const resolveMemberName = (uid: string): string => {
     const p = companyUsers.find((u) => u.uid === uid);
@@ -321,18 +324,22 @@ const InviteUserPage: React.FC = () => {
     }
   };
 
-  const startEditRoles = (profile: UserProfile) => {
+  const startEditUser = (profile: UserProfile) => {
     const entry = profile.companies?.find((c) => c.companyId === currentTenantId);
     setEditingUser(profile);
     setEditingRoles(entry?.roles ?? []);
+    setEditingDisplayName(profile.displayName ?? '');
+    setEditingPhone(profile.phone ?? '');
   };
 
-  const cancelEditRoles = () => {
+  const cancelEditUser = () => {
     setEditingUser(null);
     setEditingRoles([]);
+    setEditingDisplayName('');
+    setEditingPhone('');
   };
 
-  const saveEditRoles = async () => {
+  const saveEditUser = async () => {
     if (!editingUser || !currentTenantId) return;
     if (editingRoles.length === 0) {
       setError('Select at least one role.');
@@ -353,11 +360,15 @@ const InviteUserPage: React.FC = () => {
           : undefined;
       await getDataStore().setUserProfile({
         ...editingUser,
+        displayName: editingDisplayName.trim() || editingUser.displayName,
+        phone: editingPhone.trim() || undefined,
         companies: updatedCompanies,
         ...(adminCompanyIds !== undefined && { adminCompanyIds }),
       });
       setEditingUser(null);
       setEditingRoles([]);
+      setEditingDisplayName('');
+      setEditingPhone('');
       await loadDirectory();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -637,7 +648,7 @@ const InviteUserPage: React.FC = () => {
                   <th style={{ textAlign: 'left', padding: '12px', fontWeight: '600', color: '#374151' }}>Name</th>
                   <th style={{ textAlign: 'left', padding: '12px', fontWeight: '600', color: '#374151' }}>Email</th>
                   <th style={{ textAlign: 'left', padding: '12px', fontWeight: '600', color: '#374151' }}>Roles</th>
-                  {isAdmin && (
+                  {canEditDirectory && (
                     <th style={{ textAlign: 'right', padding: '12px', fontWeight: '600', color: '#374151' }}>Actions</th>
                   )}
                 </tr>
@@ -675,13 +686,13 @@ const InviteUserPage: React.FC = () => {
                           </span>
                         )}
                       </td>
-                      {isAdmin && (
+                      {canEditDirectory && (
                         <td style={{ padding: '12px', textAlign: 'right' }}>
                           {editingUser?.uid === profile.uid ? (
                             <button
                               type="button"
                               className="btn-secondary"
-                              onClick={cancelEditRoles}
+                              onClick={cancelEditUser}
                               style={{ marginRight: '8px' }}
                             >
                               Cancel
@@ -690,9 +701,9 @@ const InviteUserPage: React.FC = () => {
                             <button
                               type="button"
                               className="btn-secondary"
-                              onClick={() => startEditRoles(profile)}
+                              onClick={() => startEditUser(profile)}
                             >
-                              Edit roles
+                              Edit
                             </button>
                           )}
                         </td>
@@ -700,9 +711,32 @@ const InviteUserPage: React.FC = () => {
                     </tr>
                     {editingUser?.uid === profile.uid && (
                       <tr style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                        <td colSpan={isAdmin ? 4 : 3} style={{ padding: '16px' }}>
+                        <td colSpan={canEditDirectory ? 4 : 3} style={{ padding: '16px' }}>
                           <div style={{ marginBottom: '12px', fontWeight: '500', fontSize: '13px', color: '#374151' }}>
-                            Edit roles for {profile.email}
+                            Edit user: {profile.email}
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '12px', maxWidth: '400px' }}>
+                            <label style={{ fontSize: '14px', color: '#374151' }}>
+                              Name
+                              <input
+                                type="text"
+                                value={editingDisplayName}
+                                onChange={(e) => setEditingDisplayName(e.target.value)}
+                                style={{ display: 'block', marginTop: '4px', padding: '8px', width: '100%', borderRadius: '6px', border: '1px solid #d1d5db' }}
+                              />
+                            </label>
+                            <label style={{ fontSize: '14px', color: '#374151' }}>
+                              Phone
+                              <input
+                                type="text"
+                                value={editingPhone}
+                                onChange={(e) => setEditingPhone(e.target.value)}
+                                style={{ display: 'block', marginTop: '4px', padding: '8px', width: '100%', borderRadius: '6px', border: '1px solid #d1d5db' }}
+                              />
+                            </label>
+                          </div>
+                          <div style={{ marginBottom: '12px', fontWeight: '500', fontSize: '13px', color: '#374151' }}>
+                            Roles
                           </div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px 16px', marginBottom: '12px' }}>
                             {ALL_ROLES.map((role) => (
@@ -728,10 +762,10 @@ const InviteUserPage: React.FC = () => {
                           <button
                             type="button"
                             className="btn-primary"
-                            onClick={saveEditRoles}
+                            onClick={saveEditUser}
                             disabled={roleSaveLoading || editingRoles.length === 0}
                           >
-                            {roleSaveLoading ? 'Saving…' : 'Save roles'}
+                            {roleSaveLoading ? 'Saving…' : 'Save'}
                           </button>
                         </td>
                       </tr>
