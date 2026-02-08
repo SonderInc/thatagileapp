@@ -30,16 +30,8 @@ const Landing: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '24px' }}>
-      {/* App branding */}
-      <div style={{ marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <img
-          src="/TAA-logo.png"
-          alt="thatagileapp"
-          style={{ height: '48px', width: 'auto', objectFit: 'contain' }}
-        />
-        <span style={{ fontSize: '24px', fontWeight: '600', color: '#111827' }}>thatagileapp</span>
-      </div>
+    <>
+      <div style={{ padding: '24px' }}>
       {/* Company section: current tenant logo + vision */}
       <div style={{ marginBottom: '32px' }}>
         <h1 style={{ margin: 0, fontSize: '32px', fontWeight: '700', color: '#111827' }}>
@@ -274,7 +266,26 @@ const Landing: React.FC = () => {
           ))
         )}
       </div>
-    </div>
+      </div>
+      <div
+        style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          zIndex: 10,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+        }}
+      >
+        <img
+          src="/TAA-logo.png"
+          alt="That Agile App"
+          style={{ height: '40px', width: 'auto', objectFit: 'contain' }}
+        />
+        <span style={{ fontSize: '20px', fontWeight: '600', color: '#111827' }}>That Agile App</span>
+      </div>
+    </>
   );
 };
 
