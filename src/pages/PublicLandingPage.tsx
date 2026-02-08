@@ -85,6 +85,10 @@ const PublicLandingPage: React.FC = () => {
   if (mode === 'login') {
     return (
       <div style={{ padding: '24px', maxWidth: '400px', margin: '0 auto' }}>
+        <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <img src="/TAA-logo.png" alt="thatagileapp" style={{ height: '40px', width: 'auto', objectFit: 'contain' }} />
+          <span style={{ fontSize: '20px', fontWeight: '600', color: '#111827' }}>thatagileapp</span>
+        </div>
         <p style={{ marginBottom: '16px', fontSize: '14px', color: '#6b7280' }}>
           <button
             type="button"
@@ -102,6 +106,10 @@ const PublicLandingPage: React.FC = () => {
   if (mode === 'register') {
     return (
       <div style={{ padding: '24px', maxWidth: '500px', margin: '0 auto' }}>
+        <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <img src="/TAA-logo.png" alt="thatagileapp" style={{ height: '40px', width: 'auto', objectFit: 'contain' }} />
+          <span style={{ fontSize: '20px', fontWeight: '600', color: '#111827' }}>thatagileapp</span>
+        </div>
         <h1 style={{ marginBottom: '8px', fontSize: '24px', fontWeight: '600', color: '#111827' }}>
           Register your Company
         </h1>
@@ -214,6 +222,14 @@ const PublicLandingPage: React.FC = () => {
 
   return (
     <div style={{ padding: '24px', maxWidth: '520px', margin: '0 auto', textAlign: 'center' }}>
+      <div style={{ marginBottom: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+        <img
+          src="/TAA-logo.png"
+          alt="thatagileapp"
+          style={{ height: '48px', width: 'auto', objectFit: 'contain' }}
+        />
+        <span style={{ fontSize: '24px', fontWeight: '600', color: '#111827' }}>thatagileapp</span>
+      </div>
       <h1 style={{ marginBottom: '12px', fontSize: '28px', fontWeight: '700', color: '#111827' }}>
         Register your Company
       </h1>
