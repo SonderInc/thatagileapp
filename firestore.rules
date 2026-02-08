@@ -9,6 +9,10 @@ service cloud.firestore {
         allow read: if request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (companyId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('companyIds', []) || companyId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('adminCompanyIds', []) || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('appAdmin', false) == true);
         allow write: if request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && companyId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('adminCompanyIds', []);
       }
+      match /terminology/{docId} {
+        allow read: if request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (companyId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('companyIds', []) || companyId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('adminCompanyIds', []) || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('appAdmin', false) == true);
+        allow write: if request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && companyId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('adminCompanyIds', []);
+      }
       match /frameworkMigrations/{jobId} {
         allow read: if request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (companyId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('companyIds', []) || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('appAdmin', false) == true);
         allow write: if request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && companyId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('adminCompanyIds', []);
@@ -32,6 +36,10 @@ service cloud.firestore {
     }
     match /productTerminology/{productId} {
       allow read: if request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && exists(/databases/$(database)/documents/workItems/$(productId)) && get(/databases/$(database)/documents/workItems/$(productId)).data.get('companyId', null) in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('companyIds', []) || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('appAdmin', false) == true;
+      allow write: if request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && exists(/databases/$(database)/documents/workItems/$(productId)) && get(/databases/$(database)/documents/workItems/$(productId)).data.get('companyId', null) in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('adminCompanyIds', []);
+    }
+    match /productTerminologyOverride/{productId} {
+      allow read: if request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && exists(/databases/$(database)/documents/workItems/$(productId)) && (get(/databases/$(database)/documents/workItems/$(productId)).data.get('companyId', null) in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('companyIds', []) || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('appAdmin', false) == true);
       allow write: if request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && exists(/databases/$(database)/documents/workItems/$(productId)) && get(/databases/$(database)/documents/workItems/$(productId)).data.get('companyId', null) in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('adminCompanyIds', []);
     }
     match /productHierarchyConfigs/{productId} {

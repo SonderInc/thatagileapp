@@ -853,8 +853,11 @@ export async function deletePlanningPlacement(id: string): Promise<void> {
   await deleteDoc(ref);
 }
 
-/** Terminology settings document: companies/{companyId}/settings/terminology */
-const TERMINOLOGY_DOC_ID = 'terminology';
+/** Terminology: new company path (default for resolution). */
+const COMPANY_TERMINOLOGY_COLLECTION = 'terminology';
+const COMPANY_TERMINOLOGY_DOC_ID = 'default';
+/** Legacy: companies/{companyId}/settings/terminology */
+const SETTINGS_TERMINOLOGY_DOC_ID = 'terminology';
 
 export interface TerminologyDoc {
   activePackId: string;
@@ -863,25 +866,83 @@ export interface TerminologyDoc {
   updatedBy?: string;
 }
 
-export async function getTerminologySettings(companyId: string): Promise<{ activePackId: string; overrides: Record<string, string> } | null> {
-  if (!db) return Promise.reject(new Error('Firebase not configured'));
-  const ref = doc(db, COMPANIES_COLLECTION, companyId, 'settings', TERMINOLOGY_DOC_ID);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) return null;
-  const data = snap.data();
+function parseTerminologyDoc(data: Record<string, unknown>): { activePackId: string; overrides: Record<string, string> } {
   return {
     activePackId: (data.activePackId as string) ?? 'default',
     overrides: (data.overrides as Record<string, string>) ?? {},
   };
 }
 
-export async function setTerminologySettings(
+/** Company terminology: companies/{companyId}/terminology/default. With fallback to settings/terminology and one-time backfill from legacy productTerminology. */
+export async function getCompanyTerminology(companyId: string): Promise<{ activePackId: string; overrides: Record<string, string> } | null> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const newRef = doc(db, COMPANIES_COLLECTION, companyId, COMPANY_TERMINOLOGY_COLLECTION, COMPANY_TERMINOLOGY_DOC_ID);
+  const newSnap = await getDoc(newRef);
+  if (newSnap.exists()) return parseTerminologyDoc(newSnap.data());
+  const legacyRef = doc(db, COMPANIES_COLLECTION, companyId, 'settings', SETTINGS_TERMINOLOGY_DOC_ID);
+  const legacySnap = await getDoc(legacyRef);
+  if (legacySnap.exists()) return parseTerminologyDoc(legacySnap.data());
+  const workItems = await getWorkItems(companyId);
+  const firstProduct = workItems.find((w) => w.type === 'product');
+  if (firstProduct) {
+    const legacyProduct = await getProductTerminology(firstProduct.id);
+    if (legacyProduct) {
+      await setCompanyTerminology(companyId, legacyProduct, '');
+      const afterSnap = await getDoc(newRef);
+      if (afterSnap.exists()) return parseTerminologyDoc(afterSnap.data());
+    }
+  }
+  return null;
+}
+
+export async function setCompanyTerminology(
   companyId: string,
   settings: { activePackId: string; overrides: Record<string, string> },
   uid: string
 ): Promise<void> {
   if (!db) return Promise.reject(new Error('Firebase not configured'));
-  const ref = doc(db, COMPANIES_COLLECTION, companyId, 'settings', TERMINOLOGY_DOC_ID);
+  const ref = doc(db, COMPANIES_COLLECTION, companyId, COMPANY_TERMINOLOGY_COLLECTION, COMPANY_TERMINOLOGY_DOC_ID);
+  await setDoc(ref, {
+    activePackId: settings.activePackId,
+    overrides: settings.overrides,
+    updatedAt: serverTimestamp(),
+    ...(uid && { updatedBy: uid }),
+  });
+}
+
+/** Legacy wrapper: use getCompanyTerminology for resolution. */
+export async function getTerminologySettings(companyId: string): Promise<{ activePackId: string; overrides: Record<string, string> } | null> {
+  return getCompanyTerminology(companyId);
+}
+
+/** Legacy wrapper: writes to company terminology (new path). */
+export async function setTerminologySettings(
+  companyId: string,
+  settings: { activePackId: string; overrides: Record<string, string> },
+  uid: string
+): Promise<void> {
+  await setCompanyTerminology(companyId, settings, uid);
+}
+
+const PRODUCT_TERMINOLOGY_COLLECTION = 'productTerminology';
+const PRODUCT_TERMINOLOGY_OVERRIDE_COLLECTION = 'productTerminologyOverride';
+
+/** Product override: productTerminologyOverride/{productId}. Used for resolution when present. */
+export async function getProductTerminologyOverride(productId: string): Promise<{ activePackId: string; overrides: Record<string, string> } | null> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = doc(db, PRODUCT_TERMINOLOGY_OVERRIDE_COLLECTION, productId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  return parseTerminologyDoc(snap.data());
+}
+
+export async function setProductTerminologyOverride(
+  productId: string,
+  settings: { activePackId: string; overrides: Record<string, string> },
+  uid: string
+): Promise<void> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = doc(db, PRODUCT_TERMINOLOGY_OVERRIDE_COLLECTION, productId);
   await setDoc(ref, {
     activePackId: settings.activePackId,
     overrides: settings.overrides,
@@ -890,18 +951,13 @@ export async function setTerminologySettings(
   });
 }
 
-const PRODUCT_TERMINOLOGY_COLLECTION = 'productTerminology';
-
+/** Legacy: productTerminology/{productId}. Used only for backfill; do not use for resolution. */
 export async function getProductTerminology(productId: string): Promise<{ activePackId: string; overrides: Record<string, string> } | null> {
   if (!db) return Promise.reject(new Error('Firebase not configured'));
   const ref = doc(db, PRODUCT_TERMINOLOGY_COLLECTION, productId);
   const snap = await getDoc(ref);
   if (!snap.exists()) return null;
-  const data = snap.data();
-  return {
-    activePackId: (data.activePackId as string) ?? 'default',
-    overrides: (data.overrides as Record<string, string>) ?? {},
-  };
+  return parseTerminologyDoc(snap.data());
 }
 
 export async function setProductTerminology(
@@ -917,6 +973,12 @@ export async function setProductTerminology(
     updatedAt: serverTimestamp(),
     updatedBy: uid,
   });
+}
+
+export async function deleteProductTerminologyOverride(productId: string): Promise<void> {
+  if (!db) return Promise.reject(new Error('Firebase not configured'));
+  const ref = doc(db, PRODUCT_TERMINOLOGY_OVERRIDE_COLLECTION, productId);
+  await deleteDoc(ref);
 }
 
 // --- Product hierarchy config (per-product enabled types + order) ---

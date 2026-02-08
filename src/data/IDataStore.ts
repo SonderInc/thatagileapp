@@ -56,10 +56,17 @@ export interface IDataStore {
   ): Promise<string>;
   updateBoardItem(boardId: string, itemId: string, updates: { laneId?: string; columnId?: string }): Promise<void>;
   deleteBoardItem(boardId: string, itemId: string): Promise<void>;
-  /** Terminology: companies/{companyId}/settings/terminology */
+  /** Terminology: companies/{companyId}/settings/terminology (legacy); use getCompanyTerminology for resolution. */
   getTerminologySettings(companyId: string): Promise<{ activePackId: string; overrides: Record<string, string> } | null>;
   setTerminologySettings(companyId: string, settings: { activePackId: string; overrides: Record<string, string> }, uid: string): Promise<void>;
-  /** Terminology per product: productTerminology/{productId} */
+  /** Company-wide terminology: companies/{companyId}/terminology/default (with fallback to settings/terminology and one-time backfill). */
+  getCompanyTerminology(companyId: string): Promise<{ activePackId: string; overrides: Record<string, string> } | null>;
+  setCompanyTerminology(companyId: string, settings: { activePackId: string; overrides: Record<string, string> }, uid: string): Promise<void>;
+  /** Product override: productTerminologyOverride/{productId}. Used for resolution when present; else company terminology. */
+  getProductTerminologyOverride(productId: string): Promise<{ activePackId: string; overrides: Record<string, string> } | null>;
+  setProductTerminologyOverride(productId: string, settings: { activePackId: string; overrides: Record<string, string> }, uid: string): Promise<void>;
+  deleteProductTerminologyOverride(productId: string): Promise<void>;
+  /** Legacy: productTerminology/{productId}. Used only for backfill; do not use for resolution. */
   getProductTerminology(productId: string): Promise<{ activePackId: string; overrides: Record<string, string> } | null>;
   setProductTerminology(productId: string, settings: { activePackId: string; overrides: Record<string, string> }, uid: string): Promise<void>;
   /** Hierarchy config per product: productHierarchyConfigs/{productId} */

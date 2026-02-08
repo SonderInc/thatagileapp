@@ -156,6 +156,7 @@ interface AppState {
   saveTerminology: (companyId: string, settings: TerminologySettings) => Promise<void>;
   loadProductTerminology: (productId: string | null) => Promise<void>;
   saveProductTerminology: (productId: string, settings: TerminologySettings) => Promise<void>;
+  removeProductTerminologyOverride: (productId: string) => Promise<void>;
   setTerminologyProductId: (id: string | null) => void;
   loadHierarchyConfig: (productId: string) => Promise<void>;
   setHierarchyConfig: (productId: string, config: Pick<ProductHierarchyConfig, 'enabledTypes' | 'order'>) => Promise<void>;
@@ -567,9 +568,9 @@ export const useStore = create<AppState>((set, get) => ({
     }
     set({ productTerminologyLoadError: null });
     try {
-      const settings = await terminologyService.loadProductTerminology(productId);
+      const override = await terminologyService.loadProductTerminologyOverride(productId);
       set({
-        productTerminologySettings: settings,
+        productTerminologySettings: override ?? null,
         productTerminologyProductId: productId,
         productTerminologyLoadError: null,
       });
@@ -581,12 +582,19 @@ export const useStore = create<AppState>((set, get) => ({
   saveProductTerminology: async (productId, settings) => {
     const uid = get().firebaseUser?.uid;
     if (!uid) return;
-    await terminologyService.saveProductTerminology(productId, settings, uid);
+    await terminologyService.saveProductTerminologyOverride(productId, settings, uid);
     set({
       productTerminologySettings: settings,
       productTerminologyProductId: productId,
       productTerminologyLoadError: null,
     });
+  },
+  removeProductTerminologyOverride: async (productId) => {
+    await terminologyService.removeProductTerminologyOverride(productId);
+    const { productTerminologyProductId } = get();
+    if (productTerminologyProductId === productId) {
+      set({ productTerminologySettings: null, productTerminologyProductId: productId });
+    }
   },
   setTerminologyProductId: (id) => set({ terminologyProductId: id }),
   loadHierarchyConfig: async (productId) => {
